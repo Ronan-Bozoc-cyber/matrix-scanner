@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matrix Scanner — Dashboard Réseau &amp; CVE</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- Fond animé "pluie de code" -->
+<canvas id="matrix-bg"></canvas>
+
+<div class="app">
+
+  <header class="app-header">
+    <h1>&gt; MATRIX_SCANNER <span class="cursor">_</span></h1>
+    <p class="subtitle">Dashboard pédagogique de reconnaissance réseau et de détection de CVE</p>
+  </header>
+
+  <!-- ============================================================ -->
+  <!-- BANDEAU D'AVERTISSEMENT LÉGAL (toujours visible)               -->
+  <!-- ============================================================ -->
+  <div class="card warning-card">
+    ⚠️ <strong>Usage strictement pédagogique.</strong> Ne scannez que des machines vous appartenant
+    ou pour lesquelles vous disposez d'une autorisation écrite explicite. Le scan non autorisé
+    d'un système tiers est un délit pénal.
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- BANDEAU DE VÉRIFICATION DES DÉPENDANCES                       -->
+  <!-- ============================================================ -->
+  <div class="card" id="deps-card">
+    <h2>01_ // Vérification des prérequis système</h2>
+    <div id="deps-list" class="deps-list">Vérification en cours...</div>
+    <div id="deps-missing-alert" class="alert-box hidden">
+      <p>Des outils requis sont manquants sur ce système.</p>
+      <button id="install-btn" class="btn btn-primary">⚡ Installer les dépendances</button>
+      <pre id="install-log" class="install-log hidden"></pre>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- PARAMÉTRAGE DU SCAN                                            -->
+  <!-- ============================================================ -->
+  <div class="card">
+    <h2>02_ // Paramétrage du scan</h2>
+
+    <div class="form-grid">
+
+      <!-- CIBLE -->
+      <div class="form-row">
+        <div class="form-control">
+          <label for="target">Cible (IP / CIDR / hostname)</label>
+          <input type="text" id="target" placeholder="ex: 192.168.56.101" autocomplete="off">
+        </div>
+        <div class="explain-box">
+          La cible doit être une machine que vous êtes autorisé à scanner
+          (ex: une VM Metasploitable sur votre réseau local isolé). Formats
+          acceptés : IP unique, plage CIDR (/24), ou nom d'hôte.
+        </div>
+      </div>
+
+      <!-- TYPE DE SCAN -->
+      <div class="form-row">
+        <div class="form-control">
+          <label for="scan_type">Type de scan</label>
+          <select id="scan_type">
+            <option value="sS">SYN scan (furtif) — -sS</option>
+            <option value="sT">Connect scan (complet) — -sT</option>
+            <option value="sU">UDP scan — -sU</option>
+            <option value="sA">ACK scan (firewall) — -sA</option>
+            <option value="sn">Ping scan (hôtes actifs) — -sn</option>
+          </select>
+        </div>
+        <div class="explain-box" id="explain-scan-type">
+          Le SYN scan (-sS) envoie un paquet TCP SYN et n'établit jamais la connexion
+          complète : il est rapide et plus discret face aux logs applicatifs, mais
+          nécessite les privilèges root sur la machine qui scanne.
+        </div>
+      </div>
+
+      <!-- PORTS -->
+      <div class="form-row">
+        <div class="form-control">
+          <label for="port_mode">Sélection des ports</label>
+          <select id="port_mode">
+            <option value="fast">Rapide (100 ports courants) — -F</option>
+            <option value="top1000" selected>Standard (1000 ports courants)</option>
+            <option value="all">Exhaustif (65535 ports) — -p-</option>
+            <option value="custom">Personnalisé</option>
+          </select>
+          <input type="text" id="custom_ports" placeholder="ex: 22,80,443,8000-8100" class="hidden">
+        </div>
+        <div class="explain-box" id="explain-ports">
+          Plus la plage de ports est large, plus le scan est long et plus le trafic
+          généré est important (donc plus détectable par un système de surveillance).
+        </div>
+      </div>
+
+      <!-- INTENSITÉ / TIMING -->
+      <div class="form-row">
+        <div class="form-control">
+          <label for="timing">Intensité du scan (timing template)</label>
+          <input type="range" id="timing" min="0" max="5" value="3" step="1">
+          <div class="slider-labels">
+            <span>T0 furtif</span><span>T3 normal</span><span>T5 insane</span>
+          </div>
+        </div>
+        <div class="explain-box" id="explain-timing">
+          -T3 (normal) est un bon compromis par défaut. Les valeurs basses (-T0/-T1)
+          ralentissent volontairement le scan pour tenter de passer sous le seuil de
+          détection d'un IDS/IPS ; les valeurs hautes (-T4/-T5) privilégient la vitesse.
+        </div>
+      </div>
+
+      <!-- OPTIONS AVANCÉES (checkboxes) -->
+      <div class="form-row full-width">
+        <div class="checkbox-grid">
+          <label class="checkbox-item">
+            <input type="checkbox" id="service_version" checked>
+            <span>Détection de version des services (-sV)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="os_detection">
+            <span>Détection du système d'exploitation (-O)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="default_scripts">
+            <span>Scripts NSE par défaut (--script=default)</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="vuln_scripts">
+            <span>Scripts NSE de détection de vulnérabilités (--script=vuln)</span>
+          </label>
+        </div>
+        <div class="explain-box">
+          <strong>-sV</strong> identifie précisément la version d'un service (utile pour
+          rechercher des CVE ensuite). <strong>-O</strong> tente de deviner l'OS distant via
+          l'empreinte TCP/IP. <strong>--script=vuln</strong> est plus intrusif et plus long :
+          à réserver aux environnements de lab dédiés.
+        </div>
+      </div>
+
+    </div>
+
+    <button id="scan-btn" class="btn btn-primary btn-large">▶ LANCER LE SCAN</button>
+
+    <div id="command-preview" class="command-preview hidden">
+      <span class="prompt">$</span> <code id="command-preview-text"></code>
+    </div>
+
+    <div id="scan-progress" class="scan-progress hidden">
+      <div class="loader"></div>
+      <span id="scan-progress-text">Scan en cours...</span>
+    </div>
+
+    <!-- Terminal de suivi en temps réel : affiche les lignes de progression
+         renvoyées par nmap (-v --stats-every 2s) via stderr, remontées par
+         le backend et rafraîchies par polling (voir script.js). -->
+    <div id="scan-terminal" class="terminal-box hidden">
+      <div class="terminal-header">
+        <span class="terminal-dot"></span> nmap — sortie en direct
+      </div>
+      <pre id="scan-terminal-content"></pre>
+    </div>
+
+    <div id="scan-error" class="alert-box error hidden"></div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- RÉSULTATS                                                      -->
+  <!-- ============================================================ -->
+  <div class="card hidden" id="results-card">
+    <h2>03_ // Résultats du scan</h2>
+
+    <div class="results-summary" id="results-summary"></div>
+
+    <div class="chart-container">
+      <canvas id="ports-chart"></canvas>
+    </div>
+
+    <h3>Détail par hôte</h3>
+    <div id="hosts-detail"></div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- RECHERCHE CVE                                                  -->
+  <!-- ============================================================ -->
+  <div class="card hidden" id="cve-card">
+    <h2>04_ // Recherche de CVE / exploits connus (Exploit-DB)</h2>
+    <p class="hint">Cliquez sur un service détecté ci-dessus (badge "🔍 Chercher CVE") pour lancer une recherche.</p>
+    <div id="cve-results"></div>
+  </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
