@@ -284,12 +284,28 @@ def _fetch_public_ip_worker():
         ("https://api64.ipify.org?format=json", "json", "ip"),
     ]
     detected_ip = None
-    for url, fmt, key in services:
-        try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                if resp.status == 200:
-                    raw = resp.read().decode("utf-8").strip()
+
+    # 1. Tester les proxies SOCKS/HTTP OnionHop & Tor s'ils sont actifs
+    proxy_candidates = [
+        "socks5h://127.0.0.1:9050",
+        "socks5h://127.0.0.1:9150",
+        "socks5h://127.0.0.1:1080",
+        "socks5h://127.0.0.1:9052",
+        "http://127.0.0.1:8118",
+        "http://127.0.0.1:8080",
+    ]
+    for env_var in ["ALL_PROXY", "HTTP_PROXY", "HTTPS_PROXY", "socks_proxy"]:
+        val = os.environ.get(env_var)
+        if val and val not in proxy_candidates:
+            proxy_candidates.insert(0, val)
+
+    for proxy in proxy_candidates:
+        for url, fmt, key in services:
+            try:
+                cmd = ["curl", "-s", "--max-time", "3", "-A", "Mozilla/5.0", "--proxy", proxy, url]
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=4)
+                if res.returncode == 0 and res.stdout:
+                    raw = res.stdout.strip()
                     if fmt == "json":
                         data = json.loads(raw)
                         ip_candidate = data.get(key, "").strip()
@@ -299,8 +315,30 @@ def _fetch_public_ip_worker():
                         ipaddress.ip_address(ip_candidate)
                         detected_ip = ip_candidate
                         break
-        except Exception:
-            continue
+            except Exception:
+                continue
+        if detected_ip:
+            break
+
+    # 2. Si aucun proxy n'est actif, passer en connexion directe
+    if not detected_ip:
+        for url, fmt, key in services:
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    if resp.status == 200:
+                        raw = resp.read().decode("utf-8").strip()
+                        if fmt == "json":
+                            data = json.loads(raw)
+                            ip_candidate = data.get(key, "").strip()
+                        else:
+                            ip_candidate = raw.strip()
+                        if ip_candidate:
+                            ipaddress.ip_address(ip_candidate)
+                            detected_ip = ip_candidate
+                            break
+            except Exception:
+                continue
 
     PUBLIC_IP_CACHE["ip"] = detected_ip if detected_ip else "Indisponible"
     PUBLIC_IP_CACHE["last_check"] = time.time()
