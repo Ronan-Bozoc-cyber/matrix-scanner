@@ -64,8 +64,29 @@
         <input type="checkbox" id="skip_host_discovery"> Ignorer découverte hôte (-Pn)
       </label>
     </div>
+    <div style="border-top: 1px solid rgba(255,170,0,0.2); margin-top: 15px; padding-top: 15px;">
+      <h4 style="color: #f1c40f; margin-top: 0; margin-bottom: 10px;"><i class="fa-solid fa-clock-rotate-left"></i> Pause Anti-Blocage & Reprise Automatique</h4>
+      <div class="form-row">
+        <div class="form-control">
+          <label for="retry_interval">Fréquence des tests de réactivité</label>
+          <select id="retry_interval">
+            <option value="15">15 secondes</option>
+            <option value="30" selected>30 secondes (Recommandé)</option>
+            <option value="60">60 secondes</option>
+          </select>
+        </div>
+        <div class="form-control">
+          <label for="max_retries">Nombre maximal d'essais</label>
+          <select id="max_retries">
+            <option value="3" selected>3 tentatives</option>
+            <option value="5">5 tentatives</option>
+            <option value="10">10 tentatives</option>
+          </select>
+        </div>
+      </div>
+    </div>
     <div class="explain-box" id="explain-timing" style="margin-top: 15px;">
-      Configuration manuelle pour un scan avancé avec Nmap.
+      Configuration manuelle pour un scan avancé avec Nmap et gestion de résilience.
     </div>
   </div>
 </div>

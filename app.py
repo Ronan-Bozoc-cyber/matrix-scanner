@@ -1669,6 +1669,43 @@ def subdomains_scan():
     })
 
 
+# =====================================================================================
+# SECTION 7.8 : CHECK TARGET CONNECTIVITY (PING / HTTP CHECK FOR PAUSE MODAL)
+# =====================================================================================
+
+@app.route("/api/check-ping", methods=["POST"])
+def check_ping():
+    data = request.get_json(silent=True) or {}
+    target_url = data.get("target_url", "").strip()
+
+    if not target_url:
+        return jsonify({"reachable": False, "error": "Cible manquante."})
+
+    host = target_url.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+
+    # Test 1 : Résolution DNS / Socket connect sur port 80 ou 443 ou ICMP ping
+    try:
+        ip = socket.gethostbyname(host)
+    except socket.gaierror:
+        return jsonify({"reachable": False, "error": f"Résolution DNS échouée pour {host}."})
+
+    # Test 2 : Ping rapide 2 sec
+    cmd = ["ping", "-c", "1", "-W", "2", host]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode == 0:
+        return jsonify({"reachable": True, "ip": ip, "method": "ICMP Ping"})
+
+    # Test 3 : TCP connect port 80/443 si ICMP bloqué par pare-feu
+    for port in [80, 443, 22, 8080]:
+        try:
+            with socket.create_connection((ip, port), timeout=2.5):
+                return jsonify({"reachable": True, "ip": ip, "port": port, "method": f"TCP Port {port}"})
+        except OSError:
+            pass
+
+    return jsonify({"reachable": False, "ip": ip, "error": "Le serveur ne répond ni au Ping ICMP ni aux connexions TCP (80/443)."})
+
+
 
 # =====================================================================================
 # SECTION 7.8 : NETDISCOVER (ARP DISCOVERY)

@@ -330,6 +330,140 @@ async function startScan(mode, customTarget = null) {
   runNmapScan(target, mode, modeToggle);
 }
 
+// =====================================================================================
+// GESTIONNAIRE DE PAUSE ET CHRONOMÈTRE ANTI-BLOCAGE POUR LA CIBLE
+// =====================================================================================
+
+let pauseTimerInterval = null;
+let currentPauseState = {
+  active: false,
+  target: "",
+  stepName: "",
+  retryCount: 0,
+  maxRetries: 3,
+  intervalSeconds: 30,
+  timeRemaining: 30,
+  resumeCallback: null
+};
+
+function triggerPauseModal(stepName, target, reasonMsg, resumeCallback) {
+  const modal = document.getElementById("modal-scan-pause");
+  if (!modal) return;
+
+  const retryIntervalEl = document.getElementById("retry_interval");
+  const maxRetriesEl = document.getElementById("max_retries");
+
+  const intervalSec = retryIntervalEl ? parseInt(retryIntervalEl.value, 10) || 30 : 30;
+  const maxRetries = maxRetriesEl ? parseInt(maxRetriesEl.value, 10) || 3 : 3;
+
+  currentPauseState = {
+    active: true,
+    target: target,
+    stepName: stepName,
+    retryCount: currentPauseState.retryCount + 1,
+    maxRetries: maxRetries,
+    intervalSeconds: intervalSec,
+    timeRemaining: intervalSec,
+    resumeCallback: resumeCallback
+  };
+
+  const reasonEl = document.getElementById("pause-reason-text");
+  const attemptsEl = document.getElementById("pause-attempts-text");
+
+  if (reasonEl) reasonEl.textContent = `${stepName} - ${reasonMsg}`;
+  if (attemptsEl) attemptsEl.textContent = `Tentative ${currentPauseState.retryCount} sur ${currentPauseState.maxRetries}`;
+
+  updateCountdownDisplay();
+  modal.classList.remove("hidden");
+
+  if (pauseTimerInterval) clearInterval(pauseTimerInterval);
+
+  pauseTimerInterval = setInterval(() => {
+    currentPauseState.timeRemaining--;
+    updateCountdownDisplay();
+
+    if (currentPauseState.timeRemaining <= 0) {
+      clearInterval(pauseTimerInterval);
+      testTargetConnectivityNow();
+    }
+  }, 1000);
+}
+
+function updateCountdownDisplay() {
+  const countdownEl = document.getElementById("pause-countdown");
+  if (!countdownEl) return;
+  const mins = Math.floor(currentPauseState.timeRemaining / 60);
+  const secs = currentPauseState.timeRemaining % 60;
+  const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  countdownEl.textContent = formatted;
+}
+
+async function testTargetConnectivityNow() {
+  if (pauseTimerInterval) clearInterval(pauseTimerInterval);
+  const countdownEl = document.getElementById("pause-countdown");
+  if (countdownEl) countdownEl.textContent = "Test...";
+
+  try {
+    const res = await fetch("/api/check-ping", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: currentPauseState.target })
+    });
+    const data = await res.json();
+
+    if (data.reachable) {
+      closePauseModal();
+      if (currentPauseState.resumeCallback) {
+        currentPauseState.resumeCallback();
+      }
+    } else {
+      if (currentPauseState.retryCount >= currentPauseState.maxRetries) {
+        alert(`La cible ${currentPauseState.target} ne répond pas après ${currentPauseState.maxRetries} essais (${data.error || 'Délai d\'attente dépassé'}).`);
+        currentPauseState.timeRemaining = currentPauseState.intervalSeconds;
+        updateCountdownDisplay();
+      } else {
+        triggerPauseModal(currentPauseState.stepName, currentPauseState.target, data.error || "Le serveur cible ne répond pas aux tests ICMP/TCP.", currentPauseState.resumeCallback);
+      }
+    }
+  } catch (err) {
+    triggerPauseModal(currentPauseState.stepName, currentPauseState.target, "Erreur réseau lors du test : " + err.message, currentPauseState.resumeCallback);
+  }
+}
+
+function closePauseModal() {
+  if (pauseTimerInterval) clearInterval(pauseTimerInterval);
+  const modal = document.getElementById("modal-scan-pause");
+  if (modal) modal.classList.add("hidden");
+  currentPauseState.active = false;
+}
+
+function initPauseModalButtons() {
+  const btnRetryNow = document.getElementById("btn-pause-retry-now");
+  const btnForceResume = document.getElementById("btn-pause-resume-force");
+  const btnCancel = document.getElementById("btn-pause-cancel");
+
+  if (btnRetryNow) btnRetryNow.onclick = () => testTargetConnectivityNow();
+  if (btnForceResume) {
+    btnForceResume.onclick = () => {
+      const cb = currentPauseState.resumeCallback;
+      closePauseModal();
+      if (cb) cb();
+    };
+  }
+  if (btnCancel) {
+    btnCancel.onclick = () => {
+      closePauseModal();
+      setScanningState(false);
+      const progressBox = document.getElementById("scan-progress");
+      if (progressBox) progressBox.classList.add("hidden");
+    };
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initPauseModalButtons();
+});
+
 async function runWebPentestPipeline(target, modeToggle) {
   const whoisCard = document.getElementById("whois-card");
   const whoisProgress = document.getElementById("whois-progress");
@@ -474,6 +608,12 @@ async function runWebPentestPipeline(target, modeToggle) {
     if (subdomainsProgress) subdomainsProgress.classList.add("hidden");
     const errMsg = err.name === "AbortError" ? "Délai d'attente dépassé (45s)" : err.message;
     if (subdomainsContent) subdomainsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Recherche de sous-domaines non disponible (${errMsg}).</div>`;
+    
+    // Déclenchement de la modale de pause si timeout ou coupure réseau
+    if (err.name === "AbortError" || err.message.includes("NetworkError") || err.message.includes("fetch")) {
+      triggerPauseModal("Énumération sous-domaines", target, "La cible n'a pas répondu dans les délais (45s).", () => runWebPentestPipeline(target, modeToggle));
+      return;
+    }
   }
 
   // --- ÉTAPE 3 : DÉTECTION WAF (Wafw00f) ---

@@ -37,3 +37,37 @@
     </div>
   </div>
 </div>
+
+<!-- MODALE DE PAUSE ANTI-BLOCAGE ET CHRONOMÈTRE -->
+<div id="modal-scan-pause" class="modal hidden">
+  <div class="modal-content card" style="max-width: 600px; background: #140d00; border: 2px solid #f1c40f; box-shadow: 0 0 25px rgba(241,196,15,0.3);">
+    <h3 style="color: #f1c40f; margin-top: 0;"><i class="fa-solid fa-triangle-exclamation"></i> Scan en Pause : Cible Indisponible</h3>
+    
+    <div style="padding: 12px 16px; background: rgba(241, 196, 15, 0.1); border-left: 4px solid #f1c40f; border-radius: 4px; color: #f7dc6f; font-size: 0.9rem; margin-bottom: 15px;">
+      <strong>⚠️ Délai d'attente dépassé :</strong> <span id="pause-reason-text">La cible n'a pas répondu dans le délai imparti.</span>
+      <div style="font-size: 0.8rem; color: #ccc; margin-top: 6px;">
+        Le serveur cible est peut-être temporairement surchargé, en cours de redémarrage ou en train de filtrer les requêtes (WAF).
+      </div>
+    </div>
+
+    <div style="text-align: center; margin: 20px 0; padding: 15px; background: rgba(0,0,0,0.6); border-radius: 8px; border: 1px solid rgba(241,196,15,0.2);">
+      <div style="font-size: 0.8rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px;">Prochain test de connectivité dans :</div>
+      <div id="pause-countdown" style="font-size: 2.8rem; font-weight: bold; color: #f1c40f; font-family: monospace; text-shadow: 0 0 10px rgba(241,196,15,0.5); margin: 5px 0;">00:30</div>
+      <div id="pause-attempts-text" style="font-size: 0.8rem; color: #888;">Tentative 1 sur 3</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+      <div style="display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap;">
+        <button id="btn-pause-retry-now" class="btn btn-small" style="background: rgba(241,196,15,0.2); border-color: #f1c40f; color: #f1c40f; font-weight: bold; flex: 1;">
+          <i class="fa-solid fa-rotate-right"></i> Tester la réactivité maintenant
+        </button>
+        <button id="btn-pause-resume-force" class="btn btn-small" style="background: rgba(46,204,113,0.2); border-color: #2ecc71; color: #2ecc71; font-weight: bold; flex: 1;">
+          <i class="fa-solid fa-play"></i> Ignorer et poursuivre
+        </button>
+      </div>
+      <button id="btn-pause-cancel" class="btn btn-small" style="background: rgba(231,76,60,0.2); border-color: #e74c3c; color: #ff8888; margin-top: 5px;">
+        <i class="fa-solid fa-stop"></i> Abandonner le scan
+      </button>
+    </div>
+  </div>
+</div>
