@@ -1515,6 +1515,14 @@ def waf_scan():
 # SECTION 7.6 : WHOIS & DOMAIN RECON
 # =====================================================================================
 
+def extract_root_domain(target_url):
+    cleaned = target_url.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0].strip()
+    parts = cleaned.split(".")
+    if len(parts) >= 2:
+        return ".".join(parts[-2:])
+    return cleaned
+
+
 @app.route("/api/whois-scan", methods=["POST"])
 def whois_scan():
     data = request.get_json(silent=True) or {}
@@ -1523,16 +1531,19 @@ def whois_scan():
     if not target_url:
         return jsonify({"error": "Cible manquante."}), 400
 
-    domain = target_url.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+    domain = extract_root_domain(target_url)
 
     cmd = ["whois", domain]
     try:
-        process = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        process = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
         raw_text = process.stdout or process.stderr
 
         registrar = None
         created_date = None
+        updated_date = None
         expiry_date = None
+        dnssec = None
+        statuses = []
         name_servers = []
 
         for line in raw_text.splitlines():
@@ -1540,10 +1551,18 @@ def whois_scan():
             line_lower = line_str.lower()
             if not registrar and ("registrar:" in line_lower or "sponsoring registrar:" in line_lower):
                 registrar = line_str.split(":", 1)[-1].strip()
-            elif not created_date and ("creation date:" in line_lower or "created:" in line_lower):
+            elif not created_date and ("creation date:" in line_lower or "created:" in line_lower or "created on:" in line_lower):
                 created_date = line_str.split(":", 1)[-1].strip()
-            elif not expiry_date and ("registry expiry date:" in line_lower or "expiry date:" in line_lower or "expiration date:" in line_lower):
+            elif not updated_date and ("updated date:" in line_lower or "last-update:" in line_lower or "changed:" in line_lower):
+                updated_date = line_str.split(":", 1)[-1].strip()
+            elif not expiry_date and ("registry expiry date:" in line_lower or "expiry date:" in line_lower or "expiration date:" in line_lower or "expires:" in line_lower):
                 expiry_date = line_str.split(":", 1)[-1].strip()
+            elif not dnssec and "dnssec:" in line_lower:
+                dnssec = line_str.split(":", 1)[-1].strip()
+            elif "domain status:" in line_lower or "status:" in line_lower:
+                st = line_str.split(":", 1)[-1].strip().split()[0]
+                if st and st not in statuses and len(statuses) < 4:
+                    statuses.append(st)
             elif "name server:" in line_lower or "nserver:" in line_lower:
                 ns = line_str.split(":", 1)[-1].strip().lower()
                 if ns and ns not in name_servers:
@@ -1552,10 +1571,13 @@ def whois_scan():
         return jsonify({
             "domain": domain,
             "registrar": registrar or "Non divulgué / Privé",
-            "created_date": created_date or "Inconnue",
-            "expiry_date": expiry_date or "Inconnue",
-            "name_servers": name_servers[:4],
-            "raw_text": raw_text[:3000]
+            "created_date": created_date or "Non renseignée",
+            "updated_date": updated_date or "Non renseignée",
+            "expiry_date": expiry_date or "Non renseignée",
+            "dnssec": dnssec or "Inconnu / Non configuré",
+            "statuses": statuses,
+            "name_servers": name_servers[:6],
+            "raw_text": raw_text[:4000]
         })
     except subprocess.TimeoutExpired:
         return jsonify({"error": "Délai d'attente dépassé pour la requête WHOIS."}), 504
@@ -1564,7 +1586,7 @@ def whois_scan():
 
 
 # =====================================================================================
-# SECTION 7.7 : SUBLIST3R (SUBDOMAIN ENUMERATION)
+# SECTION 7.7 : SUBLIST3R & DNSRECON (SUBDOMAIN ENUMERATION)
 # =====================================================================================
 
 @app.route("/api/subdomains-scan", methods=["POST"])
@@ -1575,35 +1597,48 @@ def subdomains_scan():
     if not target_url:
         return jsonify({"error": "Cible manquante."}), 400
 
-    domain = target_url.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+    root_domain = extract_root_domain(target_url)
 
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp_file:
         tmp_path = tmp_file.name
 
-    cmd = ["sublist3r", "-d", domain, "-o", tmp_path, "-t", "5"]
+    subdomains = set()
 
+    # Tentative 1 : Sublist3r OSINT (recherche passive multi-moteurs)
+    cmd = ["sublist3r", "-d", root_domain, "-o", tmp_path, "-t", "5"]
     try:
-        subprocess.run(cmd, capture_output=True, text=True, timeout=40)
-
-        subdomains = []
+        subprocess.run(cmd, capture_output=True, text=True, timeout=45)
         if os.path.exists(tmp_path):
             with open(tmp_path, 'r', encoding='utf-8', errors='ignore') as f:
-                subdomains = [line.strip() for line in f if line.strip()]
+                for line in f:
+                    sd = line.strip().lower()
+                    if sd:
+                        subdomains.add(sd)
+            os.remove(tmp_path)
+    except Exception:
+        if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-        return jsonify({
-            "domain": domain,
-            "subdomains": subdomains,
-            "count": len(subdomains)
-        })
-    except subprocess.TimeoutExpired:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
-        return jsonify({"error": "Délai dépassé pour la recherche de sous-domaines Sublist3r."}), 504
-    except Exception as exc:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
-        return jsonify({"error": f"Erreur Sublist3r : {exc}"}), 500
+    # Tentative 2 (Fallback ou complément) : DNSRecon si Sublist3r a trouvé peu de résultats
+    if len(subdomains) < 2:
+        try:
+            dr_cmd = ["dnsrecon", "-d", root_domain, "-t", "std"]
+            res = subprocess.run(dr_cmd, capture_output=True, text=True, timeout=25)
+            output = res.stdout or ""
+            for line in output.splitlines():
+                matches = re.findall(rf'([a-zA-Z0-9_.-]+\.{re.escape(root_domain)})', line, re.IGNORECASE)
+                for m in matches:
+                    subdomains.add(m.lower())
+        except Exception:
+            pass
+
+    sorted_subdomains = sorted(list(subdomains))
+
+    return jsonify({
+        "domain": root_domain,
+        "subdomains": sorted_subdomains,
+        "count": len(sorted_subdomains)
+    })
 
 
 

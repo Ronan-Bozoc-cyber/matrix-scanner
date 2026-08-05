@@ -378,27 +378,52 @@ async function runWebPentestPipeline(target, modeToggle) {
       whoisContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Impossible de récupérer le WHOIS (${wData.error}).</div>`;
     } else {
       const nsHtml = (wData.name_servers && wData.name_servers.length > 0)
-        ? wData.name_servers.map(n => `<span style="background: rgba(155, 89, 182, 0.2); border: 1px solid #9b59b6; color: #d6a2e8; padding: 2px 8px; border-radius: 3px; font-size: 0.8rem; font-family: monospace;">${n}</span>`).join(" ")
+        ? wData.name_servers.map(n => `<span style="background: rgba(155, 89, 182, 0.2); border: 1px solid #9b59b6; color: #d6a2e8; padding: 2px 8px; border-radius: 3px; font-size: 0.8rem; font-family: monospace; margin-right: 4px;">${n}</span>`).join("")
         : "<span style='color:#aaa;'>Non détecté</span>";
 
+      const statusHtml = (wData.statuses && wData.statuses.length > 0)
+        ? wData.statuses.map(s => `<span style="background: rgba(52, 152, 219, 0.15); border: 1px solid #3498db; color: #7ec8ff; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem; margin-right: 4px;">${s}</span>`).join("")
+        : "<span style='color:#aaa;'>Aucune restriction</span>";
+
       whoisContent.innerHTML = `
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 12px;">
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(155, 89, 182, 0.3); padding: 10px; border-radius: 6px;">
+            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Domaine Racine</div>
+            <div style="font-weight: bold; color: #9b59b6; font-size: 0.95rem; margin-top: 3px;">${wData.domain}</div>
+          </div>
           <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(155, 89, 182, 0.3); padding: 10px; border-radius: 6px;">
             <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Registrar (Bureau)</div>
-            <div style="font-weight: bold; color: #9b59b6; font-size: 0.95rem; margin-top: 3px;">${wData.registrar}</div>
+            <div style="font-weight: bold; color: #fff; font-size: 0.9rem; margin-top: 3px;">${wData.registrar}</div>
           </div>
           <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(155, 89, 182, 0.3); padding: 10px; border-radius: 6px;">
             <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Date de Création</div>
-            <div style="font-weight: bold; color: #fff; font-size: 0.9rem; margin-top: 3px;">${wData.created_date}</div>
+            <div style="font-weight: bold; color: #fff; font-size: 0.85rem; margin-top: 3px;">${wData.created_date}</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(155, 89, 182, 0.3); padding: 10px; border-radius: 6px;">
+            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Dernière Modification</div>
+            <div style="font-weight: bold; color: #fff; font-size: 0.85rem; margin-top: 3px;">${wData.updated_date}</div>
           </div>
           <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(155, 89, 182, 0.3); padding: 10px; border-radius: 6px;">
             <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Date d'Expiration</div>
-            <div style="font-weight: bold; color: #fff; font-size: 0.9rem; margin-top: 3px;">${wData.expiry_date}</div>
+            <div style="font-weight: bold; color: #fff; font-size: 0.85rem; margin-top: 3px;">${wData.expiry_date}</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(155, 89, 182, 0.3); padding: 10px; border-radius: 6px;">
+            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">DNSSEC</div>
+            <div style="font-weight: bold; color: #a3e9a4; font-size: 0.85rem; margin-top: 3px;">${wData.dnssec}</div>
           </div>
         </div>
-        <div style="margin-top: 8px;">
-          <span style="font-size: 0.85rem; color: #aaa; margin-right: 8px;">Serveurs DNS Autoritatifs :</span> ${nsHtml}
+
+        <div style="margin-top: 10px; font-size: 0.85rem; color: #ccc;">
+          <div style="margin-bottom: 6px;"><strong>Serveurs DNS (NS) :</strong> ${nsHtml}</div>
+          <div style="margin-bottom: 10px;"><strong>Statuts EPP :</strong> ${statusHtml}</div>
         </div>
+
+        <details style="margin-top: 12px; background: rgba(0,0,0,0.5); border: 1px solid rgba(155, 89, 182, 0.3); border-radius: 6px; padding: 8px;">
+          <summary style="cursor: pointer; color: #d6a2e8; font-size: 0.85rem; font-weight: bold;">
+            <i class="fa-solid fa-file-lines"></i> Afficher le rapport WHOIS brut complet
+          </summary>
+          <pre style="margin-top: 8px; font-size: 0.75rem; color: #aaa; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto;">${wData.raw_text || "Non disponible."}</pre>
+        </details>
       `;
     }
   } catch (err) {
