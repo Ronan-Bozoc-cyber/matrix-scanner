@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =====================================================================================
-# run.sh — Lance Matrix Scanner Pro (Interface ASCII Cyberpunk)
+# run.sh — Lance M-SCAN (Interface ASCII Matrix Green)
 # =====================================================================================
 # Active l'environnement virtuel, choisit un port libre (5000 ou >= 10001), et propose
 # le choix du navigateur (Navigateur par défaut ou lancement d'OnionHop 3.7.8 + Ouverture
@@ -12,13 +12,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Couleurs ANSI Cyberpunk / Matrix
-GREEN="\e[1;32m"
-CYAN="\e[1;36m"
+# Couleurs ANSI Matrix Green Phosphor
+GREEN="\e[38;5;46m"
+BRIGHT_GREEN="\e[38;5;82m"
+DIM_GREEN="\e[38;5;34m"
 WHITE="\e[1;37m"
 YELLOW="\e[1;33m"
 RED="\e[1;31m"
-DIM="\e[2m"
 RESET="\e[0m"
 
 # Fonction d'affichage du Banner ASCII Art
@@ -27,14 +27,14 @@ show_ascii_banner() {
     echo -e "${GREEN}"
     echo " ╔═════════════════════════════════════════════════════════════════════════════╗"
     echo " ║                                                                             ║"
-    echo " ║  ███╗   ███╗    ███████╗  ██████╗  █████╗  ███╗   ██╗                       ║"
-    echo " ║  ████╗ ████║    ██╔════╝ ██╔════╝ ██╔══██╗ ████╗  ██║                       ║"
-    echo " ║  ██╔████╔██║ ▄▄ ███████╗ ██║      ███████║ ██╔██╗ ██║ ▄▄  ████████╗         ║"
-    echo " ║  ██║╚██╔╝██║    ╚════██║ ██║      ██╔══██║ ██║╚██╗██║     ╚═══════╝         ║"
-    echo " ║  ██║ ╚═╝ ██║ ▀▀ ███████║ ╚██████╗ ██║  ██║ ██║ ╚████║ ▀▀  ████████╗         ║"
-    echo " ║  ╚═╝     ╚═╝    ╚══════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═╝  ╚═══╝  ╚═══════╝         ║"
+    echo " ║  ███╗   ███╗   ███████╗  ██████╗  █████╗  ███╗   ██╗                        ║"
+    echo " ║  ████╗ ████║   ██╔════╝ ██╔════╝ ██╔══██╗ ████╗  ██║                        ║"
+    echo " ║  ██╔████╔██║ ▀▀███████╗ ██║      ███████║ ██╔██╗ ██║ ▀▀                     ║"
+    echo " ║  ██║╚██╔╝██║   ╚════██║ ██║      ██╔══██║ ██║╚██╗██║                        ║"
+    echo " ║  ██║ ╚═╝ ██║   ███████║ ╚██████╗ ██║  ██║ ██║ ╚████║                        ║"
+    echo " ║  ╚═╝     ╚═╝   ╚══════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═╝  ╚═══╝                        ║"
     echo " ║                                                                             ║"
-    echo -e " ║              ${CYAN}[ Professional Reconnaissance & CVE Dashboard ]${GREEN}               ║"
+    echo -e " ║              ${BRIGHT_GREEN}[ Professional Reconnaissance & CVE Dashboard ]${GREEN}               ║"
     echo -e " ║                          ${WHITE}Concepteur : Ronan BOZOC${GREEN}                           ║"
     echo " ╚═════════════════════════════════════════════════════════════════════════════╝"
     echo -e "${RESET}"
@@ -55,7 +55,7 @@ fi
 # shellcheck disable=SC1091
 source venv/bin/activate
 
-echo -e "${CYAN}[⚙] Analyse des ports réseau en cours...${RESET}"
+echo -e "${BRIGHT_GREEN}[⚙] Analyse des ports réseau en cours...${RESET}"
 DETECTED_PORT=$(python3 -c "import app; print(app.find_available_port(5000, 10001))" 2>/dev/null | tail -n 1)
 export PORT="${DETECTED_PORT:-5000}"
 URL="http://127.0.0.1:${PORT}"
@@ -80,7 +80,7 @@ get_or_install_onionhop() {
     DO_INSTALL="${DO_INSTALL:-O}"
 
     if [[ "$DO_INSTALL" =~ ^[OoYy]$ ]]; then
-        echo -e "${CYAN}[⬇] Téléchargement d'OnionHop 3.7.8 AppImage depuis GitHub...${RESET}"
+        echo -e "${BRIGHT_GREEN}[⬇] Téléchargement d'OnionHop 3.7.8 AppImage depuis GitHub...${RESET}"
         mkdir -p "$HOME/.local/bin"
         TARGET_APPIMAGE="$HOME/.local/bin/OnionHop-x86_64.AppImage"
         GITHUB_RELEASE_URL="https://github.com/center2055/OnionHop/releases/download/v3.7.8/OnionHop-x86_64.AppImage"
@@ -96,7 +96,7 @@ get_or_install_onionhop() {
             return 1
         fi
     else
-        echo -e "${DIM}[i] Installation d'OnionHop ignorée.${RESET}"
+        echo -e "${DIM_GREEN}[i] Installation d'OnionHop ignorée.${RESET}"
         return 1
     fi
 }
@@ -122,11 +122,11 @@ fi
 (
     sleep 2
     if [ "$CHOICE" = "2" ] && [ -n "$ONION_BIN" ]; then
-        echo -e "${CYAN}[🚀] Lancement de l'application OnionHop 3.7.8 ($ONION_BIN)...${RESET}"
+        echo -e "${BRIGHT_GREEN}[🚀] Lancement de l'application OnionHop 3.7.8 ($ONION_BIN)...${RESET}"
         "$ONION_BIN" &>/dev/null &
     fi
 
-    echo -e "${GREEN}[🌐] Ouverture de M_SCAN _ dans le navigateur par défaut ($URL)...${RESET}"
+    echo -e "${GREEN}[🌐] Ouverture de M-SCAN dans le navigateur par défaut ($URL)...${RESET}"
     if command -v xdg-open &>/dev/null; then
         xdg-open "$URL" &>/dev/null &
     fi
@@ -134,7 +134,7 @@ fi
 
 echo ""
 echo -e "${GREEN} ┌─────────────────────────────────────────────────────────────────────────────┐${RESET}"
-echo -e "${GREEN} │ ${WHITE}[★] DÉMARRAGE DE M_SCAN _ SUR ${CYAN}$URL${GREEN}${RESET}"
+echo -e "${GREEN} │ ${WHITE}[★] DÉMARRAGE DE M-SCAN SUR ${BRIGHT_GREEN}$URL${GREEN}${RESET}"
 echo -e "${GREEN} └─────────────────────────────────────────────────────────────────────────────┘${RESET}"
 echo ""
 
