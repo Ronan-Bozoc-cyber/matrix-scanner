@@ -88,9 +88,14 @@
         <div id="screenshot-card" class="card hidden" style="margin-bottom: 20px; border-color: #3498db;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
             <h3 class="card-title" style="color: #3498db; margin: 0;"><i class="fa-solid fa-camera"></i> Capture d'Écran du Site Web Cible</h3>
-            <button id="btn-add-screenshot-to-report" class="btn btn-small" style="background: rgba(52, 152, 219, 0.15); border-color: #3498db; color: #7ec8ff; font-weight: bold; font-size: 0.75rem;">
-              <i class="fa-solid fa-image"></i> Ajouter la capture au rapport
-            </button>
+            <div style="display: flex; gap: 8px;">
+              <button id="btn-retry-screenshot" class="btn btn-small" style="background: rgba(52, 152, 219, 0.15); border-color: #3498db; color: #7ec8ff; font-weight: bold; font-size: 0.75rem;">
+                <i class="fa-solid fa-rotate-right"></i> Relancer la capture
+              </button>
+              <button id="btn-add-screenshot-to-report" class="btn btn-small" style="background: rgba(52, 152, 219, 0.15); border-color: #3498db; color: #7ec8ff; font-weight: bold; font-size: 0.75rem;">
+                <i class="fa-solid fa-image"></i> Ajouter la capture au rapport
+              </button>
+            </div>
           </div>
           <div id="screenshot-progress" class="scan-progress hidden">
             <div class="loader"></div>

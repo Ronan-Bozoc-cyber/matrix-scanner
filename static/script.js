@@ -662,36 +662,8 @@ async function runWebPentestPipeline(target, modeToggle) {
   }
 
   // --- ÉTAPE 4 : CAPTURE D'ÉCRAN SITE WEB (Gowitness) ---
-  if (progressText) progressText.textContent = "Étape 4/5 : Prise de vue du site Web (Gowitness)...";
-  if (screenshotCard) screenshotCard.classList.remove("hidden");
-  if (screenshotProgress) screenshotProgress.classList.remove("hidden");
-  if (screenshotContent) screenshotContent.innerHTML = "";
-
-  try {
-    const ssRes = await fetch("/api/screenshot", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target_url: target })
-    });
-    const ssData = await ssRes.json();
-    if (screenshotProgress) screenshotProgress.classList.add("hidden");
-
-    if (ssData.screenshot_url) {
-      screenshotContent.innerHTML = `
-        <div style="text-align: center;">
-          <a href="${ssData.screenshot_url}" target="_blank" title="Cliquer pour agrandir l'aperçu">
-            <img src="${ssData.screenshot_url}" style="max-width: 100%; max-height: 400px; border: 1px solid #3498db; border-radius: 6px; box-shadow: 0 0 15px rgba(52,152,219,0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'">
-          </a>
-          <p style="font-size: 0.8rem; color: #aaa; margin-top: 8px;">Aperçu visuel de l'application web rendu par Gowitness (Cliquer pour ouvrir)</p>
-        </div>
-      `;
-    } else {
-      screenshotContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Impossible de générer l'aperçu visuel (${ssData.error || "Service Web non accessible"}).</div>`;
-    }
-  } catch (err) {
-    if (screenshotProgress) screenshotProgress.classList.add("hidden");
-    if (screenshotContent) screenshotContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Capture d'écran indisponible (${err.message}).</div>`;
-  }
+  if (progressText) progressText.textContent = "Étape 4/6 : Prise de vue du site Web (Gowitness)...";
+  await executeGowitnessScreenshot(target);
 
   // --- ÉTAPE 5 : EMPREINTE CMS & TECHNOLOGIES WEB (WhatWeb) ---
   if (progressText) progressText.textContent = "Étape 5/6 : Détection des technologies web & CMS (WhatWeb)...";
@@ -721,6 +693,60 @@ async function runWebPentestPipeline(target, modeToggle) {
   // --- ÉTAPE 6 : PENTEST DE VULNÉRABILITÉS (Nmap, Nuclei, WPScan) ---
   if (progressText) progressText.textContent = "Étape 6/6 : Détection des services, ports & vulnérabilités...";
   await runNmapScan(target, "web", modeToggle);
+}
+
+async function executeGowitnessScreenshot(target) {
+  const screenshotCard = document.getElementById("screenshot-card");
+  const screenshotProgress = document.getElementById("screenshot-progress");
+  const screenshotContent = document.getElementById("screenshot-results-content");
+
+  if (screenshotCard) screenshotCard.classList.remove("hidden");
+  if (screenshotProgress) screenshotProgress.classList.remove("hidden");
+  if (screenshotContent) screenshotContent.innerHTML = "";
+
+  try {
+    const ssRes = await fetch("/api/screenshot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const ssData = await ssRes.json();
+    if (screenshotProgress) screenshotProgress.classList.add("hidden");
+
+    if (ssData.screenshot_url) {
+      screenshotContent.innerHTML = `
+        <div style="text-align: center;">
+          <a href="${ssData.screenshot_url}" target="_blank" title="Cliquer pour agrandir l'aperçu">
+            <img src="${ssData.screenshot_url}" style="max-width: 100%; max-height: 400px; border: 1px solid #3498db; border-radius: 6px; box-shadow: 0 0 15px rgba(52,152,219,0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'">
+          </a>
+          <p style="font-size: 0.8rem; color: #aaa; margin-top: 8px;">Aperçu visuel de l'application web rendu par Gowitness (Cliquer pour ouvrir)</p>
+        </div>
+      `;
+    } else {
+      screenshotContent.innerHTML = `
+        <div style="padding: 12px; background: rgba(241, 196, 15, 0.1); border-left: 3px solid #f1c40f; color: #f7dc6f; font-size: 0.85rem; text-align: left;">
+          <strong>⚠️ Capture d'écran indisponible :</strong> ${ssData.error || "Le service web n'a pas répondu à la prise de vue Gowitness."}
+          <div style="margin-top: 8px;">
+            <button onclick="executeGowitnessScreenshot('${target}')" class="btn btn-small" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #7ec8ff;">
+              <i class="fa-solid fa-rotate-right"></i> Réessayer la capture visuelle
+            </button>
+          </div>
+        </div>
+      `;
+    }
+  } catch (err) {
+    if (screenshotProgress) screenshotProgress.classList.add("hidden");
+    if (screenshotContent) screenshotContent.innerHTML = `
+      <div style="padding: 12px; background: rgba(241, 196, 15, 0.1); border-left: 3px solid #f1c40f; color: #f7dc6f; font-size: 0.85rem; text-align: left;">
+        <strong>⚠️ Capture d'écran indisponible :</strong> ${err.message}
+        <div style="margin-top: 8px;">
+          <button onclick="executeGowitnessScreenshot('${target}')" class="btn btn-small" style="background: rgba(52, 152, 219, 0.2); border: 1px solid #3498db; color: #7ec8ff;">
+            <i class="fa-solid fa-rotate-right"></i> Réessayer la capture visuelle
+          </button>
+        </div>
+      </div>
+    `;
+  }
 }
 
 function pollWhatwebJob(jobId, cmsProgress, cmsContent) {
@@ -2528,6 +2554,20 @@ function initAddToReportButtons() {
         return;
       }
       openAddToReportModal("Capture d'Écran du Site Web (Gowitness)", content.innerHTML);
+      return;
+    }
+
+    // Bouton Relancer la capture Gowitness
+    const btnRetrySs = e.target.closest("#btn-retry-screenshot");
+    if (btnRetrySs) {
+      e.preventDefault();
+      const targetInput = document.getElementById("target-input") || document.getElementById("target_input");
+      const currentTarget = targetInput ? targetInput.value.trim() : "";
+      if (currentTarget) {
+        executeGowitnessScreenshot(currentTarget);
+      } else {
+        alert("Veuillez saisir l'URL de la cible web dans le champ de saisie.");
+      }
       return;
     }
 
