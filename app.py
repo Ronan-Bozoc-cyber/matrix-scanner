@@ -2383,7 +2383,35 @@ def export_report_pdf(report_id):
     )
 
 
+def open_onionhop_or_default_browser(url="http://127.0.0.1:5000"):
+    """
+    Tente d'ouvrir l'application dans OnionHop 3.7.8 ou dans le navigateur par défaut.
+    """
+    time.sleep(1.2)
+    # Recherche prioritaire des exécutables OnionHop
+    onion_binaries = ["onionhop", "onionhop-3.7.8", "onion-hop", "OnionHop", "onionhop3.7.8"]
+    for cmd in onion_binaries:
+        path = shutil.which(cmd)
+        if path:
+            try:
+                subprocess.Popen([path, url])
+                print(f"[+] Application ouverte dans OnionHop ({path})")
+                return
+            except Exception as e:
+                print(f"[!] Échec d'ouverture avec {cmd} : {e}")
+
+    # Fallback sur le navigateur par défaut si OnionHop n'est pas détecté
+    try:
+        import webbrowser
+        webbrowser.open(url)
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
+    # Lancement d'OnionHop 3.7.8 / navigateur par défaut en arrière-plan
+    threading.Thread(target=open_onionhop_or_default_browser, daemon=True).start()
+
     # debug=True est pratique en pédagogie (affichage des erreurs)
     # use_reloader=False empêche les redémarrages intempestifs du serveur lors des écritures SQLite en base de données
     app.run(host="127.0.0.1", port=5000, debug=True, use_reloader=False)

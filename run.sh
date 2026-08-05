@@ -26,4 +26,21 @@ fi
 source venv/bin/activate
 
 echo "[+] Démarrage de Matrix Scanner sur http://127.0.0.1:5000"
+
+# Tentative d'ouverture automatique dans OnionHop 3.7.8
+(
+    sleep 1.5
+    URL="http://127.0.0.1:5000"
+    if command -v onionhop &>/dev/null; then
+        echo "[+] Ouverture dans OnionHop..."
+        onionhop "$URL" &>/dev/null &
+    elif command -v onionhop-3.7.8 &>/dev/null; then
+        echo "[+] Ouverture dans OnionHop 3.7.8..."
+        onionhop-3.7.8 "$URL" &>/dev/null &
+    elif command -v onion-hop &>/dev/null; then
+        echo "[+] Ouverture dans OnionHop..."
+        onion-hop "$URL" &>/dev/null &
+    fi
+) &
+
 python3 app.py
