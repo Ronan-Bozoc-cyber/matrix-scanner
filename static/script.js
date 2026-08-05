@@ -1879,16 +1879,39 @@ function initAddToReportButtons() {
     if (btnNetdiscover) {
       e.preventDefault();
       const listEl = document.getElementById("netdiscover-results-list");
-      let html = listEl ? listEl.innerHTML : "";
-      if (!html.trim()) {
+      let rawHtml = listEl ? listEl.innerHTML : "";
+      if (!rawHtml.trim()) {
         const card = document.getElementById("netdiscover-card");
-        if (card) html = card.innerHTML;
+        if (card) rawHtml = card.innerHTML;
       }
-      if (!html || !html.trim()) {
+      if (!rawHtml || !rawHtml.trim()) {
         alert("Veuillez d'abord lancer une découverte ARP Netdiscover pour obtenir des résultats.");
         return;
       }
-      openAddToReportModal("Découverte ARP (Netdiscover LAN)", html);
+
+      // Nettoyage complet pour le rapport d'audit
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = rawHtml;
+
+      // 1. Supprimer tous les boutons (Lancer le scan, Tout sélectionner, Tout désélectionner, etc.)
+      tempDiv.querySelectorAll("button").forEach(b => b.remove());
+
+      // 2. Supprimer les textes d'instructions interactives
+      tempDiv.querySelectorAll("span").forEach(s => {
+        if (s.textContent.includes("Sélectionnez les hôtes")) s.remove();
+      });
+
+      // 3. Supprimer la colonne des cases à cocher (checkboxes) dans le tableau
+      tempDiv.querySelectorAll("tr").forEach(tr => {
+        const cells = Array.from(tr.children);
+        cells.forEach(cell => {
+          if (cell.querySelector("input[type='checkbox']") || (tr.parentElement.tagName === "THEAD" && cell === cells[0])) {
+            cell.remove();
+          }
+        });
+      });
+
+      openAddToReportModal("Découverte ARP (Netdiscover LAN)", tempDiv.innerHTML);
       return;
     }
 
