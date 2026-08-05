@@ -191,6 +191,16 @@ REQUIRED_TOOLS = {
         "pip_package": "python-docx",
         "description": "Génération et exportation de rapports Word (.docx)",
     },
+    "whois": {
+        "check_cmd": ["whois", "--version"],
+        "apt_package": "whois",
+        "description": "Consultation des informations du registre de nom de domaine (WHOIS)",
+    },
+    "sublist3r": {
+        "check_cmd": ["sublist3r", "-h"],
+        "apt_package": "sublist3r",
+        "description": "Énumération OSINT passive de sous-domaines web",
+    },
     "reportlab": {
         "py_module": "reportlab",
         "pip_package": "reportlab",
@@ -1499,6 +1509,101 @@ def waf_scan():
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
         return jsonify({"error": f"Erreur lors de la détection WAF : {exc}"}), 500
+
+
+# =====================================================================================
+# SECTION 7.6 : WHOIS & DOMAIN RECON
+# =====================================================================================
+
+@app.route("/api/whois-scan", methods=["POST"])
+def whois_scan():
+    data = request.get_json(silent=True) or {}
+    target_url = data.get("target_url", "").strip()
+
+    if not target_url:
+        return jsonify({"error": "Cible manquante."}), 400
+
+    domain = target_url.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+
+    cmd = ["whois", domain]
+    try:
+        process = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        raw_text = process.stdout or process.stderr
+
+        registrar = None
+        created_date = None
+        expiry_date = None
+        name_servers = []
+
+        for line in raw_text.splitlines():
+            line_str = line.strip()
+            line_lower = line_str.lower()
+            if not registrar and ("registrar:" in line_lower or "sponsoring registrar:" in line_lower):
+                registrar = line_str.split(":", 1)[-1].strip()
+            elif not created_date and ("creation date:" in line_lower or "created:" in line_lower):
+                created_date = line_str.split(":", 1)[-1].strip()
+            elif not expiry_date and ("registry expiry date:" in line_lower or "expiry date:" in line_lower or "expiration date:" in line_lower):
+                expiry_date = line_str.split(":", 1)[-1].strip()
+            elif "name server:" in line_lower or "nserver:" in line_lower:
+                ns = line_str.split(":", 1)[-1].strip().lower()
+                if ns and ns not in name_servers:
+                    name_servers.append(ns)
+
+        return jsonify({
+            "domain": domain,
+            "registrar": registrar or "Non divulgué / Privé",
+            "created_date": created_date or "Inconnue",
+            "expiry_date": expiry_date or "Inconnue",
+            "name_servers": name_servers[:4],
+            "raw_text": raw_text[:3000]
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Délai d'attente dépassé pour la requête WHOIS."}), 504
+    except Exception as exc:
+        return jsonify({"error": f"Erreur WHOIS : {exc}"}), 500
+
+
+# =====================================================================================
+# SECTION 7.7 : SUBLIST3R (SUBDOMAIN ENUMERATION)
+# =====================================================================================
+
+@app.route("/api/subdomains-scan", methods=["POST"])
+def subdomains_scan():
+    data = request.get_json(silent=True) or {}
+    target_url = data.get("target_url", "").strip()
+
+    if not target_url:
+        return jsonify({"error": "Cible manquante."}), 400
+
+    domain = target_url.replace("http://", "").replace("https://", "").split("/")[0].split(":")[0]
+
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp_file:
+        tmp_path = tmp_file.name
+
+    cmd = ["sublist3r", "-d", domain, "-o", tmp_path, "-t", "5"]
+
+    try:
+        subprocess.run(cmd, capture_output=True, text=True, timeout=40)
+
+        subdomains = []
+        if os.path.exists(tmp_path):
+            with open(tmp_path, 'r', encoding='utf-8', errors='ignore') as f:
+                subdomains = [line.strip() for line in f if line.strip()]
+            os.remove(tmp_path)
+
+        return jsonify({
+            "domain": domain,
+            "subdomains": subdomains,
+            "count": len(subdomains)
+        })
+    except subprocess.TimeoutExpired:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        return jsonify({"error": "Délai dépassé pour la recherche de sous-domaines Sublist3r."}), 504
+    except Exception as exc:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        return jsonify({"error": f"Erreur Sublist3r : {exc}"}), 500
 
 
 

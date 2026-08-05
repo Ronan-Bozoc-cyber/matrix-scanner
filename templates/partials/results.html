@@ -39,6 +39,36 @@
           </div>
         </div>
 
+        <!-- CARTE WHOIS & REGISTRE DE DOMAINE -->
+        <div id="whois-card" class="card hidden" style="margin-bottom: 20px; border-color: #9b59b6;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="card-title" style="color: #9b59b6; margin: 0;"><i class="fa-solid fa-address-card"></i> Enregistrement du Nom de Domaine (WHOIS)</h3>
+            <button id="btn-add-whois-to-report" class="btn btn-small" style="background: rgba(155, 89, 182, 0.15); border-color: #9b59b6; color: #d6a2e8; font-weight: bold; font-size: 0.75rem;">
+              <i class="fa-solid fa-plus"></i> Ajouter le WHOIS au rapport
+            </button>
+          </div>
+          <div id="whois-progress" class="scan-progress hidden">
+            <div class="loader"></div>
+            <span id="whois-progress-text">Interrogation des registres WHOIS en cours...</span>
+          </div>
+          <div id="whois-results-content" style="margin-top: 10px;"></div>
+        </div>
+
+        <!-- CARTE ÉNUMÉRATION DE SOUS-DOMAINES (Sublist3r) -->
+        <div id="subdomains-card" class="card hidden" style="margin-bottom: 20px; border-color: #f1c40f;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="card-title" style="color: #f1c40f; margin: 0;"><i class="fa-solid fa-sitemap"></i> Sous-Domaines Découverts (Sublist3r OSINT)</h3>
+            <button id="btn-add-subdomains-to-report" class="btn btn-small" style="background: rgba(241, 196, 15, 0.15); border-color: #f1c40f; color: #f7dc6f; font-weight: bold; font-size: 0.75rem;">
+              <i class="fa-solid fa-plus"></i> Ajouter les sous-domaines au rapport
+            </button>
+          </div>
+          <div id="subdomains-progress" class="scan-progress hidden">
+            <div class="loader"></div>
+            <span id="subdomains-progress-text">Énumération OSINT des sous-domaines avec Sublist3r en cours...</span>
+          </div>
+          <div id="subdomains-results-content" style="margin-top: 10px;"></div>
+        </div>
+
         <!-- CARTE DÉTECTION WAF (Pare-feu applicatif web) -->
         <div id="waf-card" class="card hidden" style="margin-bottom: 20px; border-color: #e74c3c;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">

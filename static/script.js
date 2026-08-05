@@ -331,6 +331,14 @@ async function startScan(mode, customTarget = null) {
 }
 
 async function runWebPentestPipeline(target, modeToggle) {
+  const whoisCard = document.getElementById("whois-card");
+  const whoisProgress = document.getElementById("whois-progress");
+  const whoisContent = document.getElementById("whois-results-content");
+
+  const subdomainsCard = document.getElementById("subdomains-card");
+  const subdomainsProgress = document.getElementById("subdomains-progress");
+  const subdomainsContent = document.getElementById("subdomains-results-content");
+
   const wafCard = document.getElementById("waf-card");
   const wafProgress = document.getElementById("waf-progress");
   const wafContent = document.getElementById("waf-results-content");
@@ -351,8 +359,91 @@ async function runWebPentestPipeline(target, modeToggle) {
   setScanningState(true, "Pentest Web Distant en cours...");
   if (progressBox) progressBox.classList.remove("hidden");
 
-  // --- ÉTAPE 1 : DÉTECTION WAF (Wafw00f) ---
-  if (progressText) progressText.textContent = "Étape 1/3 : Analyse du Pare-Feu Applicatif (Wafw00f)...";
+  // --- ÉTAPE 1 : ENREGISTREMENT DU DOMAINE (WHOIS) ---
+  if (progressText) progressText.textContent = "Étape 1/5 : Consultation du Registre de Domaine (WHOIS)...";
+  if (whoisCard) whoisCard.classList.remove("hidden");
+  if (whoisProgress) whoisProgress.classList.remove("hidden");
+  if (whoisContent) whoisContent.innerHTML = "";
+
+  try {
+    const wRes = await fetch("/api/whois-scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const wData = await wRes.json();
+    if (whoisProgress) whoisProgress.classList.add("hidden");
+
+    if (wData.error) {
+      whoisContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Impossible de récupérer le WHOIS (${wData.error}).</div>`;
+    } else {
+      const nsHtml = (wData.name_servers && wData.name_servers.length > 0)
+        ? wData.name_servers.map(n => `<span style="background: rgba(155, 89, 182, 0.2); border: 1px solid #9b59b6; color: #d6a2e8; padding: 2px 8px; border-radius: 3px; font-size: 0.8rem; font-family: monospace;">${n}</span>`).join(" ")
+        : "<span style='color:#aaa;'>Non détecté</span>";
+
+      whoisContent.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;">
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(155, 89, 182, 0.3); padding: 10px; border-radius: 6px;">
+            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Registrar (Bureau)</div>
+            <div style="font-weight: bold; color: #9b59b6; font-size: 0.95rem; margin-top: 3px;">${wData.registrar}</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(155, 89, 182, 0.3); padding: 10px; border-radius: 6px;">
+            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Date de Création</div>
+            <div style="font-weight: bold; color: #fff; font-size: 0.9rem; margin-top: 3px;">${wData.created_date}</div>
+          </div>
+          <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(155, 89, 182, 0.3); padding: 10px; border-radius: 6px;">
+            <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Date d'Expiration</div>
+            <div style="font-weight: bold; color: #fff; font-size: 0.9rem; margin-top: 3px;">${wData.expiry_date}</div>
+          </div>
+        </div>
+        <div style="margin-top: 8px;">
+          <span style="font-size: 0.85rem; color: #aaa; margin-right: 8px;">Serveurs DNS Autoritatifs :</span> ${nsHtml}
+        </div>
+      `;
+    }
+  } catch (err) {
+    if (whoisProgress) whoisProgress.classList.add("hidden");
+    if (whoisContent) whoisContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Données WHOIS indisponibles (${err.message}).</div>`;
+  }
+
+  // --- ÉTAPE 2 : ÉNUMÉRATION SOUS-DOMAINES (Sublist3r) ---
+  if (progressText) progressText.textContent = "Étape 2/5 : Énumération OSINT des Sous-domaines (Sublist3r)...";
+  if (subdomainsCard) subdomainsCard.classList.remove("hidden");
+  if (subdomainsProgress) subdomainsProgress.classList.remove("hidden");
+  if (subdomainsContent) subdomainsContent.innerHTML = "";
+
+  try {
+    const subRes = await fetch("/api/subdomains-scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const subData = await subRes.json();
+    if (subdomainsProgress) subdomainsProgress.classList.add("hidden");
+
+    if (subData.subdomains && subData.subdomains.length > 0) {
+      let subHtml = `
+        <div style="font-size: 0.85rem; color: #f1c40f; margin-bottom: 8px; font-weight: bold;">
+          <i class="fa-solid fa-circle-check"></i> ${subData.count} sous-domaine(s) public(s) découvert(s) via OSINT :
+        </div>
+        <div style="max-height: 160px; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid rgba(241, 196, 15, 0.3); padding: 8px; border-radius: 6px;">
+          <ul style="margin: 0; padding-left: 20px; font-family: monospace; font-size: 0.85rem; color: #fff;">
+      `;
+      subData.subdomains.forEach(sd => {
+        subHtml += `<li style="margin-bottom: 3px;"><a href="http://${sd}" target="_blank" style="color: #f7dc6f; text-decoration: none;">${sd}</a></li>`;
+      });
+      subHtml += `</ul></div>`;
+      subdomainsContent.innerHTML = subHtml;
+    } else {
+      subdomainsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Aucun sous-domaine public supplémentaire identifié par OSINT passive pour <b>${target}</b>.</div>`;
+    }
+  } catch (err) {
+    if (subdomainsProgress) subdomainsProgress.classList.add("hidden");
+    if (subdomainsContent) subdomainsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Recherche de sous-domaines non disponible (${err.message}).</div>`;
+  }
+
+  // --- ÉTAPE 3 : DÉTECTION WAF (Wafw00f) ---
+  if (progressText) progressText.textContent = "Étape 3/5 : Analyse du Pare-Feu Applicatif (Wafw00f)...";
   if (wafCard) wafCard.classList.remove("hidden");
   if (wafProgress) wafProgress.classList.remove("hidden");
   if (wafContent) wafContent.innerHTML = "";
@@ -385,8 +476,8 @@ async function runWebPentestPipeline(target, modeToggle) {
     if (wafContent) wafContent.innerHTML = `<div style="color: #ffaa00; font-size: 0.85rem;">⚠️ Analyse WAF non disponible (${err.message}).</div>`;
   }
 
-  // --- ÉTAPE 2 : CAPTURE D'ÉCRAN SITE WEB (Gowitness) ---
-  if (progressText) progressText.textContent = "Étape 2/3 : Prise de vue du site Web (Gowitness)...";
+  // --- ÉTAPE 4 : CAPTURE D'ÉCRAN SITE WEB (Gowitness) ---
+  if (progressText) progressText.textContent = "Étape 4/5 : Prise de vue du site Web (Gowitness)...";
   if (screenshotCard) screenshotCard.classList.remove("hidden");
   if (screenshotProgress) screenshotProgress.classList.remove("hidden");
   if (screenshotContent) screenshotContent.innerHTML = "";
@@ -417,8 +508,8 @@ async function runWebPentestPipeline(target, modeToggle) {
     if (screenshotContent) screenshotContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Capture d'écran indisponible (${err.message}).</div>`;
   }
 
-  // --- ÉTAPE 3 : PENTEST DE VULNÉRABILITÉS & EMPREINTE (Nmap, WhatWeb, Nuclei) ---
-  if (progressText) progressText.textContent = "Étape 3/3 : Détection des services, technologies & vulnérabilités...";
+  // --- ÉTAPE 5 : PENTEST DE VULNÉRABILITÉS & EMPREINTE (Nmap, WhatWeb, Nuclei) ---
+  if (progressText) progressText.textContent = "Étape 5/5 : Détection des services, technologies & vulnérabilités...";
   await runNmapScan(target, "web", modeToggle);
 }
 
@@ -2046,6 +2137,32 @@ function initAddToReportButtons() {
       } catch (err) {
         alert("Erreur de capture d'image de la topologie : " + err.message);
       }
+      return;
+    }
+
+    // Bouton WHOIS
+    const btnWhois = e.target.closest("#btn-add-whois-to-report");
+    if (btnWhois) {
+      e.preventDefault();
+      const content = document.getElementById("whois-results-content");
+      if (!content || !content.innerHTML.trim()) {
+        alert("Aucune donnée WHOIS disponible à ajouter.");
+        return;
+      }
+      openAddToReportModal("Informations de Domaine (WHOIS)", content.innerHTML);
+      return;
+    }
+
+    // Bouton Sous-domaines
+    const btnSubdomains = e.target.closest("#btn-add-subdomains-to-report");
+    if (btnSubdomains) {
+      e.preventDefault();
+      const content = document.getElementById("subdomains-results-content");
+      if (!content || !content.innerHTML.trim()) {
+        alert("Aucun sous-domaine disponible à ajouter.");
+        return;
+      }
+      openAddToReportModal("Sous-Domaines Découverts (Sublist3r)", content.innerHTML);
       return;
     }
 
