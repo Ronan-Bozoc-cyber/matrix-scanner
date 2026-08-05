@@ -1778,61 +1778,85 @@ function insertWysiwygTable() {
 /* ---------- BOUTONS "AJOUTER AU RAPPORT" ET MODALE ---------- */
 
 function initAddToReportButtons() {
-  // Bouton Netdiscover Table
-  document.getElementById("btn-add-netdiscover-to-report")?.addEventListener("click", () => {
-    const listEl = document.getElementById("netdiscover-results-list");
-    if (!listEl || !listEl.innerHTML.trim()) {
-      alert("Aucun résultat Netdiscover à ajouter.");
+  document.addEventListener("click", (e) => {
+    // Bouton Résultats de Scan
+    const btnResults = e.target.closest("#btn-add-results-to-report");
+    if (btnResults) {
+      e.preventDefault();
+      const summaryEl = document.getElementById("results-summary");
+      const hostsEl = document.getElementById("hosts-detail");
+      let html = (summaryEl ? summaryEl.innerHTML : "") + (hostsEl ? hostsEl.innerHTML : "");
+      if (!html.trim()) {
+        const card = document.getElementById("results-card");
+        if (card) html = card.innerHTML;
+      }
+      if (!html || !html.trim()) {
+        alert("Veuillez d'abord lancer un scan pour obtenir des résultats à ajouter.");
+        return;
+      }
+      openAddToReportModal("Résultats du Pentest Réseau", html);
       return;
     }
-    openAddToReportModal("Découverte ARP (Netdiscover LAN)", listEl.innerHTML);
-  });
 
-  // Bouton Topologie Image
-  document.getElementById("btn-add-topo-to-report")?.addEventListener("click", () => {
-    const container = document.getElementById("local-topology-container");
-    if (!container) return;
-
-    const canvas = container.querySelector("canvas");
-    if (!canvas) {
-      alert("Graphique de topologie indisponible ou non généré.");
+    // Bouton Netdiscover Table
+    const btnNetdiscover = e.target.closest("#btn-add-netdiscover-to-report");
+    if (btnNetdiscover) {
+      e.preventDefault();
+      const listEl = document.getElementById("netdiscover-results-list");
+      let html = listEl ? listEl.innerHTML : "";
+      if (!html.trim()) {
+        const card = document.getElementById("netdiscover-card");
+        if (card) html = card.innerHTML;
+      }
+      if (!html || !html.trim()) {
+        alert("Veuillez d'abord lancer une découverte ARP Netdiscover pour obtenir des résultats.");
+        return;
+      }
+      openAddToReportModal("Découverte ARP (Netdiscover LAN)", html);
       return;
     }
 
-    try {
-      const dataUrl = canvas.toDataURL("image/png");
-      const imgHtml = `
-        <div style="text-align: center; margin: 15px 0;">
-          <img src="${dataUrl}" style="max-width: 100%; border: 1px solid #00ff41; border-radius: 6px; box-shadow: 0 0 10px rgba(0,255,65,0.2);">
-          <p style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">Schéma de topologie du réseau local (LAN)</p>
-        </div>
-      `;
-      openAddToReportModal("Topologie Réseau Local (LAN)", imgHtml);
-    } catch (err) {
-      alert("Erreur de capture d'image de la topologie : " + err.message);
-    }
-  });
+    // Bouton Topologie Image
+    const btnTopo = e.target.closest("#btn-add-topo-to-report");
+    if (btnTopo) {
+      e.preventDefault();
+      const container = document.getElementById("local-topology-container");
+      if (!container) return;
 
-  // Bouton Résultats de scan
-  document.getElementById("btn-add-results-to-report")?.addEventListener("click", () => {
-    const summaryEl = document.getElementById("results-summary");
-    const hostsEl = document.getElementById("hosts-detail");
-    const html = (summaryEl ? summaryEl.innerHTML : "") + (hostsEl ? hostsEl.innerHTML : "");
-    if (!html.trim()) {
-      alert("Aucun résultat de scan à ajouter.");
+      const canvas = container.querySelector("canvas");
+      if (!canvas) {
+        alert("Graphique de topologie indisponible. Veuillez d'abord lancer un scan local.");
+        return;
+      }
+
+      try {
+        const dataUrl = canvas.toDataURL("image/png");
+        const imgHtml = `
+          <div style="text-align: center; margin: 15px 0;">
+            <img src="${dataUrl}" style="max-width: 100%; border: 1px solid #00ff41; border-radius: 6px; box-shadow: 0 0 10px rgba(0,255,65,0.2);">
+            <p style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">Schéma de topologie du réseau local (LAN)</p>
+          </div>
+        `;
+        openAddToReportModal("Topologie Réseau Local (LAN)", imgHtml);
+      } catch (err) {
+        alert("Erreur de capture d'image de la topologie : " + err.message);
+      }
       return;
     }
-    openAddToReportModal("Résultats du Pentest Réseau", html);
-  });
 
-  // Bouton CVE
-  document.getElementById("btn-add-cve-to-report")?.addEventListener("click", () => {
-    const cveEl = document.getElementById("cve-results");
-    if (!cveEl || !cveEl.innerHTML.trim()) {
-      alert("Aucune CVE sélectionnée à ajouter.");
+    // Bouton CVE
+    const btnCve = e.target.closest("#btn-add-cve-to-report");
+    if (btnCve) {
+      e.preventDefault();
+      const cveEl = document.getElementById("cve-results");
+      let html = cveEl ? cveEl.innerHTML : "";
+      if (!html || !html.trim()) {
+        alert("Veuillez effectuer une recherche CVE d'abord.");
+        return;
+      }
+      openAddToReportModal("Vulnérabilités CVE Identifiées", html);
       return;
     }
-    openAddToReportModal("Vulnérabilités CVE Identifiées", cveEl.innerHTML);
   });
 }
 
@@ -1842,7 +1866,12 @@ function initAddToReportModal() {
   const cancelBtn = document.getElementById("btn-cancel-add-report");
   const confirmBtn = document.getElementById("btn-confirm-add-report");
 
-  const closeModal = () => modal?.classList.add("hidden");
+  const closeModal = () => {
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.style.display = "none";
+    }
+  };
 
   closeBtn?.addEventListener("click", closeModal);
   cancelBtn?.addEventListener("click", closeModal);
@@ -1873,7 +1902,7 @@ function initAddToReportModal() {
       }
 
       if (!targetReportId) {
-        alert("Veuillez sélectionner un rapport ou indiquer un titre pour en créer un nouveau.");
+        alert("Veuillez sélectionner un rapport existant ou indiquer un titre pour en créer un nouveau.");
         return;
       }
 
@@ -1910,25 +1939,28 @@ async function openAddToReportModal(title, html) {
   const newTitleInput = document.getElementById("input-new-report-title");
 
   if (newTitleInput) newTitleInput.value = "";
-  if (selectEl) selectEl.innerHTML = `<option value="">Chargement...</option>`;
+  if (selectEl) selectEl.innerHTML = `<option value="">Chargement des rapports...</option>`;
 
-  modal?.classList.remove("hidden");
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.style.display = "flex";
+  }
 
   try {
     const res = await fetch("/api/reports");
     const reports = await res.json();
 
     if (!Array.isArray(reports) || reports.length === 0) {
-      selectEl.innerHTML = `<option value="">(Aucun rapport existant - Saisissez un titre ci-dessous)</option>`;
+      if (selectEl) selectEl.innerHTML = `<option value="">(Aucun rapport existant - Saisissez un titre ci-dessous)</option>`;
     } else {
       let options = `<option value="">-- Sélectionner un rapport existant --</option>`;
       reports.forEach(r => {
         options += `<option value="${r.id}">${r.title} (${r.updated_at})</option>`;
       });
-      selectEl.innerHTML = options;
+      if (selectEl) selectEl.innerHTML = options;
     }
   } catch (err) {
-    selectEl.innerHTML = `<option value="">Erreur chargement rapports</option>`;
+    if (selectEl) selectEl.innerHTML = `<option value="">Erreur chargement rapports</option>`;
   }
 }
 
