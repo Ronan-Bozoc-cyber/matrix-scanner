@@ -359,7 +359,7 @@ def _fetch_public_ip_worker():
 def get_public_ip():
     global PUBLIC_IP_CACHE
     now = time.time()
-    if (now - PUBLIC_IP_CACHE["last_check"] > 300 or PUBLIC_IP_CACHE["ip"] in ["Détection...", "Indisponible"]) and not PUBLIC_IP_CACHE["fetching"]:
+    if (now - PUBLIC_IP_CACHE["last_check"] > 10 or PUBLIC_IP_CACHE["ip"] in ["Détection...", "Indisponible"]) and not PUBLIC_IP_CACHE["fetching"]:
         PUBLIC_IP_CACHE["fetching"] = True
         threading.Thread(target=_fetch_public_ip_worker, daemon=True).start()
     return PUBLIC_IP_CACHE["ip"]
