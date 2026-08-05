@@ -790,6 +790,43 @@ function renderWhatWebCmsResults(results, cmsContent) {
     techBadges.push(`<span style="background: rgba(46, 204, 113, 0.15); border: 1px solid #2ecc71; color: #a3e9a4; padding: 3px 8px; border-radius: 4px; font-size: 0.78rem; font-family: monospace; display: inline-block; margin-bottom: 4px; margin-right: 4px;">${badgeText}</span>`);
   }
 
+  const cvesFound = targetData.cves_found || [];
+  let cveTableHtml = "";
+
+  if (cvesFound.length > 0) {
+    cveTableHtml = `
+      <div style="margin-top: 15px; background: rgba(231, 76, 60, 0.08); border: 1px solid rgba(231, 76, 60, 0.3); border-radius: 6px; padding: 12px;">
+        <div style="font-size: 0.85rem; color: #ff8888; font-weight: bold; margin-bottom: 8px;">
+          <i class="fa-solid fa-bug"></i> ${cvesFound.length} CVE & Exploits Connus Détectés pour les Composants Web :
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; color: #fff;">
+          <thead>
+            <tr style="background: rgba(231, 76, 60, 0.2); color: #ff9999; text-align: left;">
+              <th style="padding: 6px 8px;">Composant</th>
+              <th style="padding: 6px 8px;">CVSS v3</th>
+              <th style="padding: 6px 8px;">Vulnérabilité / Exploit</th>
+              <th style="padding: 6px 8px;">Ref / EDB-ID</th>
+            </tr>
+          </thead>
+          <tbody>
+    `;
+
+    cvesFound.forEach(item => {
+      const isHigh = parseFloat(item.cvss_score) >= 7.0;
+      const cvssBg = isHigh ? "background: #e74c3c; color: #fff;" : "background: #f39c12; color: #000;";
+      cveTableHtml += `
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.08);">
+          <td style="padding: 6px 8px; font-weight: bold; color: #a3e9a4;">${item.plugin} ${item.version || ''}</td>
+          <td style="padding: 6px 8px;"><span style="${cvssBg} font-weight: bold; padding: 2px 6px; border-radius: 3px; font-size: 0.75rem;">${item.cvss_score} (${item.severity})</span></td>
+          <td style="padding: 6px 8px;">${item.title}</td>
+          <td style="padding: 6px 8px; font-family: monospace; color: #3498db;">EDB-${item.edb_id}</td>
+        </tr>
+      `;
+    });
+
+    cveTableHtml += `</tbody></table></div>`;
+  }
+
   cmsContent.innerHTML = `
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 12px;">
       <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(46, 204, 113, 0.3); padding: 10px; border-radius: 6px;">
@@ -810,6 +847,8 @@ function renderWhatWebCmsResults(results, cmsContent) {
       <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 6px;"><strong>Technologies Web Identifiées par WhatWeb (${techBadges.length}) :</strong></div>
       <div>${techBadges.length > 0 ? techBadges.join(" ") : "<span style='color:#888;'>Aucune technologie spécifique détectée</span>"}</div>
     </div>
+
+    ${cveTableHtml}
   `;
 }
 
