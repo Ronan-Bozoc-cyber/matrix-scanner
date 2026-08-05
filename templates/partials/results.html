@@ -43,17 +43,30 @@
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
       <h2 style="margin: 0;">03_ // Résultats du scan</h2>
       <button id="btn-add-results-to-report" class="btn btn-small" style="background: rgba(0, 255, 65, 0.15); border-color: #00ff41; color: #00ff41; font-weight: bold;">
-        <i class="fa-solid fa-plus"></i> Ajouter les résultats au rapport
+        <i class="fa-solid fa-plus"></i> Ajouter les résultats complets au rapport
       </button>
     </div>
 
     <div class="results-summary" id="results-summary"></div>
 
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+      <h3 style="margin: 0; color: #00ff41;"><i class="fa-solid fa-chart-pie"></i> Répartition des Ports</h3>
+      <button id="btn-add-chart-to-report" class="btn btn-small" style="background: rgba(0, 255, 65, 0.12); border-color: #00ff41; color: #00ff41; font-size: 0.8rem;">
+        <i class="fa-solid fa-image"></i> Ajouter le graphique au rapport
+      </button>
+    </div>
+
     <div class="chart-container">
       <canvas id="ports-chart"></canvas>
     </div>
 
-    <h3>Détail par hôte</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; border-top: 1px dashed rgba(0,255,65,0.2); padding-top: 15px;">
+      <h3 style="margin: 0; color: #00ff41;"><i class="fa-solid fa-network-wired"></i> Détail par hôte</h3>
+      <button id="btn-add-all-hosts-to-report" class="btn btn-small" style="background: rgba(0, 255, 65, 0.15); border-color: #00ff41; color: #00ff41; font-weight: bold; font-size: 0.8rem;">
+        <i class="fa-solid fa-server"></i> Ajouter tous les hôtes au rapport (1-clic)
+      </button>
+    </div>
+
     <div id="hosts-detail"></div>
   </div>
 

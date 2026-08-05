@@ -640,12 +640,34 @@ function renderResults(hosts) {
     const hostBlock = document.createElement("div");
     hostBlock.className = "host-block";
 
+    const titleContainer = document.createElement("div");
+    titleContainer.style.display = "flex";
+    titleContainer.style.justifyContent = "space-between";
+    titleContainer.style.alignItems = "center";
+    titleContainer.style.flexWrap = "wrap";
+    titleContainer.style.gap = "10px";
+    titleContainer.style.marginBottom = "8px";
+
     const title = document.createElement("h4");
+    title.style.margin = "0";
     const icon = host.icon || "fa-server";
     const cat = host.category ? ` [${host.category}]` : "";
     const nameStr = host.hostname || host.netbios_name ? ` (${host.hostname || host.netbios_name})` : "";
     title.innerHTML = `<i class="fa-solid ${icon}" style="color:#00ff41; margin-right:8px;"></i> ${host.ip}${nameStr} <small style="color:#ffaa00; font-size:0.8em;">${cat}</small>`;
-    hostBlock.appendChild(title);
+
+    const addHostBtn = document.createElement("button");
+    addHostBtn.className = "btn btn-small btn-add-single-host-to-report";
+    addHostBtn.setAttribute("data-host-ip", host.ip);
+    addHostBtn.style.fontSize = "0.75rem";
+    addHostBtn.style.padding = "3px 8px";
+    addHostBtn.style.background = "rgba(0, 255, 65, 0.12)";
+    addHostBtn.style.borderColor = "#00ff41";
+    addHostBtn.style.color = "#00ff41";
+    addHostBtn.innerHTML = `<i class="fa-solid fa-plus"></i> Ajouter cet hôte au rapport`;
+
+    titleContainer.appendChild(title);
+    titleContainer.appendChild(addHostBtn);
+    hostBlock.appendChild(titleContainer);
 
     if (host.vendor || host.netbios_name) {
       const infoP = document.createElement("p");
@@ -1795,6 +1817,60 @@ function initAddToReportButtons() {
         return;
       }
       openAddToReportModal("Résultats du Pentest Réseau", html);
+      return;
+    }
+
+    // Bouton Graphique des Ports (Chart)
+    const btnChart = e.target.closest("#btn-add-chart-to-report");
+    if (btnChart) {
+      e.preventDefault();
+      const canvas = document.getElementById("ports-chart");
+      if (!canvas) {
+        alert("Graphique des ports indisponible.");
+        return;
+      }
+      try {
+        const dataUrl = canvas.toDataURL("image/png");
+        const chartHtml = `
+          <div style="text-align: center; margin: 15px 0;">
+            <img src="${dataUrl}" style="max-width: 100%; border: 1px solid #00ff41; border-radius: 6px; box-shadow: 0 0 10px rgba(0,255,65,0.2);">
+            <p style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">Graphique de répartition des ports scannés</p>
+          </div>
+        `;
+        openAddToReportModal("Graphique Répartition des Ports", chartHtml);
+      } catch (err) {
+        alert("Erreur de capture du graphique : " + err.message);
+      }
+      return;
+    }
+
+    // Bouton Tous les Hôtes (1-clic)
+    const btnAllHosts = e.target.closest("#btn-add-all-hosts-to-report");
+    if (btnAllHosts) {
+      e.preventDefault();
+      const hostsEl = document.getElementById("hosts-detail");
+      if (!hostsEl || !hostsEl.innerHTML.trim()) {
+        alert("Aucun détail d'hôte disponible à ajouter.");
+        return;
+      }
+      // Clone element and strip buttons
+      const clone = hostsEl.cloneNode(true);
+      clone.querySelectorAll(".btn-add-single-host-to-report").forEach(b => b.remove());
+      openAddToReportModal("Détail Complet de Tous les Hôtes Scannés", clone.innerHTML);
+      return;
+    }
+
+    // Bouton Hôte Individuel
+    const btnSingleHost = e.target.closest(".btn-add-single-host-to-report");
+    if (btnSingleHost) {
+      e.preventDefault();
+      const hostBlock = btnSingleHost.closest(".host-block");
+      if (!hostBlock) return;
+      const hostIp = btnSingleHost.getAttribute("data-host-ip") || "Inconnu";
+      // Clone element and remove button before generating HTML
+      const clone = hostBlock.cloneNode(true);
+      clone.querySelectorAll(".btn-add-single-host-to-report").forEach(b => b.remove());
+      openAddToReportModal(`Fiche Hôte : ${hostIp}`, clone.innerHTML);
       return;
     }
 
