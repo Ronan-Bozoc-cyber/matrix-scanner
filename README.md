@@ -1,138 +1,181 @@
-# 🟢 Matrix Scanner — Dashboard pédagogique de reconnaissance réseau, audit Web & CVE
+# 🟢 Matrix Scanner — Plateforme Pédagogique d'Audit Réseau, de Sécurité Web & de CVE
 
-**Matrix Scanner** est une application web locale moderne et pédagogique destinée aux élèves ingénieurs et passionnés de cybersécurité. Elle permet d'apprendre, de manière visuelle, interactive et guidée, l'utilisation de `nmap`, l'audit de sécurité d'applications web, ainsi que la recherche de vulnérabilités connues (CVE) via la base locale `searchsploit` (Exploit-DB).
+**Matrix Scanner** est un tableau de bord web interactif, visuel et pédagogique conçu pour les élèves ingénieurs, les professionnels et les passionnés de cybersécurité. 
 
-![Thème Matrix](static/workflow.png)
-
----
-
-## ⚠️ AVERTISSEMENT LÉGAL
-
-**N'utilisez cet outil que sur des machines que vous possédez ou pour lesquelles vous disposez d'une autorisation écrite explicite** (VM de lab type Metasploitable, réseau de TP isolé, environnement CTF...). Scanner un système tiers sans autorisation est une infraction pénale (en France : art. 323-1 du Code pénal).
+Il permet d'apprendre et d'expérimenter concrètement la reconnaissance réseau avec `nmap`, l'analyse d'applications web (en-têtes de sécurité, WAF, empreintes) et la recherche de vulnérabilités réelles (CVE) via la base locale Exploit-DB (`searchsploit`).
 
 ---
 
-## 🌟 Fonctionnalités principales
+## ⚠️ AVERTISSEMENT LÉGAL ET ÉTHIQUE
 
-### 🤖 Mode Autopilote & Scan Intelligent (`/web` & `/local`)
-- **Analyse automatique d'IP/Domaine** : Test de connectivité ICMP / Ping préalable.
-- **Scan Réseau Nmap** : Détection des ports ouverts, résolution de services/versions (`-sV`) et empreinte d'OS (`-O`).
-- **Audit de Sécurité Web** : Détection d'en-têtes HTTP de sécurité (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, etc.), détection de serveurs et technologies via `whatweb`.
-- **Captures d'écran Web** : Génération automatique de visuels des services web découverts.
-- **Corrélation CVE automatique** : Interrogation automatique de la base locale Exploit-DB via `searchsploit` pour chaque service identifié.
-- **Score de Risque & Recommandations** : Calcul d'un score de vulnérabilité global (0 à 100) accompagné de conseils de remédiation clairs.
+**L'utilisation de cet outil doit se faire exclusivement sur des systèmes dont vous êtes propriétaire ou pour lesquels vous possédez une autorisation écrite explicite.**
 
-### ⚙️ Mode Scan Manuel Avancé
-- **7 Types de Scans Nmap** : SYN Scan (`-sS`), TCP Connect (`-sT`), UDP Scan (`-sU`), FIN (`-sF`), NULL (`-sN`), Xmas (`-sX`), ACK (`-sA`).
-- **Portée personnalisable** : Top 100, Top 1000, Ports Web, Tous les ports (65535) ou sélection sur mesure.
-- **Techniques d'évasion & Timing** : Fragmentation de paquets (`-f`), leurres IP (`-D RND:5`), contrôle de cadence (`-T0` à `-T5`), traceroute (`--traceroute`), et scripts NSE.
-- **Aperçu dynamique (`Command Preview`)** : Affichage en temps réel de la commande `nmap` exacte construite sous le capot pour renforcer l'apprentissage CLI.
-
-### 📊 Visualisation & Historique SQLite
-- **Dashboard Réorganisé & Responsive** : Interface fluide en thématique Cyberpunk / Matrix avec fond animé en pluie de code Canvas (`matrix.js`).
-- **Graphiques interactifs Chart.js** : Répartition visuelle des services et classification des niveaux de sévérité des vulnérabilités.
-- **Base de données SQLite (`scanner_history.db`)** : Historique complet des scans enregistrés, comparaison, consultation des rapports passés et suppression en un clic.
-
-### 🛠️ Gestionnaire de Dépendances & Polkit
-- Détection automatique au démarrage des outils indispensables (`nmap`, `searchsploit` / `exploitdb`, `whatweb`, `policykit-1`).
-- Bouton d'installation graphique en un clic avec élévation de privilèges Polkit (`pkexec`).
+- **Cadre légal** : En France, l'accès ou le maintien frauduleux dans un système de traitement automatisé de données est puni par l'article 323-1 et suivants du Code pénal.
+- **Usage recommandé** : Environnements de TP isolés, machines virtuelles de laboratoire (*Metasploitable, VulnHub, TryHackMe*), ou missions de test d'intrusion dûment autorisées.
 
 ---
 
-## 📋 Prérequis système
+## 🎓 Objectifs Pédagogiques
 
-- **Système d'exploitation** : Linux (Debian, Ubuntu, Kali Linux)
-- **Python** : Version 3.9+
-- **Privilèges** : `policykit-1` (fournit `pkexec`, généralement présent sur les environnements de bureau)
-- **Accès internet / apt** : Pour l'installation automatique des paquets système (`nmap`, `exploitdb`, `whatweb`)
+Matrix Scanner n'est pas une "boîte noire" : il est spécialement conçu pour transmettre les concepts fondamentaux de la sécurité offensive et défensive :
+
+1. **Faire le lien UI ➔ CLI** : Chaque option sélectionnée dans l'interface reconstruit et affiche en temps réel la commande `nmap` exacte qui est exécutée (`Command Preview`).
+2. **Comprendre la mécanique des paquets réseau** : Différencier un scan TCP SYN (`-sS`) discret d'un scan TCP Connect (`-sT`) ou d'un scan furtif FIN/NULL/Xmas, et comprendre l'exigence de privilèges (*raw sockets*).
+3. **Évaluer la sécurité d'une application Web** : Détecter la présence d'un pare-feu applicatif (WAF) et vérifier l'absence d'en-têtes HTTP de protection (*HSTS, CSP, X-Frame-Options, etc.*).
+4. **Pratiquer la gestion des vulnérabilités** : Associer chaque service et version logicielle détectés (`-sV`) à des failles réelles répertoriées dans la base de données Exploit-DB.
 
 ---
 
-## 🚀 Installation & Lancement
+## ⚡ Fonctionnalités & Workflows Détaillés
 
-### 1. Installation automatisée (recommandée)
+### 🤖 1. Workflow Autopilote & Scan Intelligent (`/web` & `/local`)
 
-Un script `install.sh` automatise l'intégralité de la procédure (création du venv Python, installation de Flask, paquets système via `apt`, et attribution des capacités réseau nécessaires aux scans `-sS`/`-O` sans executer le serveur en root) :
+Le mode Autopilote enchaîne automatiquement 8 étapes d'analyse :
+
+```
+[1. Saisie IP/Domaine] ➔ [2. Test Ping ICMP] ➔ [3. Scan Nmap -sV -O] ➔ [4. Audit Web & WAF]
+   ➔ [5. Capture d'écran Web] ➔ [6. Corrélation CVE Searchsploit] ➔ [7. Score de Risque] ➔ [8. Archivage SQLite]
+```
+
+- **Étape 1 : Normalisation de la cible** — Extrait et valide l'IP ou le domaine pour éliminer tout risque d'injection.
+- **Étape 2 : Test de réactivité** — Envoi de requêtes ICMP/Ping pour valider la connectivité réseau de l'hôte.
+- **Étape 3 : Scan Nmap approfondi** — Détection des ports ouverts, résolution de versions des services (`-sV`) et empreinte d'OS (`-O`).
+- **Étape 4 : Audit Web & En-têtes HTTP** — Si des ports Web (80, 443, 8080...) sont ouverts, détection des technologies (`whatweb`), du WAF et audit des en-têtes de sécurité HTTP.
+- **Étape 5 : Capture d'écran headless** — Prise de vue automatique des applications web découvertes pour un aperçu visuel rapide.
+- **Étape 6 : Corrélation CVE locale** — Interrogation de la base locale Exploit-DB (`searchsploit --json`) sur la base des couples `(service, version)`.
+- **Étape 7 : Calcul du Score de Risque (0 à 100)** — Algorithme pondérant l'exposition des ports sensibles, la gravité des CVE et le niveau de protection HTTP.
+- **Étape 8 : Archivage & Rendu** — Sauvegarde dans la base SQLite locale et affichage des résultats sous forme de graphiques interactifs (Chart.js).
+
+---
+
+### ⚙️ 2. Workflow du Scan Manuel Avancé
+
+Permet d'expérimenter finement les options avancées de `nmap` :
+
+#### Types de Scans pris en charge :
+- **TCP SYN Scan (`-sS`)** : Furtif ("half-open"), envoie un SYN et attend SYN-ACK sans finaliser la connexion. Nécessite les capacités réseau `cap_net_raw`.
+- **TCP Connect Scan (`-sT`)** : Établit une connexion TCP complète via l'API `connect()` du système. Utilisable sans privilèges root.
+- **UDP Scan (`-sU`)** : Balaye les services UDP (DNS, DHCP, SNMP...). Plus lent et sujet aux pertes de paquets.
+- **Scans Furtifs (`-sF`, `-sN`, `-sX`)** : Scans FIN, NULL et Xmas tirant parti des spécifications RFC TCP pour contourner certains filtres stateless.
+- **TCP ACK Scan (`-sA`)** : Permet de déterminer si les ports sont filtrés par un pare-feu à état (*stateful*).
+
+#### Options d'Évasion & Timing :
+- **Contrôle de vitesse (`-T0` à `-T5`)** : De Paranoid (esquive IDS) à Insane (scans ultra-rapides sur réseaux locaux fiables).
+- **Fragmentation de paquets (`-f`)** : Scinde les en-têtes TCP en petits paquets pour échapper à la détection de certains IDS.
+- **Leurres IP (`-D RND:5`)** : Masque l'IP réelle du scanner au milieu d'IP fictives générées aléatoirement.
+- **Traceroute (`--traceroute`)** : Cartographie les sauts réseau (routeurs/pare-feux) jusqu'à la cible.
+
+---
+
+### 📊 3. Historique & Base de données SQLite (`scanner_history.db`)
+
+Tous les scans réalisés sont enregistrés localement dans une base SQLite.
+- Conserve le contexte de chaque scan (cible, type de scan, horodatage, résultats JSON complets).
+- Permet la consultation ultérieure, le rechargement interactif des rapports et la suppression d'entrées d'historique.
+
+---
+
+### 🛠️ 4. Gestionnaire de Dépendances & Sécurité Polkit
+
+Matrix Scanner requiert des outils système sous-jacents (`nmap`, `exploitdb`, `whatweb`, `policykit-1`).
+- Au démarrage, l'application vérifie automatiquement la présence de chaque binaire.
+- Si un outil manque, un bouton d'installation graphique s'affiche.
+- L'installation s'appuie sur `pkexec` (Polkit) : l'utilisateur saisit son mot de passe dans la pop-up système native. **Aucun identifiant ne transite dans le code Python**.
+
+---
+
+## 🔒 Privilèges Linux & Sécurité (`setcap`)
+
+Pourquoi les scans `-sS` et `-O` nécessitent-ils des privilèges spéciaux ?
+Les paquets réseau sur-mesure (Raw Sockets) requièrent traditionnellement d'exécuter la commande en `root`. 
+
+Pour éviter la mauvaise pratique de sécurité qui consisterait à exécuter l'ensemble du serveur Flask avec `sudo`, le script d'installation utilise la fonctionnalité **Linux Capabilities** :
+```bash
+sudo setcap cap_net_raw,cap_net_admin+eip $(readlink -f venv/bin/python3)
+```
+Cela attribue uniquement à l'interpréteur Python du venv les privilèges stricts d'émission de paquets bruts, garantissant une étanchéité et une sécurité maximales.
+
+---
+
+## 🚀 Guide d'Installation & Lancement Pas à Pas
+
+### Méthode 1 : Installation automatisée (Recommandée)
 
 ```bash
+# 1. Cloner le projet et se placer dans le dossier
 cd matrix-scanner
+
+# 2. Rendre les scripts exécutables
 chmod +x install.sh run.sh
-./install.sh      # Demande le mot de passe sudo UNIQUEMENT pour apt et setcap
-./run.sh           # Lance le serveur Flask (jamais avec sudo)
+
+# 3. Lancer le script d'installation (demande sudo uniquement pour apt et setcap)
+./install.sh
+
+# 4. Lancer le serveur (sans sudo)
+./run.sh
 ```
 
-### 2. Lancement du serveur
+### Méthode 2 : Installation manuelle
 
 ```bash
-./run.sh
-# ou manuellement :
-source venv/bin/activate && python3 app.py
+# 1. Créer et activer l'environnement virtuel Python
+python3 -m venv venv
+source venv/bin/activate
+
+# 2. Installer les dépendances Python
+pip install -r requirements.txt
+
+# 3. Installer les outils système (sur Debian/Ubuntu/Kali)
+sudo apt-get update
+sudo apt-get install -y nmap exploitdb whatweb policykit-1 libcap2-bin
+
+# 4. Attribuer les capacités réseau au Python du venv
+sudo setcap cap_net_raw,cap_net_admin+eip $(readlink -f venv/bin/python3)
+
+# 5. Lancer l'application
+python3 app.py
 ```
 
-Le serveur démarre sur **`http://127.0.0.1:5000`** (accessible uniquement depuis la machine locale). Ouvrez cette adresse dans votre navigateur web.
+### Accès à l'application
+Une fois démarré, ouvrez votre navigateur web à l'adresse : **`http://127.0.0.1:5000`**
 
 ---
 
-## 🔒 Droits Root & Capacités réseau (`setcap`)
-
-Les scans **SYN (`-sS`)** et la **détection d'OS (`-O`)** de `nmap` nécessitent la construction de paquets réseau bruts (*raw sockets*). 
-
-Pour des raisons de sécurité, le serveur Flask **ne doit jamais être exécuté en root**. Deux options sont proposées :
-
-1. **Attribution automatique des capacités Linux (`setcap`)** (géré par `install.sh`) :
-   ```bash
-   sudo setcap cap_net_raw,cap_net_admin+eip $(readlink -f venv/bin/python3)
-   ```
-   L'interpréteur Python du venv reçoit uniquement les privilèges réseau nécessaires.
-2. **Utilisation du scan TCP Connect (`-sT`)** :
-   Fonctionne sans aucun privilège spécifique et est directement sélectionnable dans le mode manuel de l'interface.
-
----
-
-## 📁 Structure du projet
+## 📁 Architecture du Projet
 
 ```
 matrix-scanner/
-├── app.py                 # Backend Flask : routes API, orchestration Nmap, WAF/HTTP, SQLite, CVE
-├── install.sh             # Script d'installation automatisée (venv, apt, setcap)
-├── run.sh                 # Script d'exécution du serveur
+├── app.py                 # Backend Flask : Routes API REST, orchestration subprocess, SQLite, CVE
+├── install.sh             # Script d'installation automatisé (venv, apt-get, setcap)
+├── run.sh                 # Script de lancement du serveur local
 ├── requirements.txt       # Dépendances Python (Flask)
-├── scanner_history.db     # Base de données SQLite (générée automatiquement à la première exécution)
-├── README.md              # Documentation du projet
+├── scanner_history.db     # Base de données SQLite générée automatiquement
+├── README.md              # Documentation pédagogique du projet
 ├── templates/             # Templates HTML Jinja2 modularisés
-│   ├── base.html          # Layout principal (barre de navigation, canvas Matrix, scripts communs)
-│   ├── home.html          # Vue d'ensemble & tableau de bord principal
-│   ├── web.html           # Section d'audit & scanner Web
-│   ├── local.html         # Section de reconnaissance réseau local / LAN
-│   ├── history.html       # Consultation & gestion de l'historique des scans
-│   ├── settings.html      # État des outils système et configuration
-│   └── partials/          # Composants UI réutilisables
+│   ├── base.html          # Layout principal (barre de nav, canvas Matrix, scripts)
+│   ├── home.html          # Vue d'ensemble et accueil du tableau de bord
+│   ├── web.html           # Interface dédiée aux audits Web & WAF
+│   ├── local.html         # Interface dédiée à la reconnaissance LAN / Réseau
+│   ├── history.html       # Interface de consultation de l'historique SQLite
+│   ├── settings.html      # État des dépendances et outils système
+│   └── partials/          # Composants réutilisables
 │       ├── results.html   # Rendu dynamique des résultats de scan & graphiques Chart.js
-│       ├── modal.html     # Modales interactives pour la recherche et le détail des CVE
-│       ├── manual_settings.html # Formulaire d'options manuelles Nmap
-│       └── banners.html   # Bannière et indicateurs d'état des dépendances
+│       ├── modal.html     # Modales interactives de détails CVE / Exploit-DB
+│       ├── manual_settings.html # Formulaire des options avancées Nmap
+│       └── banners.html   # Bandeaux d'alerte des dépendances
 └── static/
-    ├── style.css          # Feuille de style principale (Thème sombre Matrix, Cyberpunk, responsive)
-    ├── script.js          # Logique frontend (appels API asynchrones, Chart.js, modales CVE)
+    ├── style.css          # Thème sombre Matrix / Cyberpunk (Glassmorphism & animations)
+    ├── script.js          # Logique frontend (requêtes API asynchrones, Chart.js, modales)
     └── matrix.js          # Animation Canvas effet pluie de code Matrix
 ```
 
 ---
 
-## 🎓 Démarche pédagogique
-
-- **Encarts explicatifs** : Chaque option graphique (types de scan, ports, timing, évasion) est assortie d'une note didactique expliquant les flags `nmap` sous-jacents.
-- **Commande en temps réel** : La commande CLI exacte est affichée au fur et à mesure des choix pour familiariser les étudiants avec le terminal.
-- **Parsing XML natif** : Les résultats bruts de `nmap` sont traités via le format XML (`-oX -`) et structurés sous forme de tableaux lisibles.
-- **Sensibilisation aux vulnérabilités** : Pour chaque service découvert avec sa version précise (`-sV`), le bouton **"🔍 Chercher CVE"** interroge la base Exploit-DB locale (`searchsploit --json`) pour lier la théorie à la pratique.
-
----
-
-## 🛠️ Guide de dépannage
+## 🛠️ Guide de Dépannage (FAQ)
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
-| Le bouton d'installation ne réagit pas | `policykit-1` non installé | Exécuter `sudo apt-get install policykit-1` puis relancer |
-| Erreur "Permission refusée" lors du scan | Scan `-sS` ou `-O` sans privilèges | Relancer `./install.sh` pour réappliquer `setcap`, ou choisir le scan `-sT` |
-| Pop-up Polkit annulée | Annulation manuelle du mot de passe | Cliquer à nouveau sur le bouton d'installation et saisir le mot de passe sudo |
-| Le scan ne termine pas | Cible injoignable ou bloquée par un pare-feu | Tester la réactivité avec un ping, réduire le nombre de ports ou changer le timing (`-T3`) |
+| **Erreur "Permission refusée" lors du scan -sS / -O** | Capacités `setcap` non attribuées au venv | Exécuter `sudo setcap cap_net_raw,cap_net_admin+eip venv/bin/python3` ou utiliser le mode `-sT`. |
+| **Le bouton "Installer les dépendances" ne réagit pas** | `policykit-1` manquant sur le système | Installer Polkit via terminal : `sudo apt-get install policykit-1`. |
+| **Erreur de création de venv sous Debian/Kali** | Module `ensurepip` absent | Exécuter `sudo apt-get install python3-full` puis relancer `./install.sh`. |
+| **Le scan est très long ou ne répond pas** | Pare-feu bloquant ou hôte injoignable | Réduire le nombre de ports, vérifier la réactivité avec un ping, ou utiliser le timing `-T3`. |
