@@ -1,6 +1,8 @@
-# 🟢 Matrix scanner : plateforme pédagogique d'audit réseau, de sécurité web et de CVE
+# 🟢 Matrix Scanner : plateforme pédagogique d'audit réseau, de sécurité web et de CVE
 
-**Matrix Scanner** est un tableau de bord web interactif, visuel et pédagogique conçu pour les élèves ingénieurs, les professionnels et les passionnés de cybersécurité.
+> **Concepteur & Développeur** : **Ronan BOZOC**
+
+**Matrix Scanner** est un tableau de bord web interactif, visuel et pédagogique conçu par **Ronan BOZOC** pour les élèves ingénieurs, les professionnels et les passionnés de cybersécurité.
 
 Il permet d'apprendre et d'expérimenter concrètement la reconnaissance réseau avec `nmap`, l'analyse d'applications web (en-têtes de sécurité, WAF, empreintes), l'exploration de réseaux locaux (LAN, SMB, NetBIOS) et la recherche de vulnérabilités réelles (CVE) via la base locale Exploit-DB (`searchsploit`).
 

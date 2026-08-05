@@ -3,6 +3,7 @@
 """
 =====================================================================================
  MATRIX SCANNER - Tableau de bord pédagogique de reconnaissance réseau et de CVE
+ Concepteur & Développeur : Ronan BOZOC
 =====================================================================================
 
   ⚠️  AVERTISSEMENT LÉGAL ET ÉTHIQUE  ⚠️
