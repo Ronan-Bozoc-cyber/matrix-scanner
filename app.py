@@ -2389,9 +2389,19 @@ def open_onionhop_or_default_browser(url="http://127.0.0.1:5000"):
     """
     time.sleep(1.2)
     # Recherche prioritaire des exécutables OnionHop
-    onion_binaries = ["onionhop", "onionhop-3.7.8", "onion-hop", "OnionHop", "onionhop3.7.8"]
-    for cmd in onion_binaries:
-        path = shutil.which(cmd)
+    home_dir = os.path.expanduser("~")
+    onion_candidates = [
+        "onionhop",
+        "onionhop-3.7.8",
+        "onion-hop",
+        "OnionHop",
+        "onionhop3.7.8",
+        os.path.join(home_dir, ".local", "bin", "OnionHop-x86_64.AppImage"),
+        os.path.join(home_dir, ".local", "bin", "onionhop"),
+        "/usr/local/bin/OnionHop-x86_64.AppImage",
+    ]
+    for cmd in onion_candidates:
+        path = shutil.which(cmd) if not os.path.isabs(cmd) else (cmd if os.access(cmd, os.X_OK) else None)
         if path:
             try:
                 subprocess.Popen([path, url])
