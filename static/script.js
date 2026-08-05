@@ -438,18 +438,26 @@ async function runWebPentestPipeline(target, modeToggle) {
   if (subdomainsContent) subdomainsContent.innerHTML = "";
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
+
     const subRes = await fetch("/api/subdomains-scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target_url: target })
+      body: JSON.stringify({ target_url: target }),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
+
     const subData = await subRes.json();
     if (subdomainsProgress) subdomainsProgress.classList.add("hidden");
 
-    if (subData.subdomains && subData.subdomains.length > 0) {
+    if (subRes.status !== 200) {
+      subdomainsContent.innerHTML = `<div style="color: #ffaa00; font-size: 0.85rem;">⚠️ Énumération des sous-domaines non disponible (${subData.error || "Erreur serveur"}).</div>`;
+    } else if (subData.subdomains && subData.subdomains.length > 0) {
       let subHtml = `
         <div style="font-size: 0.85rem; color: #f1c40f; margin-bottom: 8px; font-weight: bold;">
-          <i class="fa-solid fa-circle-check"></i> ${subData.count} sous-domaine(s) public(s) découvert(s) via OSINT :
+          <i class="fa-solid fa-circle-check"></i> ${subData.count} sous-domaine(s) public(s) découvert(s) via OSINT & DNS :
         </div>
         <div style="max-height: 160px; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid rgba(241, 196, 15, 0.3); padding: 8px; border-radius: 6px;">
           <ul style="margin: 0; padding-left: 20px; font-family: monospace; font-size: 0.85rem; color: #fff;">
@@ -460,11 +468,12 @@ async function runWebPentestPipeline(target, modeToggle) {
       subHtml += `</ul></div>`;
       subdomainsContent.innerHTML = subHtml;
     } else {
-      subdomainsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Aucun sous-domaine public supplémentaire identifié par OSINT passive pour <b>${target}</b>.</div>`;
+      subdomainsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Aucun sous-domaine public supplémentaire identifié par OSINT pour <b>${target}</b>.</div>`;
     }
   } catch (err) {
     if (subdomainsProgress) subdomainsProgress.classList.add("hidden");
-    if (subdomainsContent) subdomainsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Recherche de sous-domaines non disponible (${err.message}).</div>`;
+    const errMsg = err.name === "AbortError" ? "Délai d'attente dépassé (45s)" : err.message;
+    if (subdomainsContent) subdomainsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Recherche de sous-domaines non disponible (${errMsg}).</div>`;
   }
 
   // --- ÉTAPE 3 : DÉTECTION WAF (Wafw00f) ---
