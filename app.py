@@ -2418,10 +2418,10 @@ def find_available_port(preferred_port=5000, start_fallback=10001, host="127.0.0
 
 def open_onionhop_or_default_browser(url="http://127.0.0.1:5000"):
     """
-    Tente d'ouvrir l'application dans OnionHop 3.7.8 ou dans le navigateur par défaut.
+    Lance OnionHop 3.7.8 (si présent) et ouvre toujours Matrix Scanner dans le navigateur par défaut.
     """
     time.sleep(1.2)
-    # Recherche prioritaire des exécutables OnionHop
+    # Lancement prioritaire d'OnionHop si disponible
     home_dir = os.path.expanduser("~")
     onion_candidates = [
         "onionhop",
@@ -2437,18 +2437,19 @@ def open_onionhop_or_default_browser(url="http://127.0.0.1:5000"):
         path = shutil.which(cmd) if not os.path.isabs(cmd) else (cmd if os.access(cmd, os.X_OK) else None)
         if path:
             try:
-                subprocess.Popen([path, url])
-                print(f"[+] Application ouverte dans OnionHop ({path}) sur {url}")
-                return
+                subprocess.Popen([path])
+                print(f"[+] Application OnionHop lancée ({path})")
+                break
             except Exception as e:
-                print(f"[!] Échec d'ouverture avec {cmd} : {e}")
+                print(f"[!] Échec du lancement d'OnionHop avec {cmd} : {e}")
 
-    # Fallback sur le navigateur par défaut si OnionHop n'est pas détecté
+    # Ouverture de Matrix Scanner dans le navigateur par défaut
     try:
         import webbrowser
         webbrowser.open(url)
-    except Exception:
-        pass
+        print(f"[+] Matrix Scanner ouvert dans le navigateur par défaut ({url})")
+    except Exception as e:
+        print(f"[!] Erreur d'ouverture du navigateur par défaut : {e}")
 
 
 if __name__ == "__main__":

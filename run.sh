@@ -3,8 +3,8 @@
 # run.sh — Lance Matrix Scanner
 # =====================================================================================
 # Active l'environnement virtuel, choisit un port libre (5000 ou >= 10001), et propose
-# le choix du navigateur (Navigateur par défaut ou OnionHop 3.7.8 avec option d'installation
-# depuis GitHub sous Linux).
+# le choix du navigateur (Navigateur par défaut ou lancement d'OnionHop 3.7.8 + Ouverture
+# du logiciel dans le navigateur par défaut).
 # =====================================================================================
 
 set -euo pipefail
@@ -79,7 +79,7 @@ if [ -t 0 ]; then
     echo "       MATRIX SCANNER PRO — CHOIX DU NAVIGATEUR         "
     echo "================================================================="
     echo "  1) Ouvrir dans le navigateur par défaut (ex: Firefox/Chrome)"
-    echo "  2) Ouvrir dans OnionHop 3.7.8 (Réseau anonyme Tor)"
+    echo "  2) Lancer OnionHop 3.7.8 + Ouvrir dans le navigateur par défaut"
     echo "================================================================="
     read -t 15 -r -p "Votre choix (1 ou 2) [Défaut dans 15s : 1] : " USER_CHOICE || USER_CHOICE="1"
     CHOICE="${USER_CHOICE:-1}"
@@ -92,17 +92,13 @@ fi
 (
     sleep 2
     if [ "$CHOICE" = "2" ] && [ -n "$ONION_BIN" ]; then
-        echo "[+] Lancement de Matrix Scanner dans OnionHop 3.7.8 ($ONION_BIN)..."
-        "$ONION_BIN" "$URL" &>/dev/null &
-    else
-        if [ "$CHOICE" = "2" ]; then
-            echo "[!] OnionHop non disponible. Ouverture dans le navigateur par défaut..."
-        else
-            echo "[+] Ouverture dans le navigateur par défaut..."
-        fi
-        if command -v xdg-open &>/dev/null; then
-            xdg-open "$URL" &>/dev/null &
-        fi
+        echo "[+] Lancement de l'application OnionHop 3.7.8 ($ONION_BIN)..."
+        "$ONION_BIN" &>/dev/null &
+    fi
+
+    echo "[+] Ouverture de Matrix Scanner dans le navigateur par défaut..."
+    if command -v xdg-open &>/dev/null; then
+        xdg-open "$URL" &>/dev/null &
     fi
 ) &
 
