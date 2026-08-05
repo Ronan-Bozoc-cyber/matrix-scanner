@@ -49,8 +49,7 @@ import tempfile
 import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from urllib.parse import urlparse
-
+import urllib.request
 import socket
 import concurrent.futures
 import sqlite3
@@ -274,6 +273,48 @@ def check_deps():
 
 
 LAST_NET_IO = {"bytes_recv": 0, "bytes_sent": 0, "time": 0}
+PUBLIC_IP_CACHE = {"ip": "Détection...", "last_check": 0, "fetching": False}
+
+def _fetch_public_ip_worker():
+    global PUBLIC_IP_CACHE
+    services = [
+        ("https://api.ipify.org?format=json", "json", "ip"),
+        ("https://ifconfig.me/ip", "text", None),
+        ("https://icanhazip.com", "text", None),
+        ("https://api64.ipify.org?format=json", "json", "ip"),
+    ]
+    detected_ip = None
+    for url, fmt, key in services:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64)"})
+            with urllib.request.urlopen(req, timeout=3) as resp:
+                if resp.status == 200:
+                    raw = resp.read().decode("utf-8").strip()
+                    if fmt == "json":
+                        data = json.loads(raw)
+                        ip_candidate = data.get(key, "").strip()
+                    else:
+                        ip_candidate = raw.strip()
+                    if ip_candidate:
+                        ipaddress.ip_address(ip_candidate)
+                        detected_ip = ip_candidate
+                        break
+        except Exception:
+            continue
+
+    PUBLIC_IP_CACHE["ip"] = detected_ip if detected_ip else "Indisponible"
+    PUBLIC_IP_CACHE["last_check"] = time.time()
+    PUBLIC_IP_CACHE["fetching"] = False
+
+
+def get_public_ip():
+    global PUBLIC_IP_CACHE
+    now = time.time()
+    if (now - PUBLIC_IP_CACHE["last_check"] > 300 or PUBLIC_IP_CACHE["ip"] in ["Détection...", "Indisponible"]) and not PUBLIC_IP_CACHE["fetching"]:
+        PUBLIC_IP_CACHE["fetching"] = True
+        threading.Thread(target=_fetch_public_ip_worker, daemon=True).start()
+    return PUBLIC_IP_CACHE["ip"]
+
 
 @app.route("/api/system-stats")
 def api_system_stats():
@@ -295,6 +336,8 @@ def api_system_stats():
     LAST_NET_IO["bytes_sent"] = net_io.bytes_sent
     LAST_NET_IO["time"] = now
 
+    public_ip = get_public_ip()
+
     return jsonify({
         "cpu_percent": round(cpu_percent, 1),
         "ram_percent": round(mem.percent, 1),
@@ -302,6 +345,7 @@ def api_system_stats():
         "ram_total_gb": round(mem.total / (1024 ** 3), 2),
         "rx_bytes_sec": round(rx_speed, 1),
         "tx_bytes_sec": round(tx_speed, 1),
+        "public_ip": public_ip,
     })
 
 

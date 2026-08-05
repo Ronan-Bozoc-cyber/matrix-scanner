@@ -2095,6 +2095,12 @@ function initSystemMonitor() {
       if (rxVal) rxVal.textContent = formatSpeed(data.rx_bytes_sec);
       if (txVal) txVal.textContent = formatSpeed(data.tx_bytes_sec);
 
+      // IP Publique
+      const publicIpEl = document.getElementById("sys-public-ip");
+      if (publicIpEl && data.public_ip) {
+        publicIpEl.textContent = data.public_ip;
+      }
+
       // Mise à jour Sparkline
       cpuData.shift();
       cpuData.push(data.cpu_percent);
@@ -2108,6 +2114,31 @@ function initSystemMonitor() {
     } catch (err) {
       console.warn("Mise à jour stats système échouée:", err);
     }
+  }
+
+  const copyIpBtn = document.getElementById("btn-copy-public-ip");
+  if (copyIpBtn && !copyIpBtn.dataset.listenerAdded) {
+    copyIpBtn.dataset.listenerAdded = "true";
+    copyIpBtn.addEventListener("click", () => {
+      const publicIpEl = document.getElementById("sys-public-ip");
+      if (!publicIpEl) return;
+      const ipText = publicIpEl.textContent.trim();
+      if (ipText && ipText !== "--.--.--.--" && ipText !== "Détection..." && ipText !== "Indisponible") {
+        navigator.clipboard.writeText(ipText).then(() => {
+          const icon = copyIpBtn.querySelector("i");
+          if (icon) {
+            icon.className = "fa-solid fa-check";
+            copyIpBtn.style.color = "#00ff41";
+            setTimeout(() => {
+              icon.className = "fa-regular fa-copy";
+              copyIpBtn.style.color = "#7ec8ff";
+            }, 1500);
+          }
+        }).catch(err => {
+          console.error("Erreur lors de la copie de l'IP:", err);
+        });
+      }
+    });
   }
 
   // Poll toutes les 2 secondes avec intervalle unique
