@@ -594,8 +594,9 @@ async function runWebPentestPipeline(target, modeToggle) {
       subdomainsContent.innerHTML = `<div style="color: #ffaa00; font-size: 0.85rem;">⚠️ Énumération des sous-domaines non disponible (${subData.error || "Erreur serveur"}).</div>`;
     } else if (subData.subdomains && subData.subdomains.length > 0) {
       let subHtml = `
-        <div style="font-size: 0.85rem; color: #f1c40f; margin-bottom: 8px; font-weight: bold;">
-          <i class="fa-solid fa-circle-check"></i> ${subData.count} sous-domaine(s) public(s) découvert(s) via OSINT & DNS :
+        <div style="font-size: 0.85rem; color: #f1c40f; margin-bottom: 8px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <span><i class="fa-solid fa-circle-check"></i> ${subData.count} sous-domaine(s) public(s) découvert(s) via OSINT & DNS :</span>
+          ${subData.wildcard_detected ? `<span style="background: rgba(241, 196, 15, 0.2); border: 1px solid #f1c40f; color: #f7dc6f; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;"><i class="fa-solid fa-filter"></i> Filtre anti-Wildcard DNS actif</span>` : ''}
         </div>
         <div style="max-height: 160px; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid rgba(241, 196, 15, 0.3); padding: 8px; border-radius: 6px;">
           <ul style="margin: 0; padding-left: 20px; font-family: monospace; font-size: 0.85rem; color: #fff;">
@@ -606,7 +607,13 @@ async function runWebPentestPipeline(target, modeToggle) {
       subHtml += `</ul></div>`;
       subdomainsContent.innerHTML = subHtml;
     } else {
-      subdomainsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Aucun sous-domaine public supplémentaire identifié par OSINT pour <b>${target}</b>.</div>`;
+      let subHtml = `
+        <div style="font-size: 0.85rem; color: #aaa;">
+          Aucun sous-domaine public supplémentaire identifié par OSINT pour <b>${target}</b>.
+          ${subData.wildcard_detected ? `<div style="margin-top: 8px; padding: 6px 10px; background: rgba(241, 196, 15, 0.15); border-left: 3px solid #f1c40f; color: #f7dc6f; font-size: 0.8rem;"><i class="fa-solid fa-filter"></i> <strong>Filtre anti-Wildcard</strong> : les adresses miroirs (*.${subData.domain}) ont été automatiquement filtrées.</div>` : ''}
+        </div>
+      `;
+      subdomainsContent.innerHTML = subHtml;
     }
   } catch (err) {
     if (subdomainsProgress) subdomainsProgress.classList.add("hidden");

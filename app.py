@@ -1606,6 +1606,19 @@ def subdomains_scan():
 
     root_domain = extract_root_domain(target_url)
 
+    # 0. DÉTECTION DU WILDCARD DNS (Pour éliminer les faux positifs *.domaine)
+    wildcard_ips = set()
+    wildcard_detected = False
+    for i in range(5):
+        random_sub = f"wildcard-check-{uuid.uuid4().hex[:8]}.{root_domain}"
+        try:
+            w_ip = socket.gethostbyname(random_sub)
+            if w_ip:
+                wildcard_ips.add(w_ip)
+                wildcard_detected = True
+        except socket.gaierror:
+            pass
+
     subdomains = set()
 
     # MOTEUR 1 : Subfinder (CT Logs, SecurityTrails, Chaos, DNSDumpster)
@@ -1636,7 +1649,7 @@ def subdomains_scan():
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    # MOTEUR 3 : Sondage DNS direct multithreadé (pour sous-domaines récents / non indexés)
+    # MOTEUR 3 : Sondage DNS direct multithreadé (avec filtrage anti-Wildcard)
     common_prefixes = [
         "www", "wiki", "mail", "webmail", "remote", "admin", "api", "dev", "test", "vpn",
         "cloud", "portal", "shop", "store", "git", "gitlab", "ns1", "ns2", "cpanel",
@@ -1647,7 +1660,9 @@ def subdomains_scan():
     def resolve_prefix(prefix):
         fqdn = f"{prefix}.{root_domain}"
         try:
-            socket.gethostbyname(fqdn)
+            ip = socket.gethostbyname(fqdn)
+            if wildcard_detected and ip in wildcard_ips:
+                return None
             return fqdn.lower()
         except socket.gaierror:
             return None
@@ -1660,12 +1675,25 @@ def subdomains_scan():
     except Exception:
         pass
 
-    sorted_subdomains = sorted(list(subdomains))
+    # Filtrage final de tous les sous-domaines candidats contre les IP Wildcard
+    filtered_subdomains = set()
+    for sd in subdomains:
+        try:
+            ip = socket.gethostbyname(sd)
+            if wildcard_detected and ip in wildcard_ips:
+                continue
+            filtered_subdomains.add(sd)
+        except socket.gaierror:
+            pass
+
+    sorted_subdomains = sorted(list(filtered_subdomains))
 
     return jsonify({
         "domain": root_domain,
         "subdomains": sorted_subdomains,
-        "count": len(sorted_subdomains)
+        "count": len(sorted_subdomains),
+        "wildcard_detected": wildcard_detected,
+        "wildcard_ips": list(wildcard_ips)
     })
 
 
