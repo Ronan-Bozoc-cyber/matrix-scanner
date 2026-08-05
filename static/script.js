@@ -320,10 +320,116 @@ async function startScan(mode, customTarget = null) {
     return;
   }
 
+  if (!customTarget && mode === "web") {
+    // Pipeline Web Pentest complet : WAF -> Screenshot -> Nmap/WhatWeb/Nuclei
+    runWebPentestPipeline(target, modeToggle);
+    return;
+  }
+
   // Normal / Manual / Selected Scan via /api/scan
-  if (progressBox) progressBox.classList.remove("hidden");
+  runNmapScan(target, mode, modeToggle);
+}
+
+async function runWebPentestPipeline(target, modeToggle) {
+  const wafCard = document.getElementById("waf-card");
+  const wafProgress = document.getElementById("waf-progress");
+  const wafContent = document.getElementById("waf-results-content");
+
+  const screenshotCard = document.getElementById("screenshot-card");
+  const screenshotProgress = document.getElementById("screenshot-progress");
+  const screenshotContent = document.getElementById("screenshot-results-content");
+
+  const progressBox = document.getElementById("scan-progress");
   const progressText = document.getElementById("scan-progress-text");
-  if (progressText) progressText.textContent = "Initialisation du scan Nmap...";
+
+  // Re-masquer anciennes cartes
+  document.getElementById("results-card")?.classList.add("hidden");
+  document.getElementById("cve-card")?.classList.add("hidden");
+  document.getElementById("topology-card")?.classList.add("hidden");
+  document.getElementById("netdiscover-card")?.classList.add("hidden");
+
+  setScanningState(true, "Pentest Web Distant en cours...");
+  if (progressBox) progressBox.classList.remove("hidden");
+
+  // --- ÉTAPE 1 : DÉTECTION WAF (Wafw00f) ---
+  if (progressText) progressText.textContent = "Étape 1/3 : Analyse du Pare-Feu Applicatif (Wafw00f)...";
+  if (wafCard) wafCard.classList.remove("hidden");
+  if (wafProgress) wafProgress.classList.remove("hidden");
+  if (wafContent) wafContent.innerHTML = "";
+
+  try {
+    const wafRes = await fetch("/api/waf-scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const wafData = await wafRes.json();
+    if (wafProgress) wafProgress.classList.add("hidden");
+
+    if (wafData.detected) {
+      wafContent.innerHTML = `
+        <div style="padding: 12px 16px; background: rgba(231, 76, 60, 0.15); border-left: 4px solid #e74c3c; border-radius: 4px; color: #ff9999;">
+          <strong>🔴 PARE-FEU WAF DÉTECTÉ :</strong> La cible est protégée par un WAF <b>${wafData.firewall || 'Inconnu'}</b> ${wafData.manufacturer ? `(${wafData.manufacturer})` : ''}.
+          <div style="font-size: 0.8rem; color: #ccc; margin-top: 5px;">Les tentatives d'attaque directe ou d'injection pourront être filtrées ou bloquées par cette sécurité.</div>
+        </div>
+      `;
+    } else {
+      wafContent.innerHTML = `
+        <div style="padding: 12px 16px; background: rgba(46, 204, 113, 0.15); border-left: 4px solid #2ecc71; border-radius: 4px; color: #a3e9a4;">
+          <strong>🟢 AUCUN WAF DÉTECTÉ :</strong> Aucun pare-feu applicatif web actif identifié par Wafw00f. La cible semble directement accessible.
+        </div>
+      `;
+    }
+  } catch (err) {
+    if (wafProgress) wafProgress.classList.add("hidden");
+    if (wafContent) wafContent.innerHTML = `<div style="color: #ffaa00; font-size: 0.85rem;">⚠️ Analyse WAF non disponible (${err.message}).</div>`;
+  }
+
+  // --- ÉTAPE 2 : CAPTURE D'ÉCRAN SITE WEB (Gowitness) ---
+  if (progressText) progressText.textContent = "Étape 2/3 : Prise de vue du site Web (Gowitness)...";
+  if (screenshotCard) screenshotCard.classList.remove("hidden");
+  if (screenshotProgress) screenshotProgress.classList.remove("hidden");
+  if (screenshotContent) screenshotContent.innerHTML = "";
+
+  try {
+    const ssRes = await fetch("/api/screenshot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const ssData = await ssRes.json();
+    if (screenshotProgress) screenshotProgress.classList.add("hidden");
+
+    if (ssData.screenshot_url) {
+      screenshotContent.innerHTML = `
+        <div style="text-align: center;">
+          <a href="${ssData.screenshot_url}" target="_blank" title="Cliquer pour agrandir l'aperçu">
+            <img src="${ssData.screenshot_url}" style="max-width: 100%; max-height: 400px; border: 1px solid #3498db; border-radius: 6px; box-shadow: 0 0 15px rgba(52,152,219,0.3); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.01)'" onmouseout="this.style.transform='scale(1)'">
+          </a>
+          <p style="font-size: 0.8rem; color: #aaa; margin-top: 8px;">Aperçu visuel de l'application web rendu par Gowitness (Cliquer pour ouvrir)</p>
+        </div>
+      `;
+    } else {
+      screenshotContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Impossible de générer l'aperçu visuel (${ssData.error || "Service Web non accessible"}).</div>`;
+    }
+  } catch (err) {
+    if (screenshotProgress) screenshotProgress.classList.add("hidden");
+    if (screenshotContent) screenshotContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Capture d'écran indisponible (${err.message}).</div>`;
+  }
+
+  // --- ÉTAPE 3 : PENTEST DE VULNÉRABILITÉS & EMPREINTE (Nmap, WhatWeb, Nuclei) ---
+  if (progressText) progressText.textContent = "Étape 3/3 : Détection des services, technologies & vulnérabilités...";
+  await runNmapScan(target, "web", modeToggle);
+}
+
+async function runNmapScan(target, mode, modeToggle) {
+  const errorBox = document.getElementById("scan-error");
+  const progressBox = document.getElementById("scan-progress");
+  const previewBox = document.getElementById("command-preview");
+  const terminalBox = document.getElementById("scan-terminal");
+  const terminalContent = document.getElementById("scan-terminal-content");
+
+  if (progressBox) progressBox.classList.remove("hidden");
   setScanningState(true, `Scanner Nmap (${mode === "web" ? "Web" : "Local"})`);
 
   if (terminalBox) terminalBox.classList.remove("hidden");
@@ -1940,6 +2046,32 @@ function initAddToReportButtons() {
       } catch (err) {
         alert("Erreur de capture d'image de la topologie : " + err.message);
       }
+      return;
+    }
+
+    // Bouton WAF
+    const btnWaf = e.target.closest("#btn-add-waf-to-report");
+    if (btnWaf) {
+      e.preventDefault();
+      const content = document.getElementById("waf-results-content");
+      if (!content || !content.innerHTML.trim()) {
+        alert("Aucun résultat WAF disponible à ajouter.");
+        return;
+      }
+      openAddToReportModal("Découverte Pare-Feu WAF (Wafw00f)", content.innerHTML);
+      return;
+    }
+
+    // Bouton Screenshot Web
+    const btnScreenshot = e.target.closest("#btn-add-screenshot-to-report");
+    if (btnScreenshot) {
+      e.preventDefault();
+      const content = document.getElementById("screenshot-results-content");
+      if (!content || !content.innerHTML.trim()) {
+        alert("Aucune capture d'écran disponible à ajouter.");
+        return;
+      }
+      openAddToReportModal("Capture d'Écran du Site Web (Gowitness)", content.innerHTML);
       return;
     }
 
