@@ -50,31 +50,37 @@ M-SCAN n'est pas une boîte noire : il est spécialement conçu pour transmettre
 
 ---
 
-## 🛠️ Outils de sécurité issus de Kali Linux et vérification automatique
+## 🛠️ Outils de sécurité et modules système (18 outils au total)
 
-M-SCAN s'appuie sur une suite de 12 outils de référence issus de la distribution Kali Linux :
+M-SCAN s'appuie sur une suite complète de **18 outils de référence** issus de Kali Linux et de modules Python spécialisés :
 
 1. **`nmap`** : scanner de ports, résolution de services et détection d'empreinte système.
 2. **`searchsploit` (exploitdb)** : recherche d'exploits et de vulnérabilités réelles (CVE) dans la base locale Exploit-DB.
-3. **`whatweb`** : analyseur d'empreintes technologiques web (CMS, serveurs web, frameworks).
-4. **`wafw00f`** : outil de détection des pare-feux applicatifs web (WAF).
-5. **`nikto`** : scanner de vulnérabilités web et recherche de fichiers dangereux.
-6. **`nuclei`** : scanner de vulnérabilités basé sur des modèles de détection réseau et web.
-7. **`wpscan`** : scanner spécialisé dans la détection des failles sur le CMS WordPress.
-8. **`gowitness`** : outil automatisé de capture d'écran d'applications web.
-9. **`netdiscover`** : outil de découverte d'hôtes et d'exploration ARP active ou passive sur le réseau local.
-10. **`nbtscan`** : résolution de noms d'hôtes et énumération des groupes de travail NetBIOS.
+3. **`nuclei`** : scanner de vulnérabilités basé sur des modèles de détection réseau et web.
+4. **`whatweb`** : analyseur d'empreintes technologiques web (CMS, serveurs web, frameworks).
+5. **`wafw00f`** : outil de détection des pare-feux applicatifs web (WAF).
+6. **`wpscan`** : scanner spécialisé dans la détection des failles sur le CMS WordPress.
+7. **`gowitness`** : outil automatisé de capture d'écran d'applications web.
+8. **`netdiscover`** : outil de découverte d'hôtes et d'exploration ARP active ou passive sur le réseau local.
+9. **`nbtscan`** : résolution de noms d'hôtes et énumération des groupes de travail NetBIOS.
+10. **`nikto`** : scanner de vulnérabilités web et recherche de fichiers dangereux.
 11. **`enum4linux`** : énumération complète des informations Windows, utilisateurs et partages Samba/SMB.
 12. **`smbmap`** : analyse fine des autorisations et des droits d'accès aux partages réseau SMB.
+13. **`whois`** : consultation des informations de registre des noms de domaine (WHOIS).
+14. **`sublist3r`** : énumération passive OSINT de sous-domaines web.
+15. **`subfinder`** : découverte rapide multi-sources de sous-domaines web.
+16. **`reportlab`** : moteur de génération et d'exportation de rapports PDF professionnels.
+17. **`python-docx`** : moteur de génération et d'exportation de rapports Word (.docx).
+18. **`psutil`** : télémétrie système, statistiques de processeur (CPU) et mémoire (RAM) en temps réel.
 
 ### 🔍 Vérification automatique et installation en un clic
-Au chargement de l'application, le backend exécute automatiquement une vérification de la présence de chacun de ces 12 outils sur le système hôte.
+Au chargement de l'application, le backend exécute automatiquement une vérification de la présence de chacun de ces 18 outils et modules sur le système hôte.
 
 Si un ou plusieurs outils sont absents :
 * L'interface affiche automatiquement un bandeau d'alerte listant les paquets manquants.
 * Un bouton d'installation **"Installer les outils manquants"** est proposé à l'utilisateur.
 * En cliquant sur ce bouton, l'application fait appel à `pkexec` (Polkit) qui affiche la boîte de dialogue d'authentification graphique native du système Linux.
-* L'utilisateur saisit son mot de passe administrateur et le système installe automatiquement les outils requis via `apt-get`, sans que le serveur Flask n'ait besoin d'être lancé en root.
+* L'utilisateur saisit son mot de passe administrateur et le système installe automatiquement les outils requis via `apt-get` / `pip`, sans que le serveur Flask n'ait besoin d'être lancé en root.
 
 ---
 
