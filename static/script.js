@@ -481,6 +481,10 @@ async function runWebPentestPipeline(target, modeToggle) {
   const screenshotProgress = document.getElementById("screenshot-progress");
   const screenshotContent = document.getElementById("screenshot-results-content");
 
+  const cmsCard = document.getElementById("cms-card");
+  const cmsProgress = document.getElementById("cms-progress");
+  const cmsContent = document.getElementById("cms-results-content");
+
   const progressBox = document.getElementById("scan-progress");
   const progressText = document.getElementById("scan-progress-text");
 
@@ -682,9 +686,124 @@ async function runWebPentestPipeline(target, modeToggle) {
     if (screenshotContent) screenshotContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Capture d'écran indisponible (${err.message}).</div>`;
   }
 
-  // --- ÉTAPE 5 : PENTEST DE VULNÉRABILITÉS & EMPREINTE (Nmap, WhatWeb, Nuclei) ---
-  if (progressText) progressText.textContent = "Étape 5/5 : Détection des services, technologies & vulnérabilités...";
+  // --- ÉTAPE 5 : EMPREINTE CMS & TECHNOLOGIES WEB (WhatWeb) ---
+  if (progressText) progressText.textContent = "Étape 5/6 : Détection des technologies web & CMS (WhatWeb)...";
+  if (cmsCard) cmsCard.classList.remove("hidden");
+  if (cmsProgress) cmsProgress.classList.remove("hidden");
+  if (cmsContent) cmsContent.innerHTML = "";
+
+  try {
+    const cmsRes = await fetch("/api/whatweb-scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target, options: { aggression: 1 } })
+    });
+    const cmsData = await cmsRes.json();
+
+    if (cmsRes.status === 200 && cmsData.job_id) {
+      await pollWhatwebJob(cmsData.job_id, cmsProgress, cmsContent);
+    } else {
+      if (cmsProgress) cmsProgress.classList.add("hidden");
+      if (cmsContent) cmsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Empreinte CMS non disponible (${cmsData.error || 'Erreur WhatWeb'}).</div>`;
+    }
+  } catch (err) {
+    if (cmsProgress) cmsProgress.classList.add("hidden");
+    if (cmsContent) cmsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Détection CMS indisponible (${err.message}).</div>`;
+  }
+
+  // --- ÉTAPE 6 : PENTEST DE VULNÉRABILITÉS (Nmap, Nuclei, WPScan) ---
+  if (progressText) progressText.textContent = "Étape 6/6 : Détection des services, ports & vulnérabilités...";
   await runNmapScan(target, "web", modeToggle);
+}
+
+function pollWhatwebJob(jobId, cmsProgress, cmsContent) {
+  return new Promise((resolve) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/whatweb-status/${jobId}`);
+        const data = await res.json();
+
+        if (data.status === "done") {
+          clearInterval(interval);
+          if (cmsProgress) cmsProgress.classList.add("hidden");
+          renderWhatWebCmsResults(data.result, cmsContent);
+          resolve();
+        } else if (data.status === "error") {
+          clearInterval(interval);
+          if (cmsProgress) cmsProgress.classList.add("hidden");
+          if (cmsContent) cmsContent.innerHTML = `<div style="color: #ffaa00; font-size: 0.85rem;">⚠️ ${data.error}</div>`;
+          resolve();
+        }
+      } catch (err) {
+        clearInterval(interval);
+        if (cmsProgress) cmsProgress.classList.add("hidden");
+        if (cmsContent) cmsContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Erreur de suivi WhatWeb (${err.message}).</div>`;
+        resolve();
+      }
+    }, 2000);
+  });
+}
+
+function renderWhatWebCmsResults(results, cmsContent) {
+  if (!cmsContent) return;
+  if (!results || results.length === 0) {
+    cmsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Aucune technologie ou CMS identifié pour cette cible.</div>`;
+    return;
+  }
+
+  const targetData = results[0] || {};
+  const plugins = targetData.plugins || {};
+
+  let cmsDetected = "Non identifié / Personnalisé";
+  let phpVersion = "Non détectée";
+  let serverInfo = "Non détecté";
+  let techBadges = [];
+
+  for (const [pluginName, pluginInfo] of Object.entries(plugins)) {
+    const nameLower = pluginName.toLowerCase();
+    const versionStr = (pluginInfo.version && pluginInfo.version.length > 0) ? pluginInfo.version.join(", ") : "";
+
+    // CMS connus
+    if (["wordpress", "joomla", "drupal", "prestashop", "shopify", "magento", "typo3", "spip", "ghost", "wix", "squarespace", "bitrix"].includes(nameLower)) {
+      cmsDetected = `<strong style="color:#2ecc71;">${pluginName}</strong> ${versionStr ? `(v${versionStr})` : ''}`;
+    }
+
+    // PHP
+    if (nameLower === "php") {
+      phpVersion = versionStr ? `PHP ${versionStr}` : "PHP (Version détectée)";
+    }
+
+    // Server
+    if (["apache", "nginx", "lighttpd", "microsoft-iis"].includes(nameLower)) {
+      serverInfo = `${pluginName} ${versionStr ? `v${versionStr}` : ''}`;
+    }
+
+    // Badges généraux
+    const badgeText = `${pluginName}${versionStr ? ` (${versionStr})` : ''}`;
+    techBadges.push(`<span style="background: rgba(46, 204, 113, 0.15); border: 1px solid #2ecc71; color: #a3e9a4; padding: 3px 8px; border-radius: 4px; font-size: 0.78rem; font-family: monospace; display: inline-block; margin-bottom: 4px; margin-right: 4px;">${badgeText}</span>`);
+  }
+
+  cmsContent.innerHTML = `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 12px;">
+      <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(46, 204, 113, 0.3); padding: 10px; border-radius: 6px;">
+        <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">CMS Identifié</div>
+        <div style="font-weight: bold; color: #2ecc71; font-size: 0.95rem; margin-top: 3px;">${cmsDetected}</div>
+      </div>
+      <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(46, 204, 113, 0.3); padding: 10px; border-radius: 6px;">
+        <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Version PHP</div>
+        <div style="font-weight: bold; color: #fff; font-size: 0.85rem; margin-top: 3px;">${phpVersion}</div>
+      </div>
+      <div style="background: rgba(0,0,0,0.4); border: 1px solid rgba(46, 204, 113, 0.3); padding: 10px; border-radius: 6px;">
+        <div style="font-size: 0.75rem; color: #888; text-transform: uppercase;">Serveur Web</div>
+        <div style="font-weight: bold; color: #fff; font-size: 0.85rem; margin-top: 3px;">${serverInfo}</div>
+      </div>
+    </div>
+
+    <div style="margin-top: 10px;">
+      <div style="font-size: 0.85rem; color: #aaa; margin-bottom: 6px;"><strong>Technologies Web Identifiées par WhatWeb (${techBadges.length}) :</strong></div>
+      <div>${techBadges.length > 0 ? techBadges.join(" ") : "<span style='color:#888;'>Aucune technologie spécifique détectée</span>"}</div>
+    </div>
+  `;
 }
 
 async function runNmapScan(target, mode, modeToggle) {
@@ -2363,6 +2482,19 @@ function initAddToReportButtons() {
         return;
       }
       openAddToReportModal("Capture d'Écran du Site Web (Gowitness)", content.innerHTML);
+      return;
+    }
+
+    // Bouton CMS & Empreinte Web
+    const btnCms = e.target.closest("#btn-add-cms-to-report");
+    if (btnCms) {
+      e.preventDefault();
+      const content = document.getElementById("cms-results-content");
+      if (!content || !content.innerHTML.trim()) {
+        alert("Aucune empreinte CMS disponible à ajouter.");
+        return;
+      }
+      openAddToReportModal("Empreinte CMS & Technologies Web (WhatWeb)", content.innerHTML);
       return;
     }
 
