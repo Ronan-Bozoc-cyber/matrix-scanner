@@ -275,35 +275,46 @@ def check_deps():
 LAST_NET_IO = {"bytes_recv": 0, "bytes_sent": 0, "time": 0}
 PUBLIC_IP_CACHE = {"ip": "Détection...", "last_check": 0, "fetching": False}
 
+def is_proxy_port_open(host, port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.05)
+        return s.connect_ex((host, port)) == 0
+
+
 def _fetch_public_ip_worker():
     global PUBLIC_IP_CACHE
     services = [
         ("https://api.ipify.org?format=json", "json", "ip"),
         ("https://ifconfig.me/ip", "text", None),
         ("https://icanhazip.com", "text", None),
-        ("https://api64.ipify.org?format=json", "json", "ip"),
     ]
     detected_ip = None
 
     # 1. Tester les proxies SOCKS/HTTP OnionHop & Tor s'ils sont actifs
     proxy_candidates = [
-        "socks5h://127.0.0.1:9050",
-        "socks5h://127.0.0.1:9150",
-        "socks5h://127.0.0.1:1080",
-        "socks5h://127.0.0.1:9052",
-        "http://127.0.0.1:8118",
-        "http://127.0.0.1:8080",
+        ("socks5h://127.0.0.1:9050", "127.0.0.1", 9050),
+        ("socks5h://127.0.0.1:9150", "127.0.0.1", 9150),
+        ("socks5h://127.0.0.1:1080", "127.0.0.1", 1080),
+        ("socks5h://127.0.0.1:9052", "127.0.0.1", 9052),
     ]
+
     for env_var in ["ALL_PROXY", "HTTP_PROXY", "HTTPS_PROXY", "socks_proxy"]:
         val = os.environ.get(env_var)
-        if val and val not in proxy_candidates:
-            proxy_candidates.insert(0, val)
+        if val:
+            try:
+                parsed = urllib.parse.urlparse(val)
+                if parsed.hostname and parsed.port:
+                    proxy_candidates.insert(0, (val, parsed.hostname, parsed.port))
+            except Exception:
+                pass
 
-    for proxy in proxy_candidates:
+    for proxy_str, host, port in proxy_candidates:
+        if not is_proxy_port_open(host, port):
+            continue
         for url, fmt, key in services:
             try:
-                cmd = ["curl", "-s", "--max-time", "3", "-A", "Mozilla/5.0", "--proxy", proxy, url]
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=4)
+                cmd = ["curl", "-s", "--max-time", "6", "-A", "Mozilla/5.0", "--proxy", proxy_str, url]
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=7)
                 if res.returncode == 0 and res.stdout:
                     raw = res.stdout.strip()
                     if fmt == "json":
