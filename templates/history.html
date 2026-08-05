@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block content %}
+<section id="view-history" class="view-section active">
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+      <h2 style="margin: 0;"><i class="fa-solid fa-clock-rotate-left"></i> 02_ // Historique des Rapports de Scans</h2>
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <button id="btn-select-all-history" class="btn btn-small"><i class="fa-solid fa-check-double"></i> Tout cocher</button>
+        <button id="btn-deselect-all-history" class="btn btn-small"><i class="fa-solid fa-xmark"></i> Tout décocher</button>
+        <button id="btn-delete-selected-history" class="btn btn-small" style="background: rgba(255, 0, 0, 0.2); border-color: #ff4444; color: #ff8888; font-weight: bold;">
+          <i class="fa-solid fa-trash-can"></i> Supprimer la sélection
+        </button>
+      </div>
+    </div>
+
+    <!-- TABLEAU D'HISTORIQUE DE SCAN -->
+    <div style="overflow-x: auto;">
+      <table class="ports-table" id="history-table" style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th style="width: 40px; text-align: center;">
+              <input type="checkbox" id="chk-toggle-all-history" style="cursor: pointer;">
+            </th>
+            <th>Date & Heure</th>
+            <th>Outil / Type</th>
+            <th>Cible</th>
+            <th>Mode</th>
+            <th style="text-align: center;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="history-table-body">
+          <tr>
+            <td colspan="6" style="text-align: center; color: #aaa; padding: 20px;">Chargement de l'historique des rapports...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+{% include 'partials/results.html' %}
+{% include 'partials/modal.html' %}
+{% endblock %}

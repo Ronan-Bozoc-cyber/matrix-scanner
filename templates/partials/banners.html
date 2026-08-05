@@ -1,0 +1,20 @@
+    <div id="command-preview" class="command-preview hidden">
+      <span class="prompt">$</span> <code id="command-preview-text"></code>
+    </div>
+
+    <div id="scan-progress" class="scan-progress hidden">
+      <div class="loader"></div>
+      <span id="scan-progress-text">Scan en cours...</span>
+    </div>
+
+    <!-- Terminal de suivi en temps réel : affiche les lignes de progression
+         renvoyées par nmap (-v --stats-every 2s) via stderr, remontées par
+         le backend et rafraîchies par polling (voir script.js). -->
+    <div id="scan-terminal" class="terminal-box hidden">
+      <div class="terminal-header">
+        <span class="terminal-dot"></span> nmap — sortie en direct
+      </div>
+      <pre id="scan-terminal-content"></pre>
+    </div>
+
+    <div id="scan-error" class="alert-box error hidden"></div>

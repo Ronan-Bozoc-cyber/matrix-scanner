@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+<section id="view-local" class="view-section active">
+        <div class="pedagogical-banner" style="background: rgba(0, 200, 81, 0.1); border-color: #00C851;">
+          <h3 style="color: #00C851;"><i class="fa-solid fa-network-wired"></i> Scanner Réseau Local (Intranet)</h3>
+          <p>Ce mode cartographie votre réseau interne. Il utilise des <strong>requêtes ARP</strong> pour identifier les <strong>fabricants de matériel</strong> (NAS, Imprimantes) et croise les versions détectées avec <strong>Vulners</strong> pour trouver des CVE de manière ciblée.</p>
+        </div>
+
+        <div class="workflow-box local-workflow" style="margin-bottom: 20px;">
+          <h4><i class="fa-solid fa-network-wired"></i> Rappel du Workflow Local</h4>
+          <div class="diagram-path">
+            <div class="node"><i class="fa-solid fa-server"></i> Cible LAN</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node"><i class="fa-solid fa-id-card"></i> Identité & NetBIOS (nbtscan & mDNS)</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node"><i class="fa-solid fa-tags"></i> Ports & OS (Nmap)</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node"><i class="fa-solid fa-biohazard"></i> CVE & Exploits (Exploit-DB)</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="form-row">
+            <div class="form-control" style="flex:1;">
+              <label for="target-local">Sous-réseau ou IP Locale</label>
+              <input type="text" id="target-local" placeholder="ex: 192.168.1.0/24" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="mode-selector-buttons" data-target-toggle="mode-toggle-local">
+            <button class="btn btn-mode mode-btn-auto active" data-mode="auto"><i class="fa-solid fa-robot"></i> AUTOMATIQUE</button>
+            <button class="btn btn-mode mode-btn-manual" data-mode="manual"><i class="fa-solid fa-sliders"></i> MANUEL</button>
+          </div>
+          <input type="hidden" id="mode-toggle-local" value="auto" class="mode-toggle">
+
+          <button id="btn-scan-local" class="btn btn-primary btn-large" style="width: 100%; margin-top: 15px; background: #1a5e20; border-color: #1a5e20; box-shadow: 0 0 10px rgba(26,94,32,0.6); color: white;">🔍 LANCER LE PENTEST LOCAL</button>
+        </div>
+      </section>
+{% include 'partials/manual_settings.html' %}
+{% include 'partials/banners.html' %}
+{% include 'partials/results.html' %}
+
+{% endblock %}

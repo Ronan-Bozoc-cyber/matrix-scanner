@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+*.db
+static/screenshots/
+
+# Patch & scratch scripts
+patch_*.py
+update_*.cjs
+update_*.js
+test_*.cjs
+test_*.py
+test_waf.json
+check_ids.cjs
+extract_*.py
+append_cards.py
+rebuild_ui.py
+restore_explanations.cjs
+old_index.html
+*_backup.html

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% block content %}
+<section id="view-settings" class="view-section active">
+        <div class="pedagogical-banner" style="background: rgba(255, 170, 0, 0.1); border-color: #ffaa00;">
+          <h3 style="color: #ffaa00;"><i class="fa-solid fa-gear"></i> Paramètres & Privilèges Système (Sudo)</h3>
+          <p>Certains outils réseau avancés comme <strong>Netdiscover</strong> (paquets ARP bruts) ou <strong>Nmap OS Detection</strong> nécessitent des privilèges d'administration (Root/Sudo). Saisissez votre mot de passe sudo pour autoriser l'exécution automatique en mode élevé.</p>
+        </div>
+
+        <div class="card" style="max-width: 650px;">
+          <h3 class="card-title"><i class="fa-solid fa-key"></i> Configuration Privilèges Sudo</h3>
+          
+          <div class="form-row" style="margin-top: 15px;">
+            <div class="form-control" style="flex:1;">
+              <label for="sudo-password-input">Mot de passe Sudo / Root local</label>
+              <input type="password" id="sudo-password-input" placeholder="Saisissez votre mot de passe utilisateur/sudo..." autocomplete="off">
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 15px;">
+            <button id="btn-save-sudo" class="btn btn-primary" style="flex:1; background: #ffaa00; border-color: #ffaa00; color: #000; font-weight: bold;"><i class="fa-solid fa-lock"></i> Enregistrer & Tester l'accès Sudo</button>
+            <button id="btn-clear-sudo" class="btn" style="background: rgba(255, 68, 68, 0.2); border-color: #ff4444; color: #ff8888;"><i class="fa-solid fa-trash"></i> Effacer</button>
+          </div>
+
+          <div id="sudo-status-alert" class="alert-box hidden" style="margin-top: 15px;"></div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h3><i class="fa-solid fa-terminal"></i> Alternative sans mot de passe (Méthode Linux recommandée)</h3>
+          <p style="color: #bbb; font-size: 0.9em;">Pour éviter de stocker ou saisir votre mot de passe dans l'application web, vous pouvez accorder les capacités réseau à Netdiscover une fois pour toutes dans votre terminal :</p>
+          <pre style="background: #111; padding: 12px; border-left: 3px solid #00ff41; color: #00ff41; font-family: monospace; font-size: 0.9em; overflow-x: auto;">sudo setcap cap_net_raw,cap_net_admin=eip /usr/sbin/netdiscover</pre>
+        </div>
+      </section>
+{% endblock %}

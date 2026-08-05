@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+<section id="view-home" class="view-section active">
+        <div class="pedagogical-banner">
+          <h3><i class="fa-solid fa-graduation-cap"></i> Espace Pédagogique - Matrix Scanner</h3>
+          <p>Cet outil a été conçu dans un but éducatif pour comprendre l'enchaînement des outils lors d'un test d'intrusion. Voici les deux chaînes de traitement automatisées (Workflows) disponibles.</p>
+        </div>
+
+        <div class="diagram-container">
+          <div class="workflow-box web-workflow">
+            <h4><i class="fa-solid fa-globe"></i> Workflow : Scanner Distant (Web & Application)</h4>
+            <div class="diagram-path">
+              <div class="node"><i class="fa-solid fa-crosshairs"></i> Cible Web</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-shield-halved"></i> Détection WAF (Wafw00f)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-code"></i> Empreinte (WhatWeb)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-camera"></i> Capture (Gowitness)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-bug"></i> Failles Web (Nikto, Nuclei, WPScan)</div>
+            </div>
+            <p class="desc">Workflow externe automatisé : Analyse la présence d'un pare-feu applicatif (WAF), capture l'aperçu visuel (Gowitness), identifie les technologies web (WhatWeb) et sonde les vulnérabilités serveur/web (Nikto, Nuclei, WPScan).</p>
+          </div>
+
+          <div class="workflow-box local-workflow">
+            <h4><i class="fa-solid fa-network-wired"></i> Workflow : Scanner Local (Intranet & LAN)</h4>
+            <div class="diagram-path">
+              <div class="node"><i class="fa-solid fa-server"></i> Cible LAN</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-id-card"></i> Identité & NetBIOS (mDNS & nbtscan)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-tags"></i> Ports & OS (Nmap)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-folder-open"></i> Énumération SMB (Enum4linux, SMBMap)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-biohazard"></i> CVE & Exploits (Exploit-DB)</div>
+            </div>
+            <p class="desc">Workflow interne automatisé : Cartographie les équipements (IP/MAC) via ARP (Netdiscover), identifie la marque/catégorie via NetBIOS/mDNS, sonde les ports et OS (Nmap), énumère les partages Windows/Samba (Enum4linux, SMBMap) et croise les bannières avec la base d'exploits (Searchsploit/CVE).</p>
+          </div>
+        </div>
+
+<!-- BANDEAU DE VÉRIFICATION DES DÉPENDANCES -->
+      <div class="card" id="deps-card" style="margin-bottom: 20px;">
+        <h2>01_ // Vérification système</h2>
+        <div id="deps-list" class="deps-list">Vérification en cours...</div>
+        <div id="deps-missing-alert" class="alert-box hidden">
+          <p>Des outils requis sont manquants sur ce système.</p>
+          <button id="install-btn" class="btn btn-primary">⚡ Installer les dépendances</button>
+          <pre id="install-log" class="install-log hidden"></pre>
+        </div>
+      </div>
+      </section>
+{% endblock %}

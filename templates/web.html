@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block content %}
+<section id="view-web" class="view-section active">
+        <div class="pedagogical-banner">
+          <h3><i class="fa-solid fa-globe"></i> Scanner Web Distant (Cloud & Sites)</h3>
+          <p>Ce mode est conçu pour attaquer une cible depuis l'extérieur. Il va chercher la présence d'un <strong>Pare-feu applicatif (WAF)</strong>, extraire les <strong>technologies web (WhatWeb)</strong>, et lancer un scanner de <strong>vulnérabilités (Nuclei)</strong>.</p>
+        </div>
+        
+        <div class="workflow-box web-workflow" style="margin-bottom: 20px;">
+          <h4><i class="fa-solid fa-globe"></i> Rappel du Workflow Web</h4>
+          <div class="diagram-path">
+            <div class="node"><i class="fa-solid fa-crosshairs"></i> Cible Web</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node"><i class="fa-solid fa-shield-halved"></i> Détection WAF (Wafw00f)</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node"><i class="fa-solid fa-code"></i> Empreinte (WhatWeb)</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node"><i class="fa-solid fa-camera"></i> Capture (Gowitness)</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node"><i class="fa-solid fa-bug"></i> Failles (Nuclei & WPScan)</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="form-row">
+            <div class="form-control" style="flex:1;">
+              <label for="target-web">Cible Web (URL ou IP publique)</label>
+              <input type="text" id="target-web" placeholder="ex: https://example.com ou 1.2.3.4" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="mode-selector-buttons" data-target-toggle="mode-toggle-web">
+            <button class="btn btn-mode mode-btn-auto active" data-mode="auto"><i class="fa-solid fa-robot"></i> AUTOMATIQUE</button>
+            <button class="btn btn-mode mode-btn-manual" data-mode="manual"><i class="fa-solid fa-sliders"></i> MANUEL</button>
+          </div>
+          <input type="hidden" id="mode-toggle-web" value="auto" class="mode-toggle">
+
+          <!-- Auto-Pilot mode web agressivité hidden pour script.js compatibilité -->
+          <input type="hidden" id="autopilot-mode-web" value="auto">
+          
+          <button id="btn-scan-web" class="btn btn-primary btn-large" style="width: 100%; margin-top: 15px; background: #1a5e20; border-color: #1a5e20; box-shadow: 0 0 10px rgba(26,94,32,0.6); color: white;">🔥 LANCER LE PENTEST WEB</button>
+        </div>
+      </section>
+{% include 'partials/manual_settings.html' %}
+{% include 'partials/banners.html' %}
+{% include 'partials/results.html' %}
+
+{% endblock %}

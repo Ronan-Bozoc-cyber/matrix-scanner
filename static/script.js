@@ -1,18 +1,95 @@
 // =====================================================================================
 // MATRIX SCANNER - script.js
-// Gère : l'animation de fond "pluie de code", la vérification/installation des
-// dépendances, le paramétrage et le lancement des scans, l'affichage des résultats
-// (tableaux + Chart.js) et la recherche de CVE via l'API backend.
 // =====================================================================================
 
+// --- ÉTAT GLOBAL DE SCAN & CHRONOMÈTRE ---
+window.isScanning = false;
+let scanStartTime = 0;
+let stopwatchInterval = null;
+
+function setScanningState(state, toolName = "") {
+  window.isScanning = state;
+  const overlay = document.getElementById('navigation-lock-overlay');
+  const statusBox = document.getElementById('global-scan-status');
+  const toolText = document.getElementById('global-scan-tool');
+  const progressBar = document.getElementById('global-scan-progress-bar');
+  const stopwatch = document.getElementById('scan-stopwatch');
+
+  if (state) {
+    if (overlay) overlay.classList.remove('hidden');
+    if (statusBox) statusBox.classList.remove('hidden');
+    if (toolText) toolText.textContent = toolName + " en cours...";
+    if (progressBar) progressBar.style.width = "50%";
+
+    if (!stopwatchInterval && stopwatch) {
+      scanStartTime = Date.now();
+      stopwatch.style.color = "#fff";
+      stopwatchInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - scanStartTime) / 1000);
+        const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+        const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+        const s = String(elapsed % 60).padStart(2, '0');
+        stopwatch.textContent = `${h}:${m}:${s}`;
+      }, 1000);
+    }
+  } else {
+    if (overlay) overlay.classList.add('hidden');
+    if (toolText) toolText.textContent = "Terminé.";
+    if (progressBar) progressBar.style.width = "100%";
+    if (stopwatchInterval) {
+      clearInterval(stopwatchInterval);
+      stopwatchInterval = null;
+      if (stopwatch) stopwatch.style.color = "var(--matrix-green)";
+    }
+  }
+}
+
+// Navigation Lock
+document.addEventListener('DOMContentLoaded', () => {
+  setScanningState(false);
+
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+      if (window.isScanning) {
+        e.preventDefault();
+        const overlayBox = document.querySelector('#navigation-lock-overlay > div');
+        if (overlayBox) {
+          overlayBox.style.transform = 'scale(1.08)';
+          overlayBox.style.backgroundColor = 'rgba(120, 0, 0, 0.95)';
+          overlayBox.style.boxShadow = '0 4px 30px rgba(255, 0, 0, 0.9)';
+          setTimeout(() => {
+            overlayBox.style.transform = 'scale(1)';
+            overlayBox.style.backgroundColor = 'rgba(20, 0, 0, 0.92)';
+            overlayBox.style.boxShadow = '0 4px 20px rgba(255, 0, 0, 0.5)';
+          }, 250);
+        }
+      }
+    });
+  });
+
+  initMatrixRain();
+  initModeSelectorButtons();
+  initScanHandlers();
+  initSettingsHandlers();
+  initHistoryHandlers();
+  initStopScanHandler();
+  initSystemMonitor();
+  initRealtimeClock();
+
+  // If on home page with deps-card, run checkDependencies
+  if (document.getElementById("deps-card")) {
+    checkDependencies();
+  }
+});
+
 /* -------------------------------------------------------------------------------
- * 1. ANIMATION DE FOND "MATRIX RAIN" (canvas 2D)
+ * 1. ANIMATION MATRIX RAIN
  * ------------------------------------------------------------------------------- */
-(function initMatrixRain() {
+function initMatrixRain() {
   const canvas = document.getElementById("matrix-bg");
+  if (!canvas) return;
   const ctx = canvas.getContext("2d");
   const chars = "アカサタナハマヤラワ0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
   let columns, drops;
 
   function resize() {
@@ -42,39 +119,59 @@
     }
   }
   setInterval(draw, 45);
-})();
+}
 
 /* -------------------------------------------------------------------------------
- * 2. VÉRIFICATION / INSTALLATION DES DÉPENDANCES
+ * 2. PRÉREQUIS SYSTÈME (DEPENDENCIES)
  * ------------------------------------------------------------------------------- */
 async function checkDependencies() {
   const listEl = document.getElementById("deps-list");
   const missingAlert = document.getElementById("deps-missing-alert");
+  if (!listEl) return;
 
   try {
     const res = await fetch("/api/check-deps");
     const data = await res.json();
 
+    const toolEntries = Object.entries(data.tools);
+    const totalCount = toolEntries.length;
+    const installedCount = toolEntries.filter(([_, info]) => info.installed).length;
+    const missingCount = totalCount - installedCount;
+
     listEl.innerHTML = "";
-    Object.entries(data.tools).forEach(([name, info]) => {
+
+    const counterDiv = document.createElement("div");
+    counterDiv.style.width = "100%";
+    counterDiv.style.marginBottom = "12px";
+    counterDiv.style.fontSize = "0.9em";
+    counterDiv.style.color = "#fff";
+    counterDiv.innerHTML = `
+      <span>Statut des outils : <b>${installedCount}/${totalCount}</b> outils installés.</span>
+      ${missingCount > 0 ? `<span style="color:#ff4444; margin-left:10px;">(<b>${missingCount}</b> outil(s) manquant(s))</span>` : `<span style="color:#00C851; margin-left:10px;">(Tous les outils sont prêts !)</span>`}
+    `;
+    listEl.appendChild(counterDiv);
+
+    toolEntries.forEach(([name, info]) => {
       const span = document.createElement("span");
       span.className = "dep-item " + (info.installed ? "ok" : "missing");
       span.textContent = `${info.installed ? "✔" : "✘"} ${name} — ${info.description}`;
       listEl.appendChild(span);
     });
 
-    if (!data.all_installed) {
-      missingAlert.classList.remove("hidden");
-      missingAlert.dataset.packages = JSON.stringify(data.missing_apt_packages);
-    } else {
-      missingAlert.classList.add("hidden");
+    if (missingAlert) {
+      if (!data.all_installed) {
+        missingAlert.classList.remove("hidden");
+        missingAlert.dataset.packages = JSON.stringify(data.missing_apt_packages);
+      } else {
+        missingAlert.classList.add("hidden");
+      }
     }
   } catch (err) {
     listEl.textContent = "Erreur lors de la vérification des dépendances : " + err.message;
   }
 }
 
-document.getElementById("install-btn").addEventListener("click", async () => {
+document.getElementById("install-btn")?.addEventListener("click", async () => {
   const btn = document.getElementById("install-btn");
   const logEl = document.getElementById("install-log");
   const missingAlert = document.getElementById("deps-missing-alert");
@@ -99,7 +196,6 @@ document.getElementById("install-btn").addEventListener("click", async () => {
       return;
     }
 
-    // Polling du statut d'installation toutes les 1.5s
     const poll = setInterval(async () => {
       const statusRes = await fetch("/api/install-status");
       const status = await statusRes.json();
@@ -125,148 +221,378 @@ document.getElementById("install-btn").addEventListener("click", async () => {
   }
 });
 
-checkDependencies();
-
 /* -------------------------------------------------------------------------------
- * 3. EXPLICATIONS DYNAMIQUES DES PARAMÈTRES
+ * 3. GESTION DES MODES (AUTOMATIQUE / MANUEL)
  * ------------------------------------------------------------------------------- */
-const SCAN_TYPE_EXPLANATIONS = {
-  sS: "Le SYN scan (-sS) envoie un paquet TCP SYN sans compléter la connexion : rapide et discret, nécessite les privilèges root.",
-  sT: "Le Connect scan (-sT) complète la poignée de main TCP classique : plus lent, plus détectable, mais fonctionne sans privilèges root.",
-  sU: "Le scan UDP (-sU) est nécessaire pour détecter des services comme DNS(53) ou SNMP(161) ; il est nettement plus lent que le TCP.",
-  sA: "Le scan ACK (-sA) ne détermine pas si un port est ouvert mais s'il est filtré par un pare-feu stateful.",
-  sn: "Le ping scan (-sn) détecte simplement les hôtes actifs sur le réseau, sans scanner leurs ports.",
-};
+function initModeSelectorButtons() {
+  document.querySelectorAll('.mode-selector-buttons .btn-mode').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const container = this.closest('.mode-selector-buttons');
+      container.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
 
-const PORT_MODE_EXPLANATIONS = {
-  fast: "Scan des 100 ports les plus courants (-F) : le plus rapide, adapté à une première reconnaissance.",
-  top1000: "Scan des 1000 ports les plus courants (comportement par défaut de nmap) : bon compromis vitesse/exhaustivité.",
-  all: "Scan des 65535 ports TCP (-p-) : le plus complet, mais aussi le plus long (peut prendre plusieurs minutes).",
-  custom: "Scan restreint aux ports que vous spécifiez (ex: 22,80,443 ou 8000-8100).",
-};
+      const targetToggleId = container.dataset.targetToggle;
+      const hiddenInput = document.getElementById(targetToggleId);
+      const mode = this.dataset.mode;
+      if (hiddenInput) hiddenInput.value = mode;
 
-const TIMING_EXPLANATIONS = [
-  "T0 (Paranoïaque) : extrêmement lent, pensé pour échapper à la détection IDS.",
-  "T1 (Furtif) : très lent et discret.",
-  "T2 (Poli) : ralentit le scan pour limiter la charge réseau.",
-  "T3 (Normal) : vitesse par défaut de nmap, bon compromis.",
-  "T4 (Agressif) : rapide, adapté à un réseau local fiable.",
-  "T5 (Insane) : vitesse maximale, au risque de perdre des résultats.",
-];
-
-document.getElementById("scan_type").addEventListener("change", (e) => {
-  document.getElementById("explain-scan-type").textContent = SCAN_TYPE_EXPLANATIONS[e.target.value];
-});
-
-document.getElementById("port_mode").addEventListener("change", (e) => {
-  document.getElementById("explain-ports").textContent = PORT_MODE_EXPLANATIONS[e.target.value];
-  document.getElementById("custom_ports").classList.toggle("hidden", e.target.value !== "custom");
-});
-
-document.getElementById("timing").addEventListener("input", (e) => {
-  document.getElementById("explain-timing").textContent = TIMING_EXPLANATIONS[parseInt(e.target.value, 10)];
-});
-
-/* -------------------------------------------------------------------------------
- * 4. LANCEMENT DU SCAN
- * ------------------------------------------------------------------------------- */
-let portsChartInstance = null;
+      const manualSettings = document.getElementById('shared-manual-settings');
+      if (manualSettings) {
+        if (mode === 'manual') {
+          manualSettings.classList.remove('hidden');
+        } else {
+          manualSettings.classList.add('hidden');
+        }
+      }
+    });
+  });
+}
 
 function collectOptions() {
+  const getVal = id => document.getElementById(id)?.value || "";
+  const getChecked = id => document.getElementById(id)?.checked || false;
+
   return {
-    scan_type: document.getElementById("scan_type").value,
-    port_mode: document.getElementById("port_mode").value,
-    custom_ports: document.getElementById("custom_ports").value,
-    timing: document.getElementById("timing").value,
-    service_version: document.getElementById("service_version").checked,
-    os_detection: document.getElementById("os_detection").checked,
-    default_scripts: document.getElementById("default_scripts").checked,
-    vuln_scripts: document.getElementById("vuln_scripts").checked,
+    scan_type: getVal("scan_type") || "sS",
+    port_mode: getVal("port_mode") || "top_1000",
+    custom_ports: getVal("custom_ports") || "",
+    timing: getVal("timing") || "3",
+    service_version: getChecked("service_version"),
+    os_detection: getChecked("os_detection"),
+    default_scripts: getChecked("default_scripts"),
+    vuln_scripts: getChecked("vuln_scripts"),
+    vulners_script: getChecked("vulners_script"),
+    aggressive_scan: getChecked("aggressive_scan"),
+    skip_host_discovery: getChecked("skip_host_discovery")
   };
 }
 
-document.getElementById("scan-btn").addEventListener("click", async () => {
-  const target = document.getElementById("target").value;
+/* -------------------------------------------------------------------------------
+ * 4. HANDLERS DE SCAN (WEB & LOCAL)
+ * ------------------------------------------------------------------------------- */
+function initScanHandlers() {
+  // Web Pentest
+  const btnWeb = document.getElementById("btn-scan-web");
+  if (btnWeb) {
+    btnWeb.addEventListener("click", () => startScan("web"));
+  }
+
+  // Local Pentest
+  const btnLocal = document.getElementById("btn-scan-local");
+  if (btnLocal) {
+    btnLocal.addEventListener("click", () => startScan("local"));
+  }
+}
+
+async function startScan(mode, customTarget = null) {
+  const targetInput = document.getElementById(mode === "web" ? "target-web" : "target-local");
+  const target = customTarget || (targetInput ? targetInput.value.trim() : "");
   const errorBox = document.getElementById("scan-error");
   const progressBox = document.getElementById("scan-progress");
   const previewBox = document.getElementById("command-preview");
-  const scanBtn = document.getElementById("scan-btn");
   const terminalBox = document.getElementById("scan-terminal");
   const terminalContent = document.getElementById("scan-terminal-content");
+  const netdiscoverCard = document.getElementById("netdiscover-card");
 
-  errorBox.classList.add("hidden");
-  document.getElementById("results-card").classList.add("hidden");
-  document.getElementById("cve-card").classList.add("hidden");
+  if (!target) {
+    if (errorBox) {
+      errorBox.textContent = "Veuillez saisir une cible valide.";
+      errorBox.classList.remove("hidden");
+    }
+    return;
+  }
 
-  scanBtn.disabled = true;
-  progressBox.classList.remove("hidden");
-  document.getElementById("scan-progress-text").textContent = "Lancement du scan...";
+  if (errorBox) errorBox.classList.add("hidden");
+  document.getElementById("results-card")?.classList.add("hidden");
+  document.getElementById("cve-card")?.classList.add("hidden");
+  
+  // Masquer netdiscoverCard uniquement si c'est un nouveau scan depuis le formulaire principal
+  if (!customTarget && netdiscoverCard) netdiscoverCard.classList.add("hidden");
 
-  terminalBox.classList.remove("hidden");
-  terminalContent.textContent = "";
+  const modeToggle = document.getElementById(`mode-toggle-${mode}`)?.value || "auto";
+
+  // Exécuter Netdiscover uniquement si pas de customTarget et si la cible est un sous-réseau complet (contient '/' ou '-')
+  const isSubnet = target.includes("/") || target.includes("-");
+
+  if (!customTarget && mode === "local" && modeToggle === "auto" && isSubnet) {
+    // Mode Auto Local sur un réseau complet : Netdiscover puis sélection Nmap
+    runAutoLocalPipeline(target);
+    return;
+  }
+
+  // Normal / Manual / Selected Scan via /api/scan
+  if (progressBox) progressBox.classList.remove("hidden");
+  const progressText = document.getElementById("scan-progress-text");
+  if (progressText) progressText.textContent = "Initialisation du scan Nmap...";
+  setScanningState(true, `Scanner Nmap (${mode === "web" ? "Web" : "Local"})`);
+
+  if (terminalBox) terminalBox.classList.remove("hidden");
+  if (terminalContent) terminalContent.textContent = "";
+
+  const options = modeToggle === "manual" ? collectOptions() : {
+    scan_type: "sS",
+    port_mode: "top_1000",
+    service_version: true,
+    os_detection: true,
+    default_scripts: false,
+    vuln_scripts: false,
+    skip_host_discovery: true
+  };
+  options.is_local = (mode === "local");
 
   try {
     const res = await fetch("/api/scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target, options: collectOptions() }),
+      body: JSON.stringify({ target, mode, options }),
     });
     const data = await res.json();
 
     if (res.status !== 200) {
-      errorBox.textContent = "Erreur : " + (data.error || "inconnue");
-      errorBox.classList.remove("hidden");
-      scanBtn.disabled = false;
-      progressBox.classList.add("hidden");
+      if (errorBox) {
+        errorBox.textContent = "Erreur : " + (data.error || "inconnue");
+        errorBox.classList.remove("hidden");
+      }
+      setScanningState(false);
+      if (progressBox) progressBox.classList.add("hidden");
       return;
     }
 
-    previewBox.classList.remove("hidden");
-    document.getElementById("command-preview-text").textContent = data.command_preview;
+    if (previewBox) {
+      previewBox.classList.remove("hidden");
+      const previewText = document.getElementById("command-preview-text");
+      if (previewText) previewText.textContent = data.command_preview;
+    }
 
     pollScanStatus(data.job_id);
   } catch (err) {
-    errorBox.textContent = "Erreur réseau : " + err.message;
-    errorBox.classList.remove("hidden");
-    scanBtn.disabled = false;
-    progressBox.classList.add("hidden");
+    if (errorBox) {
+      errorBox.textContent = "Erreur réseau : " + err.message;
+      errorBox.classList.remove("hidden");
+    }
+    setScanningState(false);
+    if (progressBox) progressBox.classList.add("hidden");
   }
-});
+}
+
+async function runAutoLocalPipeline(target) {
+  const netdiscoverCard = document.getElementById("netdiscover-card");
+  const netdiscoverProgress = document.getElementById("netdiscover-progress");
+  const netdiscoverResults = document.getElementById("netdiscover-results");
+  const netdiscoverList = document.getElementById("netdiscover-results-list");
+  const errorBox = document.getElementById("scan-error");
+
+  setScanningState(true, "Découverte ARP (Netdiscover)");
+
+  if (netdiscoverCard) netdiscoverCard.classList.remove("hidden");
+  if (netdiscoverProgress) netdiscoverProgress.classList.remove("hidden");
+  if (netdiscoverResults) netdiscoverResults.classList.add("hidden");
+
+  try {
+    const res = await fetch("/api/netdiscover-scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target }),
+    });
+    const data = await res.json();
+
+    if (res.status !== 200) {
+      if (errorBox) {
+        errorBox.textContent = "Erreur Netdiscover : " + (data.error || "Inconnue");
+        errorBox.classList.remove("hidden");
+      }
+      setScanningState(false);
+      if (netdiscoverProgress) netdiscoverProgress.classList.add("hidden");
+      return;
+    }
+
+    // Poll Netdiscover
+    const pollNd = setInterval(async () => {
+      try {
+        const statusRes = await fetch(`/api/netdiscover-status/${data.job_id}`);
+        if (statusRes.status !== 200) {
+          clearInterval(pollNd);
+          setScanningState(false);
+          if (netdiscoverProgress) netdiscoverProgress.classList.add("hidden");
+          return;
+        }
+        const job = await statusRes.json();
+
+        if (job.status === "done") {
+          clearInterval(pollNd);
+          if (netdiscoverProgress) netdiscoverProgress.classList.add("hidden");
+          if (netdiscoverResults) netdiscoverResults.classList.remove("hidden");
+
+          const devices = job.result || [];
+          if (netdiscoverList) {
+            if (devices.length === 0) {
+              netdiscoverList.innerHTML = "<p>Aucun équipement détecté par ARP.</p>";
+            } else {
+              let html = `
+                <div style="margin-bottom: 12px; display: flex; gap: 10px; align-items: center; justify-content: space-between;">
+                  <div style="display: flex; gap: 8px;">
+                    <button id="btn-select-all-netdiscover" class="btn btn-small" style="background: rgba(0,255,65,0.2); color: #00ff41; border: 1px solid #00ff41; padding: 5px 10px; cursor: pointer;">✔ Tout sélectionner</button>
+                    <button id="btn-deselect-all-netdiscover" class="btn btn-small" style="background: rgba(255,255,255,0.1); color: #ccc; border: 1px solid #555; padding: 5px 10px; cursor: pointer;">✘ Tout désélectionner</button>
+                  </div>
+                  <span style="font-size: 0.85em; color: #aaa;">Sélectionnez les hôtes à scanner avec Nmap</span>
+                </div>
+                <table class="ports-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40px; text-align: center;"><input type="checkbox" id="chk-toggle-all-netdiscover" checked style="cursor: pointer;"></th>
+                      <th>IP</th>
+                      <th>Nom Réseau / NetBIOS</th>
+                      <th>Catégorie / Type</th>
+                      <th>MAC</th>
+                      <th>Constructeur / Marque</th>
+                    </tr>
+                  </thead>
+                  <tbody>`;
+              devices.forEach(d => {
+                const icon = d.icon || "fa-server";
+                const cat = d.category || "Équipement Réseau";
+                const hostName = d.hostname || d.netbios_name || "-";
+                html += `<tr>
+                  <td style="text-align: center;"><input type="checkbox" class="netdiscover-chk" value="${d.ip}" checked style="cursor: pointer;"></td>
+                  <td><b>${d.ip}</b></td>
+                  <td><span style="color:#00ff41;">${hostName}</span> ${d.workgroup ? `<small style="color:#aaa;">(${d.workgroup})</small>` : ''}</td>
+                  <td><i class="fa-solid ${icon}" style="margin-right: 5px; color: #ffaa00;"></i> ${cat}</td>
+                  <td style="font-family: monospace; font-size: 0.9em;">${d.mac}</td>
+                  <td>${d.vendor}</td>
+                </tr>`;
+              });
+              html += `</tbody></table>
+              <button id="btn-scan-selected-netdiscover" class="btn btn-primary btn-large" style="width: 100%; margin-top: 15px; background: #1a5e20; border-color: #1a5e20; box-shadow: 0 0 10px rgba(26,94,32,0.6); color: white; cursor: pointer;">
+                ▶ LANCER LE SCAN NMAP SUR LES ÉQUIPEMENTS SÉLECTIONNÉS
+              </button>`;
+
+              netdiscoverList.innerHTML = html;
+              attachNetdiscoverEvents();
+            }
+          }
+          setScanningState(false);
+
+        } else if (job.status === "error") {
+          clearInterval(pollNd);
+          if (netdiscoverProgress) netdiscoverProgress.classList.add("hidden");
+          if (errorBox) {
+            errorBox.textContent = "Erreur Netdiscover : " + job.error;
+            errorBox.classList.remove("hidden");
+          }
+          setScanningState(false);
+        }
+      } catch (err) {
+        clearInterval(pollNd);
+        setScanningState(false);
+      }
+    }, 1000);
+    window.activePollInterval = pollNd;
+
+  } catch (err) {
+    if (errorBox) {
+      errorBox.textContent = "Erreur réseau Netdiscover : " + err.message;
+      errorBox.classList.remove("hidden");
+    }
+    setScanningState(false);
+  }
+}
+
+function attachNetdiscoverEvents() {
+  const masterChk = document.getElementById("chk-toggle-all-netdiscover");
+  const btnSelectAll = document.getElementById("btn-select-all-netdiscover");
+  const btnDeselectAll = document.getElementById("btn-deselect-all-netdiscover");
+  const btnScanSelected = document.getElementById("btn-scan-selected-netdiscover");
+
+  const getCheckboxes = () => document.querySelectorAll(".netdiscover-chk");
+
+  if (masterChk) {
+    masterChk.addEventListener("change", (e) => {
+      getCheckboxes().forEach(chk => chk.checked = e.target.checked);
+    });
+  }
+
+  if (btnSelectAll) {
+    btnSelectAll.addEventListener("click", () => {
+      getCheckboxes().forEach(chk => chk.checked = true);
+      if (masterChk) masterChk.checked = true;
+    });
+  }
+
+  if (btnDeselectAll) {
+    btnDeselectAll.addEventListener("click", () => {
+      getCheckboxes().forEach(chk => chk.checked = false);
+      if (masterChk) masterChk.checked = false;
+    });
+  }
+
+  if (btnScanSelected) {
+    btnScanSelected.addEventListener("click", () => {
+      const selectedIps = Array.from(getCheckboxes())
+        .filter(chk => chk.checked)
+        .map(chk => chk.value);
+
+      if (selectedIps.length === 0) {
+        const errorBox = document.getElementById("scan-error");
+        if (errorBox) {
+          errorBox.textContent = "Veuillez cocher au moins un équipement à scanner.";
+          errorBox.classList.remove("hidden");
+        }
+        return;
+      }
+
+      // Joindre les cibles séparées par un espace et lancer le scan Nmap
+      const customTarget = selectedIps.join(" ");
+      startScan("local", customTarget);
+    });
+  }
+}
 
 function pollScanStatus(jobId) {
-  const scanBtn = document.getElementById("scan-btn");
   const progressBox = document.getElementById("scan-progress");
   const progressText = document.getElementById("scan-progress-text");
   const errorBox = document.getElementById("scan-error");
   const terminalContent = document.getElementById("scan-terminal-content");
 
-  // Rafraîchissement rapide (1s) pour un suivi fluide de la progression nmap.
   const poll = setInterval(async () => {
-    const res = await fetch(`/api/scan-status/${jobId}`);
-    const job = await res.json();
+    try {
+      const res = await fetch(`/api/scan-status/${jobId}`);
+      if (res.status !== 200) {
+        clearInterval(poll);
+        setScanningState(false);
+        if (progressBox) progressBox.classList.add("hidden");
+        if (errorBox) {
+          errorBox.textContent = "Erreur : Tâche de scan introuvable ou serveur réinitialisé.";
+          errorBox.classList.remove("hidden");
+        }
+        return;
+      }
+      const job = await res.json();
 
-    progressText.textContent = `Scan en cours (statut: ${job.status})...`;
-    updateTerminal(terminalContent, job.log || []);
+      if (progressText) progressText.textContent = `Scan en cours (statut: ${job.status})...`;
+      if (terminalContent) updateTerminal(terminalContent, job.log || []);
 
-    if (job.status === "done") {
+      if (job.status === "done") {
+        setScanningState(false);
+        clearInterval(poll);
+        if (progressBox) progressBox.classList.add("hidden");
+        renderResults(job.result);
+      } else if (job.status === "error") {
+        setScanningState(false);
+        clearInterval(poll);
+        if (progressBox) progressBox.classList.add("hidden");
+        if (errorBox) {
+          errorBox.textContent = "Erreur pendant le scan : " + job.error;
+          errorBox.classList.remove("hidden");
+        }
+      }
+    } catch (err) {
       clearInterval(poll);
-      scanBtn.disabled = false;
-      progressBox.classList.add("hidden");
-      renderResults(job.result);
-    } else if (job.status === "error") {
-      clearInterval(poll);
-      scanBtn.disabled = false;
-      progressBox.classList.add("hidden");
-      errorBox.textContent = "Erreur pendant le scan : " + job.error;
-      errorBox.classList.remove("hidden");
+      setScanningState(false);
     }
   }, 1000);
+  window.activePollInterval = poll;
 }
 
-// Met à jour le contenu du terminal live à partir du tableau de lignes de log.
-// Ne réécrit le DOM que si le nombre de lignes a changé (évite un flicker
-// inutile) et ne force l'auto-scroll que si l'utilisateur était déjà proche
-// du bas (pour ne pas lui arracher la lecture s'il a remonté manuellement).
 function updateTerminal(terminalEl, logLines) {
   const previousLineCount = parseInt(terminalEl.dataset.lineCount || "0", 10);
   if (logLines.length === previousLineCount) return;
@@ -282,16 +608,30 @@ function updateTerminal(terminalEl, logLines) {
 }
 
 /* -------------------------------------------------------------------------------
- * 5. AFFICHAGE DES RÉSULTATS (résumé, graphique, tableaux)
+ * 5. AFFICHAGE DES RÉSULTATS
  * ------------------------------------------------------------------------------- */
+let portsChartInstance = null;
+
 function renderResults(hosts) {
+  setScanningState(false);
   const resultsCard = document.getElementById("results-card");
   const summaryEl = document.getElementById("results-summary");
   const hostsDetailEl = document.getElementById("hosts-detail");
 
+  if (!resultsCard || !summaryEl || !hostsDetailEl) return;
+
   resultsCard.classList.remove("hidden");
   summaryEl.innerHTML = "";
   hostsDetailEl.innerHTML = "";
+  window.autoCveSearched = false;
+
+  // Afficher la topologie réseau dynamique pour les scans locaux
+  const isLocalScan = (window.currentViewId === "view-local") || (hosts && hosts.length > 0 && hosts.some(h => h.mac || h.netbios_name || h.ip.startsWith("192.168.") || h.ip.startsWith("10.") || h.ip.startsWith("172.")));
+  if (isLocalScan) {
+    renderLocalTopology(hosts);
+  } else {
+    document.getElementById("topology-card")?.classList.add("hidden");
+  }
 
   let totalOpen = 0, totalClosed = 0, totalFiltered = 0;
   const serviceCounts = {};
@@ -301,8 +641,20 @@ function renderResults(hosts) {
     hostBlock.className = "host-block";
 
     const title = document.createElement("h4");
-    title.textContent = `🖥 ${host.ip}` + (host.hostname ? ` (${host.hostname})` : "");
+    const icon = host.icon || "fa-server";
+    const cat = host.category ? ` [${host.category}]` : "";
+    const nameStr = host.hostname || host.netbios_name ? ` (${host.hostname || host.netbios_name})` : "";
+    title.innerHTML = `<i class="fa-solid ${icon}" style="color:#00ff41; margin-right:8px;"></i> ${host.ip}${nameStr} <small style="color:#ffaa00; font-size:0.8em;">${cat}</small>`;
     hostBlock.appendChild(title);
+
+    if (host.vendor || host.netbios_name) {
+      const infoP = document.createElement("p");
+      infoP.style.fontSize = "0.85rem";
+      infoP.style.color = "#aaa";
+      infoP.style.marginTop = "-5px";
+      infoP.innerHTML = `Constructeur : <b>${host.vendor || 'Inconnu'}</b> ${host.workgroup ? `· Groupe de travail : <b>${host.workgroup}</b>` : ''}`;
+      hostBlock.appendChild(infoP);
+    }
 
     if (host.os_matches && host.os_matches.length > 0) {
       const osP = document.createElement("p");
@@ -314,14 +666,14 @@ function renderResults(hosts) {
 
     if (host.ports.length === 0) {
       const p = document.createElement("p");
-      p.textContent = "Aucun port scanné / hôte down (mode ping scan ?).";
+      p.textContent = "Aucun port scanné / hôte down.";
       hostBlock.appendChild(p);
     } else {
       const table = document.createElement("table");
       table.className = "ports-table";
       table.innerHTML = `
         <thead>
-          <tr><th>Port</th><th>Protocole</th><th>État</th><th>Service</th><th>Produit / Version</th><th></th></tr>
+          <tr><th>Port</th><th>Protocole</th><th>État</th><th>Service</th><th>Produit / Version</th><th>CVE / Exploits</th><th>Outils Recommandés</th></tr>
         </thead>
         <tbody></tbody>
       `;
@@ -338,29 +690,151 @@ function renderResults(hosts) {
 
         const tr = document.createElement("tr");
         const productVersion = [p.product, p.version].filter(Boolean).join(" ");
+        const searchQuery = p.product || p.service || "";
+        const hasQuery = p.state === "open" && searchQuery && searchQuery !== "unknown";
+
+        const badgeId = `cve-badge-${Math.random().toString(36).substr(2, 9)}`;
+
+        // Génération des boutons d'outils recommandés spécifiques au port/service avec popovers d'explication
+        let toolBtnsHtml = "-";
+        if (p.state === "open") {
+          const portNum = parseInt(p.port, 10);
+          const sName = (p.service || "").toLowerCase();
+          const tools = [];
+
+          if (portNum === 80 || portNum === 443 || portNum === 8080 || sName.includes("http")) {
+            tools.push({ name: "WhatWeb", icon: "fa-code", desc: "Identification des technologies Web, CMS, serveurs et frameworks.", cmd: `whatweb http://${host.ip}:${portNum}` });
+            tools.push({ name: "Nikto", icon: "fa-bug", desc: "Scanner de vulnérabilités Web (fichiers dangereux, CGI, pannes de config).", cmd: `nikto -h http://${host.ip}:${portNum}` });
+            tools.push({ name: "Nuclei", icon: "fa-bolt", desc: "Détection de failles récentes basée sur des modèles communautaires.", cmd: `nuclei -u http://${host.ip}:${portNum}` });
+          }
+          if (sName.includes("wordpress") || sName.includes("wp")) {
+            tools.push({ name: "WPScan", icon: "fa-wordpress", desc: "Audit de sécurité spécifique WordPress (plugins, thèmes, utilisateurs).", cmd: `wpscan --url http://${host.ip}:${portNum} --enumerate p,t,u` });
+          }
+          if (portNum === 445 || portNum === 139 || sName.includes("smb") || sName.includes("netbios")) {
+            tools.push({ name: "Enum4linux", icon: "fa-network-wired", desc: "Énumération complète des partages Windows/Samba et des utilisateurs.", cmd: `enum4linux -a ${host.ip}` });
+            tools.push({ name: "SMBMap", icon: "fa-folder-open", desc: "Cartographie visuelle des droits d'accès sur les partages réseau.", cmd: `smbmap -H ${host.ip}` });
+          }
+          if (portNum === 22 || sName.includes("ssh")) {
+            tools.push({ name: "SSH-Audit", icon: "fa-key", desc: "Analyse de la robustesse des algorithmes de chiffrement SSH.", cmd: `ssh-audit ${host.ip}` });
+          }
+          if (portNum === 21 || sName.includes("ftp")) {
+            tools.push({ name: "FTP-Anon", icon: "fa-folder-tree", desc: "Vérification de l'accès FTP anonyme sans mot de passe.", cmd: `nmap --script ftp-anon -p 21 ${host.ip}` });
+          }
+          if (portNum === 3306 || portNum === 5432 || sName.includes("sql")) {
+            tools.push({ name: "SQLMap", icon: "fa-database", desc: "Détection et exploitation automatique d'injections SQL sur la base.", cmd: `sqlmap -u "http://${host.ip}/..." --batch` });
+          }
+
+          if (tools.length > 0) {
+            toolBtnsHtml = `<div class="tool-btns-wrapper">` + tools.map(t => `
+              <div class="tool-btn-container">
+                <button class="tool-btn" onclick="navigator.clipboard.writeText('${t.cmd}'); alert('Commande copiée : ${t.cmd}');" title="Cliquer pour copier la commande">
+                  <i class="fa-solid ${t.icon}"></i> ${t.name}
+                </button>
+                <div class="tool-explanation-popover">
+                  <strong style="color:#00ff41; display:block; margin-bottom:3px;">${t.name}</strong>
+                  ${t.desc}<br/>
+                  <code style="color:#7ec8ff; font-size:0.7em; margin-top:4px; display:block;">$ ${t.cmd}</code>
+                </div>
+              </div>
+            `).join("") + `</div>`;
+          }
+        }
+
         tr.innerHTML = `
           <td>${p.port}</td>
           <td>${p.protocol}</td>
           <td class="state-${p.state}">${p.state}</td>
           <td>${p.service || "-"}</td>
-          <td>${productVersion || "-"}</td>
-          <td>${p.state === "open" && p.product ? '<span class="cve-search-link">🔍 Chercher CVE</span>' : ""}</td>
+          <td>${productVersion || p.service || "-"}</td>
+          <td>
+            ${hasQuery ? `<span id="${badgeId}" class="cve-badge cve-badge-loading" style="cursor:pointer;" title="Cliquer pour voir les détails des CVE"><i class="fa-solid fa-spinner fa-spin"></i> Recherche...</span>` : "-"}
+          </td>
+          <td>${toolBtnsHtml}</td>
         `;
-        if (p.state === "open" && p.product) {
-          tr.querySelector(".cve-search-link").addEventListener("click", () => {
-            searchCve(p.product, p.version || "");
-          });
-        }
+
         tbody.appendChild(tr);
+
+        if (hasQuery) {
+          const badgeEl = tr.querySelector(".cve-badge");
+          const openModalHandler = (e) => {
+            if (e) e.stopPropagation();
+            showCveModal(searchQuery, p.version || "");
+          };
+
+          fetchCveBadgeData(searchQuery, p.version || "", badgeEl);
+
+          if (badgeEl) badgeEl.onclick = openModalHandler;
+        }
       });
 
       hostBlock.appendChild(table);
+
+      // Recommandations d'outils Kali Linux spécifiques selon les services et ports découverts
+      const openPorts = host.ports.filter(p => p.state === "open");
+      if (openPorts.length > 0) {
+        const kaliBox = document.createElement("div");
+        kaliBox.style.marginTop = "12px";
+        kaliBox.style.padding = "10px 14px";
+        kaliBox.style.background = "rgba(0, 255, 65, 0.05)";
+        kaliBox.style.border = "1px solid rgba(0, 255, 65, 0.3)";
+        kaliBox.style.borderRadius = "4px";
+
+        let recommendations = [];
+
+        openPorts.forEach(p => {
+          const portNum = parseInt(p.port, 10);
+          const sName = (p.service || "").toLowerCase();
+
+          if (portNum === 80 || portNum === 443 || portNum === 8080 || sName.includes("http")) {
+            recommendations.push(`<li><b>WhatWeb / Nikto</b> : <code>whatweb http://${host.ip}:${portNum}</code> ou <code>nikto -h http://${host.ip}:${portNum}</code> pour l'analyse des vulnérabilités Web.</li>`);
+            recommendations.push(`<li><b>Nuclei</b> : <code>nuclei -u http://${host.ip}:${portNum}</code> pour scanner avec des modèles d'exploits d'actualité.</li>`);
+          }
+          if (sName.includes("wordpress") || sName.includes("wp")) {
+            recommendations.push(`<li><b>WPScan</b> : <code>wpscan --url http://${host.ip}:${portNum} --enumerate p,t,u</code> (Scanner spécifique WordPress).</li>`);
+          }
+          if (portNum === 445 || portNum === 139 || sName.includes("smb") || sName.includes("netbios")) {
+            recommendations.push(`<li><b>Enum4linux / SMBMap</b> : <code>enum4linux -a ${host.ip}</code> ou <code>smbmap -H ${host.ip}</code> pour énumérer les partages Windows/Samba.</li>`);
+          }
+          if (portNum === 22 || sName.includes("ssh")) {
+            recommendations.push(`<li><b>Hydra / SSH-Audit</b> : <code>ssh-audit ${host.ip}</code> pour auditer les algorithmes et chiffrements SSH.</li>`);
+          }
+          if (portNum === 21 || sName.includes("ftp")) {
+            recommendations.push(`<li><b>Nmap FTP Scripts</b> : <code>nmap --script ftp-anon,ftp-bounce -p 21 ${host.ip}</code> (Vérification anonyme FTP).</li>`);
+          }
+          if (portNum === 3306 || portNum === 5432 || sName.includes("sql")) {
+            recommendations.push(`<li><b>SQLMap</b> : <code>sqlmap -u "http://${host.ip}/..." --batch</code> pour tester les injections SQL.</li>`);
+          }
+        });
+
+        if (recommendations.length > 0) {
+          // Supprimer les doublons
+          recommendations = [...new Set(recommendations)];
+          kaliBox.innerHTML = `
+            <div style="font-weight: bold; color: #00ff41; margin-bottom: 6px; font-size: 0.9em;">
+              🐉 Outils Kali Linux recommandés pour ${host.ip} :
+            </div>
+            <ul style="margin: 0; padding-left: 20px; font-size: 0.85em; color: #d0d0d0; line-height: 1.5;">
+              ${recommendations.join("")}
+            </ul>
+          `;
+          hostBlock.appendChild(kaliBox);
+        }
+      }
+
+      // Auto-déclenchement de la recherche CVE pour le premier port ouvert globale
+      if (!window.autoCveSearched) {
+        const firstOpenPort = host.ports.find(p => p.state === "open" && (p.product || p.service));
+        if (firstOpenPort) {
+          window.autoCveSearched = true;
+          const queryTerm = firstOpenPort.product || firstOpenPort.service;
+          showCveModal(queryTerm, firstOpenPort.version || "");
+        }
+      }
     }
 
     hostsDetailEl.appendChild(hostBlock);
   });
 
-  // Résumé chiffré
   const stats = [
     { label: "Hôtes actifs", value: hosts.length },
     { label: "Ports ouverts", value: totalOpen },
@@ -378,7 +852,9 @@ function renderResults(hosts) {
 }
 
 function renderPortsChart(serviceCounts) {
-  const ctx = document.getElementById("ports-chart").getContext("2d");
+  const chartCanvas = document.getElementById("ports-chart");
+  if (!chartCanvas) return;
+  const ctx = chartCanvas.getContext("2d");
   if (portsChartInstance) portsChartInstance.destroy();
 
   const labels = Object.keys(serviceCounts);
@@ -408,16 +884,232 @@ function renderPortsChart(serviceCounts) {
   });
 }
 
-/* -------------------------------------------------------------------------------
- * 6. RECHERCHE DE CVE / EXPLOITS
- * ------------------------------------------------------------------------------- */
-async function searchCve(product, version) {
-  const cveCard = document.getElementById("cve-card");
-  const resultsEl = document.getElementById("cve-results");
+/* ---------- TOPOLOGIE DYNAMIQUE DU RÉSEAU LOCAL (vis-network) ---------- */
+let localNetworkInstance = null;
 
-  cveCard.classList.remove("hidden");
-  cveCard.scrollIntoView({ behavior: "smooth" });
-  resultsEl.innerHTML = `<p>Recherche en cours pour "${product} ${version}"...</p>`;
+function renderLocalTopology(hosts) {
+  const topoCard = document.getElementById("topology-card");
+  const container = document.getElementById("local-topology-container");
+  if (!topoCard || !container || typeof vis === "undefined") return;
+
+  topoCard.classList.remove("hidden");
+
+  // Déterminer la passerelle (IP finissant par .254 ou .1 ou premier équipement routeur)
+  let gatewayHost = hosts.find(h => h.ip.endsWith(".254") || h.ip.endsWith(".1") || (h.category && h.category.toLowerCase().includes("routeur"))) || hosts[0];
+  const gatewayIp = gatewayHost ? gatewayHost.ip : "192.168.1.254";
+
+  const nodes = [];
+  const edges = [];
+
+  // Nœud Passerelle / Central Hub
+  nodes.push({
+    id: gatewayIp,
+    label: `📶 Passerelle / Box\n${gatewayIp}`,
+    shape: "box",
+    margin: 10,
+    color: {
+      background: "#062812",
+      border: "#00ff41",
+      highlight: { background: "#0c4820", border: "#00ff41" }
+    },
+    font: { color: "#00ff41", face: "Share Tech Mono", size: 14 },
+    shadow: true,
+  });
+
+  hosts.forEach(h => {
+    if (h.ip === gatewayIp) return;
+
+    const nameStr = h.hostname || h.netbios_name || h.vendor || "Équipement";
+    const labelText = `${h.ip}\n(${nameStr})`;
+
+    // Évaluer le niveau de risque selon les ports et services
+    const openPorts = h.ports ? h.ports.filter(p => p.state === "open") : [];
+    let nodeColor = { background: "#092411", border: "#00C851" }; // Vert par défaut
+    let riskLevel = "safe";
+
+    const hasCriticalPorts = openPorts.some(p => [21, 22, 139, 445, 3306].includes(parseInt(p.port, 10)));
+    if (openPorts.length >= 4 || hasCriticalPorts) {
+      nodeColor = { background: "#330a0a", border: "#ff4444" }; // Rouge (Risque)
+      riskLevel = "high";
+    } else if (openPorts.length > 0) {
+      nodeColor = { background: "#2b1c04", border: "#ffbb33" }; // Orange (Attention)
+      riskLevel = "warning";
+    }
+
+    nodes.push({
+      id: h.ip,
+      label: labelText,
+      shape: "box",
+      margin: 8,
+      color: {
+        background: nodeColor.background,
+        border: nodeColor.border,
+        highlight: { background: "#1a1a1a", border: "#00ff41" }
+      },
+      font: { color: "#ffffff", face: "Share Tech Mono", size: 11 },
+      riskLevel: riskLevel
+    });
+
+    // Liaison vers la passerelle
+    edges.push({
+      from: gatewayIp,
+      to: h.ip,
+      color: { color: "rgba(0, 255, 65, 0.4)", highlight: "#00ff41" },
+      width: 1.5,
+      smooth: { type: "continuous" }
+    });
+  });
+
+  const nodesDataSet = new vis.DataSet(nodes);
+  const edgesDataSet = new vis.DataSet(edges);
+
+  const data = { nodes: nodesDataSet, edges: edgesDataSet };
+
+  const options = {
+    physics: {
+      solver: "forceAtlas2Based",
+      forceAtlas2Based: {
+        gravitationalConstant: -50,
+        centralGravity: 0.01,
+        springLength: 100,
+        springConstant: 0.08
+      },
+      maxVelocity: 50,
+      minVelocity: 0.1,
+      stabilization: { iterations: 150 }
+    },
+    interaction: {
+      hover: true,
+      zoomView: true,
+      dragView: true
+    }
+  };
+
+  if (localNetworkInstance) {
+    localNetworkInstance.destroy();
+  }
+
+  localNetworkInstance = new vis.Network(container, data, options);
+
+  // Désactiver le moteur physique après stabilisation pour libérer à 100% le CPU et éviter le gel de la page
+  localNetworkInstance.once("stabilizationIterationsDone", function() {
+    localNetworkInstance.setOptions({ physics: false });
+  });
+  setTimeout(() => {
+    if (localNetworkInstance) localNetworkInstance.setOptions({ physics: false });
+  }, 1000);
+
+  // Zoom au clic sur un nœud
+  localNetworkInstance.on("selectNode", function(params) {
+    if (params.nodes.length > 0) {
+      const selectedIp = params.nodes[0];
+      localNetworkInstance.focus(selectedIp, {
+        scale: 1.3,
+        animation: { duration: 500, easingFunction: "easeInOutQuad" }
+      });
+    }
+  });
+
+  // Gérer les filtres de topologie
+  const btnFilterAll = document.getElementById("btn-topo-filter-all");
+  const btnFilterRisk = document.getElementById("btn-topo-filter-risk");
+  const btnReset = document.getElementById("btn-topo-reset");
+
+  if (btnFilterAll) {
+    btnFilterAll.onclick = function() {
+      this.classList.add("active");
+      if (btnFilterRisk) btnFilterRisk.classList.remove("active");
+      nodesDataSet.clear();
+      nodesDataSet.add(nodes);
+      localNetworkInstance.setOptions({ physics: true });
+      setTimeout(() => { if (localNetworkInstance) localNetworkInstance.setOptions({ physics: false }); }, 600);
+    };
+  }
+
+  if (btnFilterRisk) {
+    btnFilterRisk.onclick = function() {
+      this.classList.add("active");
+      if (btnFilterAll) btnFilterAll.classList.remove("active");
+      const riskNodes = nodes.filter(n => n.id === gatewayIp || n.riskLevel === "high" || n.riskLevel === "warning");
+      nodesDataSet.clear();
+      nodesDataSet.add(riskNodes);
+      localNetworkInstance.setOptions({ physics: true });
+      setTimeout(() => { if (localNetworkInstance) localNetworkInstance.setOptions({ physics: false }); }, 600);
+    };
+  }
+
+  if (btnReset) {
+    btnReset.onclick = function() {
+      localNetworkInstance.fit({ animation: { duration: 600 } });
+    };
+  }
+}
+
+async function fetchCveBadgeData(product, version, badgeEl) {
+  if (!badgeEl) return;
+
+  badgeEl.onclick = (e) => {
+    if (e) e.stopPropagation();
+    showCveModal(product, version);
+  };
+
+  try {
+    const res = await fetch("/api/cve-search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ product, version }),
+    });
+    const data = await res.json();
+    const count = data.results ? data.results.length : 0;
+
+    badgeEl.classList.remove("cve-badge-loading");
+
+    if (count >= 5) {
+      badgeEl.classList.add("cve-badge-critical");
+      badgeEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${count} CVE`;
+    } else if (count > 0) {
+      badgeEl.classList.add("cve-badge-warning");
+      badgeEl.innerHTML = `<i class="fa-solid fa-bug"></i> ${count} CVE`;
+    } else {
+      badgeEl.classList.add("cve-badge-safe");
+      badgeEl.innerHTML = `<i class="fa-solid fa-shield-check"></i> 0 CVE`;
+    }
+  } catch (err) {
+    if (badgeEl) {
+      badgeEl.classList.remove("cve-badge-loading");
+      badgeEl.classList.add("cve-badge-safe");
+      badgeEl.innerHTML = `CVE ?`;
+    }
+  }
+}
+
+async function showCveModal(product, version) {
+  const modal = document.getElementById("cve-modal");
+  const modalTitle = document.getElementById("cve-modal-title");
+  const modalBody = document.getElementById("cve-modal-body");
+
+  if (!modal || !modalBody) return;
+
+  modalTitle.innerHTML = `<i class="fa-solid fa-bug" style="color:#ff4444; margin-right:8px;"></i> Vulnérabilités & CVE : ${product} ${version}`;
+  modalBody.innerHTML = `<p style="color:#aaa;"><i class="fa-solid fa-spinner fa-spin"></i> Recherche des exploits dans Exploit-DB pour ${product} ${version}...</p>`;
+  modal.classList.remove("hidden");
+  modal.style.display = "flex";
+
+  modal.dataset.openedAt = Date.now();
+
+  // Gérer la fermeture
+  const closeModal = () => {
+    modal.classList.add("hidden");
+    modal.style.display = "none";
+  };
+
+  const closeBtn = document.getElementById("cve-modal-close");
+  if (closeBtn) closeBtn.onclick = closeModal;
+  modal.onclick = (e) => {
+    if (e.target === modal && (Date.now() - (parseInt(modal.dataset.openedAt) || 0) > 300)) {
+      closeModal();
+    }
+  };
 
   try {
     const res = await fetch("/api/cve-search", {
@@ -427,27 +1119,443 @@ async function searchCve(product, version) {
     });
     const data = await res.json();
 
-    if (res.status !== 200) {
-      resultsEl.innerHTML = `<p class="alert-box error">${data.error || "Erreur inconnue"}</p>`;
-      return;
-    }
-
-    if (!data.results || data.results.length === 0) {
-      resultsEl.innerHTML = `<p>Aucun exploit connu trouvé dans Exploit-DB pour "${data.query}".</p>`;
-      return;
-    }
-
-    resultsEl.innerHTML = "";
-    data.results.forEach((r) => {
-      const div = document.createElement("div");
-      div.className = "cve-result-item";
-      div.innerHTML = `
-        <div class="title">${r.title}</div>
-        <div class="meta">EDB-ID: ${r.edb_id} · Type: ${r.type} · Plateforme: ${r.platform} · Date: ${r.date}</div>
+    if (res.status !== 200 || !data.results || data.results.length === 0) {
+      modalBody.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: #00C851;">
+          <i class="fa-solid fa-shield-cat" style="font-size: 3em; margin-bottom: 10px;"></i>
+          <p style="font-size: 1.1em; font-weight: bold;">Aucun exploit critique répertorié</p>
+          <p style="color: #aaa; font-size: 0.85em;">Aucune entrée trouvée dans Exploit-DB pour la recherche "${data.query || product}".</p>
+        </div>
       `;
-      resultsEl.appendChild(div);
+      return;
+    }
+
+    let html = `
+      <div style="margin-bottom: 15px; padding: 10px; background: rgba(255, 68, 68, 0.1); border-left: 4px solid #ff4444; border-radius: 4px;">
+        <span style="color: #ff4444; font-weight: bold;">${data.results.length} vulnérabilité(s) / exploit(s) identifié(s)</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+    `;
+
+    data.results.forEach((r) => {
+      html += `
+        <div class="cve-result-item" style="border: 1px solid rgba(255, 68, 68, 0.3); background: rgba(30, 0, 0, 0.4); border-radius: 6px; padding: 12px;">
+          <div style="font-weight: bold; color: #ff8888; font-size: 0.95em; margin-bottom: 6px;">${r.title}</div>
+          <div style="display: flex; gap: 15px; font-size: 0.8em; color: #aaa;">
+            <span><b>EDB-ID:</b> <code style="color: #00ff41;">${r.edb_id}</code></span>
+            <span><b>Type:</b> ${r.type || 'N/A'}</span>
+            <span><b>Plateforme:</b> ${r.platform || 'N/A'}</span>
+            ${r.date ? `<span><b>Date:</b> ${r.date}</span>` : ''}
+          </div>
+          <div style="margin-top: 8px;">
+            <a href="https://www.exploit-db.com/exploits/${r.edb_id}" target="_blank" style="color: #00ff41; font-size: 0.8em; text-decoration: underline;">
+              🔗 Consulter sur Exploit-DB
+            </a>
+          </div>
+        </div>
+      `;
     });
+    html += `</div>`;
+    modalBody.innerHTML = html;
+
   } catch (err) {
-    resultsEl.innerHTML = `<p class="alert-box error">Erreur réseau : ${err.message}</p>`;
+    modalBody.innerHTML = `<p class="alert-box error">Erreur lors de la récupération des détails : ${err.message}</p>`;
   }
 }
+
+/* -------------------------------------------------------------------------------
+ * 6. GESTION DES PARAMÈTRES (SUDO)
+ * ------------------------------------------------------------------------------- */
+function initSettingsHandlers() {
+  const btnSaveSudo = document.getElementById("btn-save-sudo");
+  const btnClearSudo = document.getElementById("btn-clear-sudo");
+  const inputSudo = document.getElementById("sudo-password-input");
+  const alertBox = document.getElementById("sudo-status-alert");
+
+  if (btnSaveSudo) {
+    btnSaveSudo.addEventListener("click", async () => {
+      const password = inputSudo ? inputSudo.value : "";
+      btnSaveSudo.disabled = true;
+      btnSaveSudo.textContent = "⏳ Vérification en cours...";
+
+      try {
+        const res = await fetch("/api/settings/sudo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
+        const data = await res.json();
+
+        if (alertBox) {
+          alertBox.classList.remove("hidden");
+          alertBox.className = "alert-box " + (data.success ? "success" : "error");
+          alertBox.textContent = data.success ? data.message : (data.error || "Erreur de mot de passe");
+        }
+      } catch (err) {
+        if (alertBox) {
+          alertBox.classList.remove("hidden");
+          alertBox.className = "alert-box error";
+          alertBox.textContent = "Erreur réseau : " + err.message;
+        }
+      } finally {
+        btnSaveSudo.disabled = false;
+        btnSaveSudo.innerHTML = `<i class="fa-solid fa-lock"></i> Enregistrer & Tester l'accès Sudo`;
+      }
+    });
+  }
+
+  if (btnClearSudo) {
+    btnClearSudo.addEventListener("click", async () => {
+      try {
+        await fetch("/api/settings/sudo/clear", { method: "POST" });
+        if (inputSudo) inputSudo.value = "";
+        if (alertBox) {
+          alertBox.classList.remove("hidden");
+          alertBox.className = "alert-box success";
+          alertBox.textContent = "Mot de passe sudo effacé de la session.";
+        }
+      } catch (err) {
+        if (alertBox) {
+          alertBox.classList.remove("hidden");
+          alertBox.className = "alert-box error";
+          alertBox.textContent = "Erreur réseau : " + err.message;
+        }
+      }
+    });
+  }
+}
+
+/* -------------------------------------------------------------------------------
+ * 7. GESTION DE L'HISTORIQUE SOUS FORME DE TABLEAU INTERACTIF
+ * ------------------------------------------------------------------------------- */
+function initHistoryHandlers() {
+  const tableBody = document.getElementById("history-table-body");
+  if (!tableBody) return;
+
+  loadHistoryTable();
+
+  const masterChk = document.getElementById("chk-toggle-all-history");
+  const btnSelectAll = document.getElementById("btn-select-all-history");
+  const btnDeselectAll = document.getElementById("btn-deselect-all-history");
+  const btnDeleteSelected = document.getElementById("btn-delete-selected-history");
+
+  const getCheckboxes = () => document.querySelectorAll(".history-chk");
+
+  if (masterChk) {
+    masterChk.addEventListener("change", (e) => {
+      getCheckboxes().forEach(chk => chk.checked = e.target.checked);
+    });
+  }
+
+  if (btnSelectAll) {
+    btnSelectAll.addEventListener("click", () => {
+      getCheckboxes().forEach(chk => chk.checked = true);
+      if (masterChk) masterChk.checked = true;
+    });
+  }
+
+  if (btnDeselectAll) {
+    btnDeselectAll.addEventListener("click", () => {
+      getCheckboxes().forEach(chk => chk.checked = false);
+      if (masterChk) masterChk.checked = false;
+    });
+  }
+
+  if (btnDeleteSelected) {
+    btnDeleteSelected.addEventListener("click", async () => {
+      const selectedIds = Array.from(getCheckboxes())
+        .filter(chk => chk.checked)
+        .map(chk => parseInt(chk.value, 10));
+
+      if (selectedIds.length === 0) {
+        alert("Veuillez cocher au moins un rapport à supprimer.");
+        return;
+      }
+
+      if (!confirm(`Voulez-vous vraiment supprimer ${selectedIds.length} rapport(s) sélectionné(s) ?`)) return;
+
+      try {
+        const res = await fetch("/api/history/delete-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: selectedIds })
+        });
+        const data = await res.json();
+        if (data.success) {
+          loadHistoryTable();
+          document.getElementById("results-card")?.classList.add("hidden");
+        } else {
+          alert("Erreur lors de la suppression : " + (data.error || "Inconnue"));
+        }
+      } catch (err) {
+        alert("Erreur réseau : " + err.message);
+      }
+    });
+  }
+}
+
+async function loadHistoryTable() {
+  const tableBody = document.getElementById("history-table-body");
+  if (!tableBody) return;
+
+  try {
+    const res = await fetch("/api/history");
+    const historyItems = await res.json();
+
+    if (!Array.isArray(historyItems) || historyItems.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #aaa; padding: 25px;">Aucun rapport d'analyse dans l'historique.</td></tr>`;
+      return;
+    }
+
+    let html = "";
+    historyItems.forEach(item => {
+      const toolIcon = item.tool === "nmap" ? "fa-tags" :
+                       item.tool === "netdiscover" ? "fa-satellite-dish" :
+                       item.tool === "nuclei" ? "fa-bolt" :
+                       item.tool === "whatweb" ? "fa-code" : "fa-file-code";
+      const modeBadge = item.mode === "local" ? `<span style="color:#00C851;">Réseau Local</span>` : `<span style="color:#7ec8ff;">Distant / Web</span>`;
+
+      html += `
+        <tr>
+          <td style="text-align: center;">
+            <input type="checkbox" class="history-chk" value="${item.id}" style="cursor: pointer;">
+          </td>
+          <td style="font-family: monospace; font-size: 0.9em; color: #d0d0d0;">${item.timestamp}</td>
+          <td><i class="fa-solid ${toolIcon}" style="color:#00ff41; margin-right: 6px;"></i> ${item.tool.toUpperCase()}</td>
+          <td><b style="color:#00ff41;">${item.target}</b></td>
+          <td>${modeBadge}</td>
+          <td style="text-align: center;">
+            <div style="display: flex; gap: 6px; justify-content: center;">
+              <button class="btn btn-small" onclick="viewHistoryDetail(${item.id})" style="font-size: 0.75rem; padding: 4px 8px;">
+                <i class="fa-solid fa-eye"></i> Afficher
+              </button>
+              <button class="btn btn-small" onclick="deleteSingleHistory(${item.id})" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(255, 0, 0, 0.2); border-color: #ff4444; color: #ff8888;">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    tableBody.innerHTML = html;
+  } catch (err) {
+    console.error("Erreur chargement tableau historique:", err);
+    tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #ff4444;">Erreur de chargement de l'historique.</td></tr>`;
+  }
+}
+
+async function viewHistoryDetail(historyId) {
+  try {
+    setScanningState(false);
+    const res = await fetch(`/api/history/${historyId}`);
+    const data = await res.json();
+    if (data.error) {
+      alert("Erreur : " + data.error);
+      return;
+    }
+    renderResults(data.result_json);
+
+    // Défilement fluide vers le tableau de résultat du rapport
+    const resultsCard = document.getElementById("results-card");
+    if (resultsCard) {
+      resultsCard.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  } catch (err) {
+    alert("Erreur réseau : " + err.message);
+  }
+}
+
+async function deleteSingleHistory(historyId) {
+  if (!confirm("Voulez-vous vraiment supprimer ce rapport ?")) return;
+  try {
+    const res = await fetch(`/api/history/${historyId}`, { method: "DELETE" });
+    const data = await res.json();
+    if (data.success) {
+      loadHistoryTable();
+      document.getElementById("results-card")?.classList.add("hidden");
+    } else {
+      alert("Erreur lors de la suppression : " + (data.error || "Inconnue"));
+    }
+  } catch (err) {
+    alert("Erreur réseau : " + err.message);
+  }
+}
+
+// Exposer globalement pour les onclick du HTML
+window.viewHistoryDetail = viewHistoryDetail;
+window.deleteSingleHistory = deleteSingleHistory;
+
+/* -------------------------------------------------------------------------------
+ * 8. BOUTON D'ARRÊT DU SCAN (CHRONOMÈTRE)
+ * ------------------------------------------------------------------------------- */
+function initStopScanHandler() {
+  const btnStop = document.getElementById("btn-stop-global-scan");
+  if (btnStop) {
+    btnStop.addEventListener("click", async () => {
+      btnStop.disabled = true;
+      btnStop.textContent = "⏳ Arrêt en cours...";
+
+      try {
+        await fetch("/api/scan/stop", { method: "POST" });
+      } catch (err) {
+        console.error("Erreur arrêt scan:", err);
+      } finally {
+        setScanningState(false);
+        btnStop.disabled = false;
+        btnStop.innerHTML = `<i class="fa-solid fa-hand"></i> Arrêter le scan`;
+
+        const errorBox = document.getElementById("scan-error");
+        if (errorBox) {
+          errorBox.textContent = "Le scan a été interrompu à la demande de l'utilisateur.";
+          errorBox.classList.remove("hidden");
+        }
+        const progressBox = document.getElementById("scan-progress");
+        if (progressBox) progressBox.classList.add("hidden");
+        const netdiscoverProgress = document.getElementById("netdiscover-progress");
+        if (netdiscoverProgress) netdiscoverProgress.classList.add("hidden");
+      }
+    });
+  }
+}
+
+/* ---------- MONITEUR SYSTÈME SIDEBAR (CPU, RAM, DEBIT INTERNET) ---------- */
+let sparklineChartInstance = null;
+let systemMonitorInterval = null;
+
+function initSystemMonitor() {
+  if (systemMonitorInterval) {
+    clearInterval(systemMonitorInterval);
+    systemMonitorInterval = null;
+  }
+
+  const cpuVal = document.getElementById("sys-cpu-val");
+  const cpuBar = document.getElementById("sys-cpu-bar");
+  const ramVal = document.getElementById("sys-ram-val");
+  const ramBar = document.getElementById("sys-ram-bar");
+  const rxVal = document.getElementById("sys-rx-val");
+  const txVal = document.getElementById("sys-tx-val");
+  const sparklineCanvas = document.getElementById("sidebar-sparkline");
+
+  if (!cpuVal || !cpuBar || !ramVal || !ramBar || !sparklineCanvas) return;
+
+  // Graphique Sparkline Temps Réel
+  const maxDataPoints = 15;
+  const cpuData = new Array(maxDataPoints).fill(0);
+  const ramData = new Array(maxDataPoints).fill(0);
+  const labels = new Array(maxDataPoints).fill("");
+
+  const ctx = sparklineCanvas.getContext("2d");
+  if (sparklineChartInstance) sparklineChartInstance.destroy();
+
+  sparklineChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "CPU",
+          data: cpuData,
+          borderColor: "#00ff41",
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false
+        },
+        {
+          label: "RAM",
+          data: ramData,
+          borderColor: "#7ec8ff",
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.3,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      scales: {
+        x: { display: false },
+        y: { display: false, min: 0, max: 100 }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false }
+      }
+    }
+  });
+
+  function formatSpeed(bytesPerSec) {
+    if (bytesPerSec >= 1024 * 1024) {
+      return (bytesPerSec / (1024 * 1024)).toFixed(1) + " MB/s";
+    } else {
+      return (bytesPerSec / 1024).toFixed(1) + " KB/s";
+    }
+  }
+
+  async function updateStats() {
+    try {
+      const res = await fetch("/api/system-stats");
+      if (!res.ok) return;
+      const data = await res.json();
+
+      // CPU
+      cpuVal.textContent = `${data.cpu_percent}%`;
+      cpuBar.style.width = `${data.cpu_percent}%`;
+      cpuBar.style.background = data.cpu_percent > 85 ? "#ff4444" : (data.cpu_percent > 60 ? "#ffbb33" : "#00ff41");
+
+      // RAM
+      ramVal.textContent = `${data.ram_used_gb} / ${data.ram_total_gb} GB`;
+      ramBar.style.width = `${data.ram_percent}%`;
+      ramBar.style.background = data.ram_percent > 85 ? "#ff4444" : (data.ram_percent > 70 ? "#ffbb33" : "#00ff41");
+
+      // Débit RX / TX
+      if (rxVal) rxVal.textContent = formatSpeed(data.rx_bytes_sec);
+      if (txVal) txVal.textContent = formatSpeed(data.tx_bytes_sec);
+
+      // Mise à jour Sparkline
+      cpuData.shift();
+      cpuData.push(data.cpu_percent);
+
+      ramData.shift();
+      ramData.push(data.ram_percent);
+
+      if (sparklineChartInstance) {
+        sparklineChartInstance.update();
+      }
+    } catch (err) {
+      console.warn("Mise à jour stats système échouée:", err);
+    }
+  }
+
+  // Poll toutes les 2 secondes avec intervalle unique
+  updateStats();
+  systemMonitorInterval = setInterval(updateStats, 2000);
+}
+
+/* ---------- HORLOGE TEMPS RÉEL (SIDEBAR HEADER) ---------- */
+function initRealtimeClock() {
+  const clockEl = document.getElementById("realtime-clock");
+  if (!clockEl) return;
+
+  function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    clockEl.textContent = `${h}:${m}:${s}`;
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+}
+
+// Exposer globalement sur window
+window.renderResults = renderResults;
+window.renderLocalTopology = renderLocalTopology;
+
+
+

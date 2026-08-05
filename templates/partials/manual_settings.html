@@ -1,0 +1,71 @@
+<div id="shared-manual-settings" class="card hidden" style="border-color: #ffaa00; box-shadow: 0 0 10px rgba(255,170,0,0.1); margin-top: 20px;">
+  <h3 style="color: #ffaa00; margin-top: 0; margin-bottom: 15px;"><i class="fa-solid fa-gear"></i> Paramètres Nmap Manuels</h3>
+
+  <div class="form-grid">
+    <div class="form-row">
+      <div class="form-control">
+        <label for="scan_type">Type de scan</label>
+        <select id="scan_type">
+          <option value="sS">SYN scan (furtif) — -sS</option>
+          <option value="sT">Connect scan (complet) — -sT</option>
+          <option value="sU">UDP scan — -sU</option>
+          <option value="sA">ACK scan (firewall) — -sA</option>
+          <option value="sn">Ping scan (hôtes actifs) — -sn</option>
+        </select>
+      </div>
+      <div class="form-control">
+        <label for="timing">Timing template (-T)</label>
+        <select id="timing">
+          <option value="3" selected>Normal (3)</option>
+          <option value="4">Agressif (4)</option>
+          <option value="5">Fou (5)</option>
+          <option value="2">Poli (2)</option>
+          <option value="1">Furtif (1)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-control">
+        <label for="port_mode">Choix des ports</label>
+        <select id="port_mode">
+          <option value="top_100">Top 100 ports (-F)</option>
+          <option value="top_1000">Top 1000 ports</option>
+          <option value="all">Tous les ports (-p-)</option>
+          <option value="custom">Personnalisé</option>
+        </select>
+      </div>
+      <div class="form-control">
+        <label for="custom_ports">Ports personnalisés (ex: 80,443)</label>
+        <input type="text" id="custom_ports" placeholder="ex: 80,443-445">
+      </div>
+    </div>
+
+    <div class="form-row" style="flex-wrap: wrap; gap: 15px;">
+      <label style="display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="service_version" checked> Version des services (-sV)
+      </label>
+      <label style="display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="os_detection" checked> Détection de l'OS (-O)
+      </label>
+      <label style="display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="default_scripts"> Scripts par défaut (-sC)
+      </label>
+      <label style="display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="vuln_scripts"> Scripts de vulnérabilités (--script=vuln)
+      </label>
+      <label style="display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="vulners_script"> Script vulners (--script=vulners)
+      </label>
+      <label style="display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="aggressive_scan"> Scan agressif (-A)
+      </label>
+      <label style="display: flex; align-items: center; gap: 5px;">
+        <input type="checkbox" id="skip_host_discovery"> Ignorer découverte hôte (-Pn)
+      </label>
+    </div>
+    <div class="explain-box" id="explain-timing" style="margin-top: 15px;">
+      Configuration manuelle pour un scan avancé avec Nmap.
+    </div>
+  </div>
+</div>

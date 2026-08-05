@@ -1,0 +1,52 @@
+<div id="results-container">
+        <!-- Netdiscover Results -->
+        <div id="netdiscover-card" class="card hidden" style="margin-bottom: 20px; border-color: #2ecc71;">
+          <h3 class="card-title" style="color: #2ecc71; margin-top:0;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</h3>
+          <div id="netdiscover-progress" class="scan-progress hidden">
+            <div class="loader"></div>
+            <span id="netdiscover-progress-text">Exploration ARP du sous-réseau en cours...</span>
+          </div>
+          <div id="netdiscover-error" class="alert-box error hidden"></div>
+          <div id="netdiscover-results" class="hidden" style="margin-top: 15px;">
+            <div id="netdiscover-results-list"></div>
+          </div>
+        <!-- CARTE TOPOLOGIE DYNAMIQUE (scanner local) -->
+        <div id="topology-card" class="card hidden" style="margin-bottom: 20px; border-color: #00ff41;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="card-title" style="color: #00ff41; margin: 0;"><i class="fa-solid fa-network-wired"></i> Topologie Dynamique du Réseau Local</h3>
+            <div class="topology-controls" style="display: flex; gap: 8px;">
+              <button id="btn-topo-filter-all" class="btn btn-small active" style="font-size: 0.75rem; padding: 4px 10px;">Tous</button>
+              <button id="btn-topo-filter-risk" class="btn btn-small" style="font-size: 0.75rem; padding: 4px 10px; border-color: #ff4444; color: #ff4444;">⚠️ Risque Élevé</button>
+              <button id="btn-topo-reset" class="btn btn-small" style="font-size: 0.75rem; padding: 4px 10px;"><i class="fa-solid fa-arrows-rotate"></i> Réinitialiser Vue</button>
+            </div>
+          </div>
+          <div id="local-topology-container" style="height: 400px; width: 100%; background: rgba(0, 10, 5, 0.65); border: 1px solid rgba(0, 255, 65, 0.3); border-radius: 6px; position: relative;"></div>
+          <div id="topo-legend" style="margin-top: 10px; display: flex; gap: 15px; font-size: 0.8rem; color: #aaa; flex-wrap: wrap;">
+            <span>🟢 Sain (0 port à risque)</span>
+            <span>🟠 Attention (Services ouverts)</span>
+            <span>🔴 Risque Élevé (CVE critiques)</span>
+            <span>📶 Passerelle / Routeur</span>
+          </div>
+        </div>
+
+<div class="card hidden" id="results-card">
+    <h2>03_ // Résultats du scan</h2>
+
+    <div class="results-summary" id="results-summary"></div>
+
+    <div class="chart-container">
+      <canvas id="ports-chart"></canvas>
+    </div>
+
+    <h3>Détail par hôte</h3>
+    <div id="hosts-detail"></div>
+  </div>
+
+  
+<div class="card hidden" id="cve-card">
+    <h2>04_ // Recherche de CVE / exploits connus (Exploit-DB)</h2>
+    <p class="hint">Cliquez sur un service détecté ci-dessus (badge "🔍 Chercher CVE") pour lancer une recherche.</p>
+    <div id="cve-results"></div>
+  </div>
+
+</div>
