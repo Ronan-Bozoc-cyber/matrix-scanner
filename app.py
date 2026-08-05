@@ -51,6 +51,8 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from urllib.parse import urlparse
 
+import socket
+import concurrent.futures
 import sqlite3
 from flask import Flask, jsonify, render_template, request, send_file
 
@@ -200,6 +202,11 @@ REQUIRED_TOOLS = {
         "check_cmd": ["sublist3r", "-h"],
         "apt_package": "sublist3r",
         "description": "Énumération OSINT passive de sous-domaines web",
+    },
+    "subfinder": {
+        "check_cmd": ["subfinder", "-version"],
+        "apt_package": "subfinder",
+        "description": "Découverte rapide multi-sources de sous-domaines web",
     },
     "reportlab": {
         "py_module": "reportlab",
@@ -1586,7 +1593,7 @@ def whois_scan():
 
 
 # =====================================================================================
-# SECTION 7.7 : SUBLIST3R & DNSRECON (SUBDOMAIN ENUMERATION)
+# SECTION 7.7 : HYBRID SUBDOMAIN ENUMERATION (SUBFINDER + SUBLIST3R + FAST DNS PROBE)
 # =====================================================================================
 
 @app.route("/api/subdomains-scan", methods=["POST"])
@@ -1599,38 +1606,59 @@ def subdomains_scan():
 
     root_domain = extract_root_domain(target_url)
 
+    subdomains = set()
+
+    # MOTEUR 1 : Subfinder (CT Logs, SecurityTrails, Chaos, DNSDumpster)
+    try:
+        sf_res = subprocess.run(["subfinder", "-d", root_domain, "-silent"], capture_output=True, text=True, timeout=25)
+        for line in sf_res.stdout.splitlines():
+            sd = line.strip().lower()
+            if sd and root_domain in sd:
+                subdomains.add(sd)
+    except Exception:
+        pass
+
+    # MOTEUR 2 : Sublist3r OSINT (recherche passive multi-moteurs)
     with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp_file:
         tmp_path = tmp_file.name
 
-    subdomains = set()
-
-    # Tentative 1 : Sublist3r OSINT (recherche passive multi-moteurs)
     cmd = ["sublist3r", "-d", root_domain, "-o", tmp_path, "-t", "5"]
     try:
-        subprocess.run(cmd, capture_output=True, text=True, timeout=45)
+        subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         if os.path.exists(tmp_path):
             with open(tmp_path, 'r', encoding='utf-8', errors='ignore') as f:
                 for line in f:
                     sd = line.strip().lower()
-                    if sd:
+                    if sd and root_domain in sd:
                         subdomains.add(sd)
             os.remove(tmp_path)
     except Exception:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    # Tentative 2 (Fallback ou complément) : DNSRecon si Sublist3r a trouvé peu de résultats
-    if len(subdomains) < 2:
+    # MOTEUR 3 : Sondage DNS direct multithreadé (pour sous-domaines récents / non indexés)
+    common_prefixes = [
+        "www", "wiki", "mail", "webmail", "remote", "admin", "api", "dev", "test", "vpn",
+        "cloud", "portal", "shop", "store", "git", "gitlab", "ns1", "ns2", "cpanel",
+        "autodiscover", "blog", "crm", "matomo", "dolibarr", "app", "demo", "stage",
+        "cyber", "leblog", "formation", "neoweb", "service-courtage", "ra"
+    ]
+
+    def resolve_prefix(prefix):
+        fqdn = f"{prefix}.{root_domain}"
         try:
-            dr_cmd = ["dnsrecon", "-d", root_domain, "-t", "std"]
-            res = subprocess.run(dr_cmd, capture_output=True, text=True, timeout=25)
-            output = res.stdout or ""
-            for line in output.splitlines():
-                matches = re.findall(rf'([a-zA-Z0-9_.-]+\.{re.escape(root_domain)})', line, re.IGNORECASE)
-                for m in matches:
-                    subdomains.add(m.lower())
-        except Exception:
-            pass
+            socket.gethostbyname(fqdn)
+            return fqdn.lower()
+        except socket.gaierror:
+            return None
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+            for res in executor.map(resolve_prefix, common_prefixes):
+                if res:
+                    subdomains.add(res)
+    except Exception:
+        pass
 
     sorted_subdomains = sorted(list(subdomains))
 
