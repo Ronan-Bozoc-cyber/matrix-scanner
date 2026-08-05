@@ -1316,23 +1316,18 @@ async function loadHistoryTable() {
       const modeBadge = item.mode === "local" ? `<span style="color:#00C851;">Réseau Local</span>` : `<span style="color:#7ec8ff;">Distant / Web</span>`;
 
       html += `
-        <tr>
-          <td style="text-align: center;">
+        <tr onclick="viewHistoryDetail(${item.id})" style="cursor: pointer;" class="history-row" title="Cliquer pour afficher le rapport">
+          <td style="text-align: center;" onclick="event.stopPropagation();">
             <input type="checkbox" class="history-chk" value="${item.id}" style="cursor: pointer;">
           </td>
           <td style="font-family: monospace; font-size: 0.9em; color: #d0d0d0;">${item.timestamp}</td>
           <td><i class="fa-solid ${toolIcon}" style="color:#00ff41; margin-right: 6px;"></i> ${item.tool.toUpperCase()}</td>
           <td><b style="color:#00ff41;">${item.target}</b></td>
           <td>${modeBadge}</td>
-          <td style="text-align: center;">
-            <div style="display: flex; gap: 6px; justify-content: center;">
-              <button class="btn btn-small" onclick="viewHistoryDetail(${item.id})" style="font-size: 0.75rem; padding: 4px 8px;">
-                <i class="fa-solid fa-eye"></i> Afficher
-              </button>
-              <button class="btn btn-small" onclick="deleteSingleHistory(${item.id})" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(255, 0, 0, 0.2); border-color: #ff4444; color: #ff8888;">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            </div>
+          <td style="text-align: center;" onclick="event.stopPropagation();">
+            <button class="btn btn-small" onclick="deleteSingleHistory(${item.id})" title="Supprimer" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(255, 0, 0, 0.2); border-color: #ff4444; color: #ff8888;">
+              <i class="fa-solid fa-trash"></i>
+            </button>
           </td>
         </tr>
       `;

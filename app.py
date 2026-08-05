@@ -1624,6 +1624,7 @@ def web():
 def local():
     return render_template("local.html", active_page="local")
 
+@app.route("/history")
 @app.route("/history_page")
 def history_page():
     return render_template("history.html", active_page="history")

@@ -949,3 +949,33 @@ table.ports-table tr:hover {
   opacity: 1;
 }
 
+/* --- HISTORIQUE TABLE STYLES --- */
+.history-row {
+  transition: background-color 0.2s ease;
+}
+
+.history-row:hover {
+  background-color: rgba(0, 255, 65, 0.08) !important;
+  box-shadow: inset 2px 0 0 #00ff41;
+}
+
+.history-table-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.history-table-container::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+}
+
+.history-table-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 65, 0.4);
+  border-radius: 4px;
+}
+
+.history-table-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 65, 0.7);
+}
+
+
