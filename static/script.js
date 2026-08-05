@@ -1936,6 +1936,8 @@ function initAddToReportButtons() {
   });
 }
 
+let isSubmittingReport = false;
+
 function initAddToReportModal() {
   const modal = document.getElementById("modal-add-to-report");
   const closeBtn = document.getElementById("close-add-report-modal");
@@ -1949,16 +1951,28 @@ function initAddToReportModal() {
     }
   };
 
-  closeBtn?.addEventListener("click", closeModal);
-  cancelBtn?.addEventListener("click", closeModal);
+  closeBtn?.addEventListener("click", () => {
+    if (!isSubmittingReport) closeModal();
+  });
+  cancelBtn?.addEventListener("click", () => {
+    if (!isSubmittingReport) closeModal();
+  });
 
   confirmBtn?.addEventListener("click", async () => {
-    if (!pendingAddToReportItem) return;
+    if (isSubmittingReport || !pendingAddToReportItem) return;
 
     const selectEl = document.getElementById("select-dest-report");
     const newTitleInput = document.getElementById("input-new-report-title");
     let targetReportId = selectEl?.value;
     const newTitle = newTitleInput?.value.trim();
+
+    // Verrouillage du bouton et feedback visuel instantané
+    isSubmittingReport = true;
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Traitement en cours...`;
+    }
+    if (cancelBtn) cancelBtn.disabled = true;
 
     try {
       if (newTitle) {
@@ -2003,6 +2017,14 @@ function initAddToReportModal() {
       }
     } catch (err) {
       alert("Erreur réseau : " + err.message);
+    } finally {
+      // Déverrouillage systématique après exécution
+      isSubmittingReport = false;
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = `<i class="fa-solid fa-check"></i> Confirmer l'ajout`;
+      }
+      if (cancelBtn) cancelBtn.disabled = false;
     }
   });
 }
