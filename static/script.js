@@ -2010,17 +2010,49 @@ function initAddToReportModal() {
 async function openAddToReportModal(title, html) {
   pendingAddToReportItem = { title, html };
 
-  const modal = document.getElementById("modal-add-to-report");
+  let modal = document.getElementById("modal-add-to-report");
+  if (!modal) {
+    // Fallback: créer et injecter la modale si elle n'est pas encore dans le DOM
+    const div = document.createElement("div");
+    div.id = "modal-add-to-report";
+    div.className = "modal";
+    div.style.display = "flex";
+    div.innerHTML = `
+      <div class="modal-content card" style="max-width: 550px; background: #0c100c; border: 1px solid #00ff41;">
+        <span class="close-btn" id="close-add-report-modal">&times;</span>
+        <h3 style="color: #00ff41; margin-top: 0;"><i class="fa-solid fa-file-circle-plus"></i> Ajouter au rapport d'audit</h3>
+        <p style="font-size: 0.9rem; color: #ccc;">Choisissez un rapport existant ou créez-en un nouveau à la volée :</p>
+        <div style="margin-bottom: 15px;">
+          <label style="display: block; font-size: 0.85rem; color: #888; margin-bottom: 5px;">Rapport de destination :</label>
+          <select id="select-dest-report" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.6); border: 1px solid rgba(0,255,65,0.4); color: #00ff41; border-radius: 4px; font-family: monospace;">
+            <option value="">Chargement des rapports...</option>
+          </select>
+        </div>
+        <div style="border-top: 1px dashed rgba(255,255,255,0.1); margin: 15px 0; padding-top: 15px;">
+          <label style="display: block; font-size: 0.85rem; color: #888; margin-bottom: 5px;">Ou créer un nouveau rapport :</label>
+          <input type="text" id="input-new-report-title" placeholder="ex: Audit Réseau LAN TP Cyber" style="width: 100%; padding: 8px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); color: #fff; border-radius: 4px;">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+          <button id="btn-cancel-add-report" class="btn btn-small">Annuler</button>
+          <button id="btn-confirm-add-report" class="btn btn-small btn-primary" style="font-weight: bold;">
+            <i class="fa-solid fa-check"></i> Confirmer l'ajout
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(div);
+    initAddToReportModal();
+    modal = div;
+  }
+
   const selectEl = document.getElementById("select-dest-report");
   const newTitleInput = document.getElementById("input-new-report-title");
 
   if (newTitleInput) newTitleInput.value = "";
   if (selectEl) selectEl.innerHTML = `<option value="">Chargement des rapports...</option>`;
 
-  if (modal) {
-    modal.classList.remove("hidden");
-    modal.style.display = "flex";
-  }
+  modal.classList.remove("hidden");
+  modal.style.display = "flex";
 
   try {
     const res = await fetch("/api/reports");
