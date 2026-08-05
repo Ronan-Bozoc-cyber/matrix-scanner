@@ -2383,6 +2383,39 @@ def export_report_pdf(report_id):
     )
 
 
+def is_port_free(port, host="127.0.0.1"):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind((host, port))
+            return True
+        except OSError:
+            return False
+
+
+def find_available_port(preferred_port=5000, start_fallback=10001, host="127.0.0.1"):
+    env_port = os.environ.get("PORT")
+    if env_port:
+        try:
+            p = int(env_port)
+            if is_port_free(p, host):
+                return p
+        except ValueError:
+            pass
+
+    if is_port_free(preferred_port, host):
+        return preferred_port
+
+    print(f"[!] Le port {preferred_port} est occupé. Recherche d'un port disponible >= {start_fallback}...")
+    p = start_fallback
+    while p < 65535:
+        if is_port_free(p, host):
+            print(f"[+] Port disponible sélectionné : {p}")
+            return p
+        p += 1
+
+    return preferred_port
+
+
 def open_onionhop_or_default_browser(url="http://127.0.0.1:5000"):
     """
     Tente d'ouvrir l'application dans OnionHop 3.7.8 ou dans le navigateur par défaut.
@@ -2405,7 +2438,7 @@ def open_onionhop_or_default_browser(url="http://127.0.0.1:5000"):
         if path:
             try:
                 subprocess.Popen([path, url])
-                print(f"[+] Application ouverte dans OnionHop ({path})")
+                print(f"[+] Application ouverte dans OnionHop ({path}) sur {url}")
                 return
             except Exception as e:
                 print(f"[!] Échec d'ouverture avec {cmd} : {e}")
@@ -2419,9 +2452,13 @@ def open_onionhop_or_default_browser(url="http://127.0.0.1:5000"):
 
 
 if __name__ == "__main__":
+    server_port = find_available_port(5000, 10001)
+    app_url = f"http://127.0.0.1:{server_port}"
+
     # Lancement d'OnionHop 3.7.8 / navigateur par défaut en arrière-plan
-    threading.Thread(target=open_onionhop_or_default_browser, daemon=True).start()
+    threading.Thread(target=open_onionhop_or_default_browser, args=(app_url,), daemon=True).start()
 
     # debug=True est pratique en pédagogie (affichage des erreurs)
     # use_reloader=False empêche les redémarrages intempestifs du serveur lors des écritures SQLite en base de données
-    app.run(host="127.0.0.1", port=5000, debug=True, use_reloader=False)
+    print(f"[+] Démarrage de Matrix Scanner sur {app_url}")
+    app.run(host="127.0.0.1", port=server_port, debug=True, use_reloader=False)

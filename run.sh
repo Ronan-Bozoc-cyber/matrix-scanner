@@ -2,8 +2,9 @@
 # =====================================================================================
 # run.sh — Lance Matrix Scanner
 # =====================================================================================
-# Active l'environnement virtuel et propose le choix du navigateur (Navigateur par
-# défaut ou OnionHop 3.7.8 avec option d'installation depuis GitHub sous Linux).
+# Active l'environnement virtuel, choisit un port libre (5000 ou >= 10001), et propose
+# le choix du navigateur (Navigateur par défaut ou OnionHop 3.7.8 avec option d'installation
+# depuis GitHub sous Linux).
 # =====================================================================================
 
 set -euo pipefail
@@ -24,7 +25,10 @@ fi
 # shellcheck disable=SC1091
 source venv/bin/activate
 
-URL="http://127.0.0.1:5000"
+# Détermination dynamique du port (5000 si libre, sinon port libre >= 10001)
+DETECTED_PORT=$(python3 -c "import app; print(app.find_available_port(5000, 10001))" 2>/dev/null | tail -n 1)
+export PORT="${DETECTED_PORT:-5000}"
+URL="http://127.0.0.1:${PORT}"
 ONION_BIN=""
 
 # Fonction de détection ou d'installation d'OnionHop 3.7.8 depuis GitHub
