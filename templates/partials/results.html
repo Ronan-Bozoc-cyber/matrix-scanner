@@ -1,7 +1,12 @@
 <div id="results-container">
         <!-- Netdiscover Results -->
         <div id="netdiscover-card" class="card hidden" style="margin-bottom: 20px; border-color: #2ecc71;">
-          <h3 class="card-title" style="color: #2ecc71; margin-top:0;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="card-title" style="color: #2ecc71; margin:0;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</h3>
+            <button id="btn-add-netdiscover-to-report" class="btn btn-small" style="background: rgba(46, 204, 113, 0.15); border-color: #2ecc71; color: #2ecc71; font-weight: bold;">
+              <i class="fa-solid fa-plus"></i> Ajouter le tableau ARP au rapport
+            </button>
+          </div>
           <div id="netdiscover-progress" class="scan-progress hidden">
             <div class="loader"></div>
             <span id="netdiscover-progress-text">Exploration ARP du sous-réseau en cours...</span>
@@ -10,14 +15,19 @@
           <div id="netdiscover-results" class="hidden" style="margin-top: 15px;">
             <div id="netdiscover-results-list"></div>
           </div>
+        </div>
+
         <!-- CARTE TOPOLOGIE DYNAMIQUE (scanner local) -->
         <div id="topology-card" class="card hidden" style="margin-bottom: 20px; border-color: #00ff41;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
             <h3 class="card-title" style="color: #00ff41; margin: 0;"><i class="fa-solid fa-network-wired"></i> Topologie Dynamique du Réseau Local</h3>
-            <div class="topology-controls" style="display: flex; gap: 8px;">
+            <div class="topology-controls" style="display: flex; gap: 8px; flex-wrap: wrap;">
               <button id="btn-topo-filter-all" class="btn btn-small active" style="font-size: 0.75rem; padding: 4px 10px;">Tous</button>
               <button id="btn-topo-filter-risk" class="btn btn-small" style="font-size: 0.75rem; padding: 4px 10px; border-color: #ff4444; color: #ff4444;">⚠️ Risque Élevé</button>
               <button id="btn-topo-reset" class="btn btn-small" style="font-size: 0.75rem; padding: 4px 10px;"><i class="fa-solid fa-arrows-rotate"></i> Réinitialiser Vue</button>
+              <button id="btn-add-topo-to-report" class="btn btn-small" style="background: rgba(0, 255, 65, 0.15); border-color: #00ff41; color: #00ff41; font-weight: bold; font-size: 0.75rem;">
+                <i class="fa-solid fa-image"></i> Intégrer la topologie au rapport
+              </button>
             </div>
           </div>
           <div id="local-topology-container" style="height: 400px; width: 100%; background: rgba(0, 10, 5, 0.65); border: 1px solid rgba(0, 255, 65, 0.3); border-radius: 6px; position: relative;"></div>
@@ -30,7 +40,12 @@
         </div>
 
 <div class="card hidden" id="results-card">
-    <h2>03_ // Résultats du scan</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+      <h2 style="margin: 0;">03_ // Résultats du scan</h2>
+      <button id="btn-add-results-to-report" class="btn btn-small" style="background: rgba(0, 255, 65, 0.15); border-color: #00ff41; color: #00ff41; font-weight: bold;">
+        <i class="fa-solid fa-plus"></i> Ajouter les résultats au rapport
+      </button>
+    </div>
 
     <div class="results-summary" id="results-summary"></div>
 
@@ -44,7 +59,12 @@
 
   
 <div class="card hidden" id="cve-card">
-    <h2>04_ // Recherche de CVE / exploits connus (Exploit-DB)</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+      <h2 style="margin: 0;">04_ // Recherche de CVE / exploits connus (Exploit-DB)</h2>
+      <button id="btn-add-cve-to-report" class="btn btn-small" style="background: rgba(255, 68, 68, 0.15); border-color: #ff4444; color: #ff8888; font-weight: bold;">
+        <i class="fa-solid fa-plus"></i> Ajouter les CVE au rapport
+      </button>
+    </div>
     <p class="hint">Cliquez sur un service détecté ci-dessus (badge "🔍 Chercher CVE") pour lancer une recherche.</p>
     <div id="cve-results"></div>
   </div>

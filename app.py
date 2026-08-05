@@ -33,6 +33,9 @@ Architecture :
       par le code Python : c'est Polkit qui gère l'authentification système).
 """
 
+import base64
+import io
+import importlib.util
 import ipaddress
 import json
 import psutil
@@ -49,7 +52,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 import sqlite3
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_file
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "scanner_history.db")
 
@@ -63,6 +66,27 @@ def init_db():
                 mode TEXT DEFAULT 'distant',
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 result_json TEXT
+            )
+        ''')
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS custom_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                author TEXT DEFAULT 'Auditeur Cybersécurité',
+                description TEXT DEFAULT '',
+                content_html TEXT DEFAULT '',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS report_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                report_id INTEGER,
+                item_title TEXT,
+                item_html TEXT,
+                added_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(report_id) REFERENCES custom_reports(id) ON DELETE CASCADE
             )
         ''')
         conn.commit()
@@ -157,6 +181,21 @@ REQUIRED_TOOLS = {
         "apt_package": "smbmap",
         "description": "Énumération des droits d'accès et partages réseau SMB",
     },
+    "psutil": {
+        "py_module": "psutil",
+        "pip_package": "psutil",
+        "description": "Statistiques système et monitoring CPU/RAM",
+    },
+    "python-docx": {
+        "py_module": "docx",
+        "pip_package": "python-docx",
+        "description": "Génération et exportation de rapports Word (.docx)",
+    },
+    "reportlab": {
+        "py_module": "reportlab",
+        "pip_package": "reportlab",
+        "description": "Génération et exportation de rapports PDF",
+    },
 }
 
 
@@ -177,6 +216,13 @@ def _tool_is_installed(cmd):
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
         return False
 
+def _py_module_is_installed(mod_name):
+    """Vérifie si un module Python est installé et importable."""
+    try:
+        return importlib.util.find_spec(mod_name) is not None
+    except Exception:
+        return False
+
 
 @app.route("/api/check-deps", methods=["GET"])
 def check_deps():
@@ -188,10 +234,20 @@ def check_deps():
     status = {}
     missing_packages = []
     for name, meta in REQUIRED_TOOLS.items():
-        installed = _tool_is_installed(meta["check_cmd"])
+        if "py_module" in meta:
+            installed = _py_module_is_installed(meta["py_module"])
+            pkg_name = meta.get("pip_package", name)
+        else:
+            installed = _tool_is_installed(meta["check_cmd"])
+            pkg_name = meta.get("apt_package", name)
+
+        if not installed:
+            missing_packages.append(pkg_name)
+
         status[name] = {
             "installed": installed,
             "description": meta["description"],
+            "is_python": "py_module" in meta,
         }
     return jsonify({
         "all_installed": len(missing_packages) == 0,
@@ -1682,6 +1738,323 @@ def delete_history_batch():
             return jsonify({"success": True, "deleted_count": len(ids)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# =====================================================================================
+# SECTION 9 : GESTION DES RAPPORTS PERSONNALISÉS (API & EXPORTATION)
+# =====================================================================================
+
+@app.route("/reports")
+def reports_page():
+    return render_template("reports.html", active_page="reports")
+
+@app.route("/api/reports", methods=["GET"])
+def get_reports():
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("SELECT id, title, author, description, created_at, updated_at FROM custom_reports ORDER BY updated_at DESC").fetchall()
+            return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/reports", methods=["POST"])
+def create_report():
+    try:
+        data = request.get_json() or {}
+        title = data.get("title", "Nouveau Rapport").strip() or "Nouveau Rapport"
+        author = data.get("author", "Auditeur Cybersécurité").strip()
+        description = data.get("description", "").strip()
+        initial_html = f"<h1>{title}</h1><p><strong>Auditeur :</strong> {author}</p><p><strong>Date :</strong> {datetime.now().strftime('%d/%m/%Y %H:%M')}</p><hr><p>{description}</p>"
+        
+        with sqlite3.connect(DB_PATH) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO custom_reports (title, author, description, content_html, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+                (title, author, description, initial_html)
+            )
+            report_id = cursor.lastrowid
+            conn.commit()
+            return jsonify({"id": report_id, "title": title, "success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/reports/<int:report_id>", methods=["GET"])
+def get_report_detail(report_id):
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM custom_reports WHERE id = ?", (report_id,)).fetchone()
+            if not row:
+                return jsonify({"error": "Rapport non trouvé"}), 404
+            items = conn.execute("SELECT * FROM report_items WHERE report_id = ? ORDER BY added_at ASC", (report_id,)).fetchall()
+            data = dict(row)
+            data["items"] = [dict(i) for i in items]
+            return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/reports/<int:report_id>", methods=["PUT"])
+def update_report(report_id):
+    try:
+        data = request.get_json() or {}
+        title = data.get("title")
+        author = data.get("author")
+        description = data.get("description")
+        content_html = data.get("content_html")
+
+        fields = []
+        params = []
+        if title is not None:
+            fields.append("title = ?")
+            params.append(title)
+        if author is not None:
+            fields.append("author = ?")
+            params.append(author)
+        if description is not None:
+            fields.append("description = ?")
+            params.append(description)
+        if content_html is not None:
+            fields.append("content_html = ?")
+            params.append(content_html)
+
+        if not fields:
+            return jsonify({"error": "Aucune modification fournie"}), 400
+
+        fields.append("updated_at = CURRENT_TIMESTAMP")
+        params.append(report_id)
+
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute(f"UPDATE custom_reports SET {', '.join(fields)} WHERE id = ?", params)
+            conn.commit()
+            return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/reports/<int:report_id>", methods=["DELETE"])
+def delete_report(report_id):
+    try:
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute("DELETE FROM custom_reports WHERE id = ?", (report_id,))
+            conn.execute("DELETE FROM report_items WHERE report_id = ?", (report_id,))
+            conn.commit()
+            return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/reports/<int:report_id>/append", methods=["POST"])
+def append_to_report(report_id):
+    try:
+        data = request.get_json() or {}
+        item_title = data.get("title", "Élément d'analyse")
+        item_html = data.get("html", "")
+
+        if not item_html:
+            return jsonify({"error": "Contenu HTML vide"}), 400
+
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT content_html FROM custom_reports WHERE id = ?", (report_id,)).fetchone()
+            if not row:
+                return jsonify({"error": "Rapport non trouvé"}), 404
+
+            current_html = row["content_html"] or ""
+            new_block = f'<div class="report-section-block" style="margin-top:20px; padding:15px; border-left:4px solid #00ff41; background:rgba(0,255,65,0.05);"><h3>{item_title}</h3>{item_html}</div>'
+            updated_html = current_html + new_block
+
+            conn.execute(
+                "UPDATE custom_reports SET content_html = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (updated_html, report_id)
+            )
+            conn.execute(
+                "INSERT INTO report_items (report_id, item_title, item_html) VALUES (?, ?, ?)",
+                (report_id, item_title, item_html)
+            )
+            conn.commit()
+            return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/reports/<int:report_id>/export/docx", methods=["GET"])
+def export_report_docx(report_id):
+    try:
+        import docx
+        from docx.shared import Inches, Pt, RGBColor
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return jsonify({"error": "Module python-docx non disponible"}), 500
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        report = conn.execute("SELECT * FROM custom_reports WHERE id = ?", (report_id,)).fetchone()
+        if not report:
+            return jsonify({"error": "Rapport introuvable"}), 404
+
+    doc = docx.Document()
+    title_p = doc.add_heading(report["title"], level=0)
+    meta_p = doc.add_paragraph(f"Auditeur : {report['author']} | Date : {report['updated_at']}")
+    meta_p.runs[0].font.italic = True
+    meta_p.runs[0].font.color.rgb = RGBColor(100, 100, 100)
+
+    html_content = report["content_html"] or ""
+    temp_files = []
+    
+    try:
+        soup = BeautifulSoup(html_content, "html.parser")
+        for elem in soup.find_all(['h1', 'h2', 'h3', 'h4', 'p', 'table', 'img']):
+            if elem.name in ['h1', 'h2', 'h3', 'h4']:
+                level = int(elem.name[1])
+                doc.add_heading(elem.get_text().strip(), level=level)
+            elif elem.name == 'p':
+                text = elem.get_text().strip()
+                if text:
+                    doc.add_paragraph(text)
+            elif elem.name == 'table':
+                rows = elem.find_all('tr')
+                if rows:
+                    col_count = max(len(r.find_all(['td', 'th'])) for r in rows)
+                    if col_count > 0:
+                        doc_table = doc.add_table(rows=len(rows), cols=col_count)
+                        doc_table.style = 'Table Grid'
+                        for r_idx, r in enumerate(rows):
+                            cols = r.find_all(['td', 'th'])
+                            for c_idx, c in enumerate(cols):
+                                if c_idx < col_count:
+                                    doc_table.cell(r_idx, c_idx).text = c.get_text().strip()
+            elif elem.name == 'img' and elem.get('src', '').startswith('data:image'):
+                src = elem['src']
+                try:
+                    header, encoded = src.split(',', 1)
+                    img_bytes = base64.b64decode(encoded)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_img:
+                        tmp_img.write(img_bytes)
+                        tmp_path = tmp_img.name
+                        temp_files.append(tmp_path)
+                    doc.add_picture(tmp_path, width=Inches(6.0))
+                except Exception as img_err:
+                    print(f"Erreur insertion image Word : {img_err}")
+    except Exception as parse_err:
+        for line in html_content.replace("<br>", "\n").replace("</p>", "\n").split("\n"):
+            clean_text = re.sub('<[^<]+?>', '', line).strip()
+            if clean_text:
+                doc.add_paragraph(clean_text)
+
+    mem_file = io.BytesIO()
+    doc.save(mem_file)
+
+    for tmp in temp_files:
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
+
+    mem_file.seek(0)
+    filename = f"Rapport_{report_id}_{re.sub(r'[^a-zA-Z0-9]', '_', report['title'])}.docx"
+    return send_file(
+        mem_file,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        as_attachment=True,
+        download_name=filename
+    )
+
+@app.route("/api/reports/<int:report_id>/export/pdf", methods=["GET"])
+def export_report_pdf(report_id):
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return jsonify({"error": "Module reportlab non disponible"}), 500
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+        report = conn.execute("SELECT * FROM custom_reports WHERE id = ?", (report_id,)).fetchone()
+        if not report:
+            return jsonify({"error": "Rapport introuvable"}), 404
+
+    pdf_buffer = io.BytesIO()
+    doc = SimpleDocTemplate(pdf_buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=30)
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=18, textColor=colors.HexColor('#00aa2b'), spaceAfter=10)
+    meta_style = ParagraphStyle('MetaStyle', parent=styles['Normal'], fontSize=9, textColor=colors.HexColor('#555555'), spaceAfter=15)
+    body_style = ParagraphStyle('BodyStyle', parent=styles['Normal'], fontSize=10, leading=14, spaceAfter=8)
+
+    story = []
+    story.append(Paragraph(report['title'], title_style))
+    story.append(Paragraph(f"Auditeur : {report['author']} | Date : {report['updated_at']}", meta_style))
+    story.append(Spacer(1, 10))
+
+    html_content = report["content_html"] or ""
+    temp_files = []
+
+    try:
+        soup = BeautifulSoup(html_content, "html.parser")
+        for elem in soup.find_all(['h1', 'h2', 'h3', 'h4', 'p', 'table', 'img']):
+            if elem.name in ['h1', 'h2', 'h3', 'h4']:
+                level_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=13, textColor=colors.HexColor('#1a5e20'), spaceBefore=8, spaceAfter=4)
+                story.append(Paragraph(elem.get_text().strip(), level_style))
+            elif elem.name == 'p':
+                text = elem.get_text().strip()
+                if text:
+                    story.append(Paragraph(text, body_style))
+            elif elem.name == 'table':
+                rows = elem.find_all('tr')
+                table_data = []
+                for r in rows:
+                    cols = r.find_all(['td', 'th'])
+                    row_data = [Paragraph(c.get_text().strip(), body_style) for c in cols]
+                    if row_data:
+                        table_data.append(row_data)
+                if table_data:
+                    t = Table(table_data)
+                    t.setStyle(TableStyle([
+                        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#e8f5e9')),
+                        ('TEXTCOLOR', (0,0), (-1,0), colors.HexColor('#1b5e20')),
+                        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#cccccc')),
+                        ('PADDING', (0,0), (-1,-1), 4),
+                    ]))
+                    story.append(t)
+                    story.append(Spacer(1, 10))
+            elif elem.name == 'img' and elem.get('src', '').startswith('data:image'):
+                src = elem['src']
+                try:
+                    header, encoded = src.split(',', 1)
+                    img_bytes = base64.b64decode(encoded)
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_img:
+                        tmp_img.write(img_bytes)
+                        tmp_path = tmp_img.name
+                        temp_files.append(tmp_path)
+                    rl_img = RLImage(tmp_path, width=450, height=250)
+                    story.append(rl_img)
+                    story.append(Spacer(1, 10))
+                except Exception as img_err:
+                    print(f"Erreur insertion image PDF : {img_err}")
+    except Exception:
+        clean_text = re.sub('<[^<]+?>', '', html_content)
+        story.append(Paragraph(clean_text, body_style))
+
+    doc.build(story)
+
+    for tmp in temp_files:
+        if os.path.exists(tmp):
+            try:
+                os.remove(tmp)
+            except Exception:
+                pass
+
+    pdf_buffer.seek(0)
+    filename = f"Rapport_{report_id}_{re.sub(r'[^a-zA-Z0-9]', '_', report['title'])}.pdf"
+    return send_file(
+        pdf_buffer,
+        mimetype="application/pdf",
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 if __name__ == "__main__":

@@ -1553,4 +1553,384 @@ window.renderResults = renderResults;
 window.renderLocalTopology = renderLocalTopology;
 
 
+/* =====================================================================================
+   SECTION RAPPORTS PERSONNALISÉS & ÉDITEUR WYSIWYG
+   ===================================================================================== */
+
+let currentActiveReportId = null;
+let pendingAddToReportItem = null;
+let reportAutoSaveTimer = null;
+
+// Initialisation globale au chargement de la page
+document.addEventListener("DOMContentLoaded", () => {
+  initReportsPage();
+  initAddToReportModal();
+  initAddToReportButtons();
+});
+
+function initReportsPage() {
+  const container = document.getElementById("reports-list-container");
+  if (!container) return; // Pas sur la page /reports
+
+  loadReportsList();
+
+  // Bouton Nouveau rapport
+  document.getElementById("btn-create-new-report")?.addEventListener("click", async () => {
+    const title = prompt("Titre du nouveau rapport :", "Audit Cybersécurité " + new Date().toLocaleDateString());
+    if (!title || !title.trim()) return;
+
+    try {
+      const res = await fetch("/api/reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title.trim() })
+      });
+      const data = await res.json();
+      if (data.success && data.id) {
+        await loadReportsList();
+        selectReportForEdit(data.id);
+      }
+    } catch (err) {
+      alert("Erreur création rapport : " + err.message);
+    }
+  });
+
+  // Boutons barre d'outils WYSIWYG
+  document.querySelectorAll(".wysiwyg-toolbar button[data-command]").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const command = btn.getAttribute("data-command");
+      const value = btn.getAttribute("data-value") || null;
+      if (command === "formatBlock" && value) {
+        document.execCommand("formatBlock", false, value);
+      } else {
+        document.execCommand(command, false, null);
+      }
+    });
+  });
+
+  // Encarts d'alerte et tableaux
+  document.getElementById("btn-wysiwyg-alert-note")?.addEventListener("click", () => insertWysiwygBlock("note"));
+  document.getElementById("btn-wysiwyg-alert-warn")?.addEventListener("click", () => insertWysiwygBlock("warn"));
+  document.getElementById("btn-wysiwyg-alert-crit")?.addEventListener("click", () => insertWysiwygBlock("crit"));
+  document.getElementById("btn-wysiwyg-table")?.addEventListener("click", () => insertWysiwygTable());
+
+  // Sauvegarde manuelle
+  document.getElementById("btn-save-report")?.addEventListener("click", saveCurrentReport);
+
+  // Supprimer le rapport actif
+  document.getElementById("btn-delete-current-report")?.addEventListener("click", async () => {
+    if (!currentActiveReportId) return;
+    if (!confirm("Voulez-vous vraiment supprimer ce rapport ?")) return;
+
+    try {
+      const res = await fetch(`/api/reports/${currentActiveReportId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        currentActiveReportId = null;
+        document.getElementById("active-report-editor")?.classList.add("hidden");
+        document.getElementById("no-report-selected")?.classList.remove("hidden");
+        loadReportsList();
+      }
+    } catch (err) {
+      alert("Erreur suppression : " + err.message);
+    }
+  });
+
+  // Export PDF
+  document.getElementById("btn-export-pdf")?.addEventListener("click", () => {
+    if (!currentActiveReportId) return;
+    window.open(`/api/reports/${currentActiveReportId}/export/pdf`, "_blank");
+  });
+
+  // Export Word .docx
+  document.getElementById("btn-export-docx")?.addEventListener("click", () => {
+    if (!currentActiveReportId) return;
+    window.open(`/api/reports/${currentActiveReportId}/export/docx`, "_blank");
+  });
+
+  // Auto-save on typing
+  const editable = document.getElementById("editor-content-editable");
+  if (editable) {
+    editable.addEventListener("input", () => {
+      if (reportAutoSaveTimer) clearTimeout(reportAutoSaveTimer);
+      reportAutoSaveTimer = setTimeout(saveCurrentReport, 4000);
+    });
+  }
+}
+
+async function loadReportsList() {
+  const container = document.getElementById("reports-list-container");
+  if (!container) return;
+
+  try {
+    const res = await fetch("/api/reports");
+    const reports = await res.json();
+
+    if (!Array.isArray(reports) || reports.length === 0) {
+      container.innerHTML = `<div style="text-align: center; color: #888; padding: 20px;">Aucun rapport créé.</div>`;
+      return;
+    }
+
+    let html = "";
+    reports.forEach(r => {
+      const activeClass = r.id === currentActiveReportId ? "border-color: #00ff41; background: rgba(0,255,65,0.1);" : "";
+      html += `
+        <div class="report-item-card" onclick="selectReportForEdit(${r.id})" style="padding: 10px; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; cursor: pointer; transition: all 0.2s ease; ${activeClass}">
+          <div style="font-weight: bold; color: #00ff41; font-size: 0.95rem;">${r.title}</div>
+          <div style="font-size: 0.75rem; color: #aaa; margin-top: 4px;">Auditeur: ${r.author} | Modifié: ${r.updated_at}</div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+  } catch (err) {
+    console.error("Erreur chargement liste rapports:", err);
+  }
+}
+
+async function selectReportForEdit(reportId) {
+  currentActiveReportId = reportId;
+  await loadReportsList(); // Refresh active styles in list
+
+  try {
+    const res = await fetch(`/api/reports/${reportId}`);
+    const report = await res.json();
+
+    if (report.error) {
+      alert("Erreur : " + report.error);
+      return;
+    }
+
+    document.getElementById("no-report-selected")?.classList.add("hidden");
+    document.getElementById("active-report-editor")?.classList.remove("hidden");
+
+    document.getElementById("report-edit-title").value = report.title;
+    document.getElementById("report-edit-author").value = report.author;
+    document.getElementById("report-edit-date").textContent = "Créé le " + report.created_at;
+    document.getElementById("editor-content-editable").innerHTML = report.content_html || "";
+
+    const statusEl = document.getElementById("auto-save-status");
+    if (statusEl) statusEl.textContent = "Dernière modification : " + report.updated_at;
+  } catch (err) {
+    alert("Erreur chargement rapport : " + err.message);
+  }
+}
+
+async function saveCurrentReport() {
+  if (!currentActiveReportId) return;
+
+  const title = document.getElementById("report-edit-title")?.value.trim() || "Rapport Sans Titre";
+  const author = document.getElementById("report-edit-author")?.value.trim() || "Auditeur";
+  const contentHtml = document.getElementById("editor-content-editable")?.innerHTML || "";
+
+  try {
+    const res = await fetch(`/api/reports/${currentActiveReportId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, author, content_html: contentHtml })
+    });
+    const data = await res.json();
+    if (data.success) {
+      const statusEl = document.getElementById("auto-save-status");
+      if (statusEl) statusEl.textContent = "Dernière sauvegarde : " + new Date().toLocaleTimeString();
+      loadReportsList();
+    }
+  } catch (err) {
+    console.warn("Échec sauvegarde automatique :", err);
+  }
+}
+
+function insertWysiwygBlock(type) {
+  let blockHtml = "";
+  if (type === "note") {
+    blockHtml = `<div style="padding: 10px 14px; background: rgba(33, 150, 243, 0.1); border-left: 4px solid #2196F3; margin: 10px 0; border-radius: 4px;"><strong>ℹ️ Note d'audit :</strong> Saisissez vos observations ici...</div><p><br></p>`;
+  } else if (type === "warn") {
+    blockHtml = `<div style="padding: 10px 14px; background: rgba(255, 187, 51, 0.1); border-left: 4px solid #ffbb33; margin: 10px 0; border-radius: 4px;"><strong>⚠️ Avertissement :</strong> Risque modéré ou configuration à revoir...</div><p><br></p>`;
+  } else if (type === "crit") {
+    blockHtml = `<div style="padding: 10px 14px; background: rgba(255, 68, 68, 0.1); border-left: 4px solid #ff4444; margin: 10px 0; border-radius: 4px; color: #ff8888;"><strong>☣️ Vulnérabilité Critique :</strong> Action corrective urgente recommandée...</div><p><br></p>`;
+  }
+  document.execCommand("insertHTML", false, blockHtml);
+}
+
+function insertWysiwygTable() {
+  const tableHtml = `
+    <table style="width:100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #00ff41;">
+      <thead>
+        <tr style="background: rgba(0,255,65,0.15); color: #00ff41;">
+          <th style="padding: 8px; border: 1px solid #00ff41;">Composant</th>
+          <th style="padding: 8px; border: 1px solid #00ff41;">Statut</th>
+          <th style="padding: 8px; border: 1px solid #00ff41;">Recommandation</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="padding: 6px; border: 1px solid rgba(0,255,65,0.3);">Service Web</td>
+          <td style="padding: 6px; border: 1px solid rgba(0,255,65,0.3);">En ligne</td>
+          <td style="padding: 6px; border: 1px solid rgba(0,255,65,0.3);">Activer HSTS et CSP</td>
+        </tr>
+      </tbody>
+    </table><p><br></p>
+  `;
+  document.execCommand("insertHTML", false, tableHtml);
+}
+
+/* ---------- BOUTONS "AJOUTER AU RAPPORT" ET MODALE ---------- */
+
+function initAddToReportButtons() {
+  // Bouton Netdiscover Table
+  document.getElementById("btn-add-netdiscover-to-report")?.addEventListener("click", () => {
+    const listEl = document.getElementById("netdiscover-results-list");
+    if (!listEl || !listEl.innerHTML.trim()) {
+      alert("Aucun résultat Netdiscover à ajouter.");
+      return;
+    }
+    openAddToReportModal("Découverte ARP (Netdiscover LAN)", listEl.innerHTML);
+  });
+
+  // Bouton Topologie Image
+  document.getElementById("btn-add-topo-to-report")?.addEventListener("click", () => {
+    const container = document.getElementById("local-topology-container");
+    if (!container) return;
+
+    const canvas = container.querySelector("canvas");
+    if (!canvas) {
+      alert("Graphique de topologie indisponible ou non généré.");
+      return;
+    }
+
+    try {
+      const dataUrl = canvas.toDataURL("image/png");
+      const imgHtml = `
+        <div style="text-align: center; margin: 15px 0;">
+          <img src="${dataUrl}" style="max-width: 100%; border: 1px solid #00ff41; border-radius: 6px; box-shadow: 0 0 10px rgba(0,255,65,0.2);">
+          <p style="font-size: 0.8rem; color: #aaa; margin-top: 5px;">Schéma de topologie du réseau local (LAN)</p>
+        </div>
+      `;
+      openAddToReportModal("Topologie Réseau Local (LAN)", imgHtml);
+    } catch (err) {
+      alert("Erreur de capture d'image de la topologie : " + err.message);
+    }
+  });
+
+  // Bouton Résultats de scan
+  document.getElementById("btn-add-results-to-report")?.addEventListener("click", () => {
+    const summaryEl = document.getElementById("results-summary");
+    const hostsEl = document.getElementById("hosts-detail");
+    const html = (summaryEl ? summaryEl.innerHTML : "") + (hostsEl ? hostsEl.innerHTML : "");
+    if (!html.trim()) {
+      alert("Aucun résultat de scan à ajouter.");
+      return;
+    }
+    openAddToReportModal("Résultats du Pentest Réseau", html);
+  });
+
+  // Bouton CVE
+  document.getElementById("btn-add-cve-to-report")?.addEventListener("click", () => {
+    const cveEl = document.getElementById("cve-results");
+    if (!cveEl || !cveEl.innerHTML.trim()) {
+      alert("Aucune CVE sélectionnée à ajouter.");
+      return;
+    }
+    openAddToReportModal("Vulnérabilités CVE Identifiées", cveEl.innerHTML);
+  });
+}
+
+function initAddToReportModal() {
+  const modal = document.getElementById("modal-add-to-report");
+  const closeBtn = document.getElementById("close-add-report-modal");
+  const cancelBtn = document.getElementById("btn-cancel-add-report");
+  const confirmBtn = document.getElementById("btn-confirm-add-report");
+
+  const closeModal = () => modal?.classList.add("hidden");
+
+  closeBtn?.addEventListener("click", closeModal);
+  cancelBtn?.addEventListener("click", closeModal);
+
+  confirmBtn?.addEventListener("click", async () => {
+    if (!pendingAddToReportItem) return;
+
+    const selectEl = document.getElementById("select-dest-report");
+    const newTitleInput = document.getElementById("input-new-report-title");
+    let targetReportId = selectEl?.value;
+    const newTitle = newTitleInput?.value.trim();
+
+    try {
+      if (newTitle) {
+        // Créer un nouveau rapport d'abord
+        const createRes = await fetch("/api/reports", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: newTitle })
+        });
+        const createData = await createRes.json();
+        if (createData.success && createData.id) {
+          targetReportId = createData.id;
+        } else {
+          alert("Erreur création rapport : " + (createData.error || "Inconnue"));
+          return;
+        }
+      }
+
+      if (!targetReportId) {
+        alert("Veuillez sélectionner un rapport ou indiquer un titre pour en créer un nouveau.");
+        return;
+      }
+
+      // Appliquer l'ajout
+      const appendRes = await fetch(`/api/reports/${targetReportId}/append`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: pendingAddToReportItem.title,
+          html: pendingAddToReportItem.html
+        })
+      });
+
+      const appendData = await appendRes.json();
+      if (appendData.success) {
+        closeModal();
+        if (confirm("Élément ajouté au rapport avec succès ! Voulez-vous ouvrir le gestionnaire de rapports ?")) {
+          window.location.href = "/reports";
+        }
+      } else {
+        alert("Erreur ajout au rapport : " + (appendData.error || "Inconnue"));
+      }
+    } catch (err) {
+      alert("Erreur réseau : " + err.message);
+    }
+  });
+}
+
+async function openAddToReportModal(title, html) {
+  pendingAddToReportItem = { title, html };
+
+  const modal = document.getElementById("modal-add-to-report");
+  const selectEl = document.getElementById("select-dest-report");
+  const newTitleInput = document.getElementById("input-new-report-title");
+
+  if (newTitleInput) newTitleInput.value = "";
+  if (selectEl) selectEl.innerHTML = `<option value="">Chargement...</option>`;
+
+  modal?.classList.remove("hidden");
+
+  try {
+    const res = await fetch("/api/reports");
+    const reports = await res.json();
+
+    if (!Array.isArray(reports) || reports.length === 0) {
+      selectEl.innerHTML = `<option value="">(Aucun rapport existant - Saisissez un titre ci-dessous)</option>`;
+    } else {
+      let options = `<option value="">-- Sélectionner un rapport existant --</option>`;
+      reports.forEach(r => {
+        options += `<option value="${r.id}">${r.title} (${r.updated_at})</option>`;
+      });
+      selectEl.innerHTML = options;
+    }
+  } catch (err) {
+    selectEl.innerHTML = `<option value="">Erreur chargement rapports</option>`;
+  }
+}
+
+
 

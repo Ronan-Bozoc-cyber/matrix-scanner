@@ -978,4 +978,62 @@ table.ports-table tr:hover {
   background: rgba(0, 255, 65, 0.7);
 }
 
+/* --- REPORTS MANAGER & WYSIWYG STYLES --- */
+.report-item-card:hover {
+  border-color: #00ff41 !important;
+  background: rgba(0, 255, 65, 0.08) !important;
+}
+
+.wysiwyg-toolbar button {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ccc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.wysiwyg-toolbar button:hover {
+  border-color: #00ff41;
+  color: #00ff41;
+  background: rgba(0, 255, 65, 0.15);
+}
+
+#editor-content-editable h1, 
+#editor-content-editable h2, 
+#editor-content-editable h3 {
+  color: #00ff41;
+  margin-top: 15px;
+  margin-bottom: 8px;
+}
+
+#editor-content-editable table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 15px 0;
+  border: 1px solid rgba(0, 255, 65, 0.3);
+}
+
+#editor-content-editable th, 
+#editor-content-editable td {
+  padding: 8px;
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  text-align: left;
+}
+
+#editor-content-editable th {
+  background: rgba(0, 255, 65, 0.1);
+  color: #00ff41;
+}
+
+#editor-content-editable img {
+  max-width: 100%;
+  border-radius: 6px;
+  margin: 10px 0;
+  border: 1px solid rgba(0, 255, 65, 0.3);
+}
+
+
 

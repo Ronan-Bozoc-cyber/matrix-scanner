@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+{% block content %}
+<section id="view-reports" class="view-section active">
+  <div class="pedagogical-banner" style="background: rgba(0, 200, 81, 0.08); border-color: #00C851;">
+    <h3 style="color: #00C851;"><i class="fa-solid fa-file-signature"></i> Gestionnaire de Rapports & Éditeur d'Audit</h3>
+    <p>Créez, personnalisez et exportez vos rapports d'analyse de cybersécurité. Vous pouvez y ajouter en 1 clic les tableaux ARP Netdiscover, le schéma de topologie réseau et les vulnérabilités CVE découvertes, puis exporter directement au format <strong>PDF</strong> ou <strong>Word (.docx)</strong>.</p>
+  </div>
+
+  <div class="reports-manager-layout" style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap;">
+    
+    <!-- PANNEAU LATÉRAL : LISTE DES RAPPORTS -->
+    <div class="card" style="flex: 1; min-width: 280px; max-width: 340px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 style="margin: 0; font-size: 1.1rem; color: #00ff41;"><i class="fa-solid fa-folder-open"></i> Vos Rapports</h3>
+        <button id="btn-create-new-report" class="btn btn-small btn-primary" style="font-weight: bold;">
+          <i class="fa-solid fa-plus"></i> Nouveau
+        </button>
+      </div>
+
+      <div id="reports-list-container" style="max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+        <div style="text-align: center; color: #888; padding: 20px;">Chargement des rapports...</div>
+      </div>
+    </div>
+
+    <!-- ZONE D'ÉDITION PRINCIPALE -->
+    <div class="card" id="report-editor-container" style="flex: 3; min-width: 320px; display: flex; flex-direction: column; gap: 15px;">
+      <div id="no-report-selected" style="text-align: center; padding: 50px 20px; color: #888;">
+        <i class="fa-solid fa-file-pen" style="font-size: 3rem; color: #00ff41; margin-bottom: 15px; opacity: 0.5;"></i>
+        <h3>Aucun rapport sélectionné</h3>
+        <p>Sélectionnez un rapport dans le panneau de gauche ou cliquez sur <strong>"Nouveau"</strong> pour commencer la rédaction.</p>
+      </div>
+
+      <div id="active-report-editor" class="hidden" style="display: flex; flex-direction: column; gap: 15px;">
+        <!-- EN-TÊTE ET ACTIONS DU RAPPORT -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid rgba(0, 255, 65, 0.2); padding-bottom: 15px;">
+          <div style="flex: 1; min-width: 200px;">
+            <input type="text" id="report-edit-title" placeholder="Titre du rapport" style="font-size: 1.3rem; font-weight: bold; width: 100%; color: #00ff41; background: transparent; border: none; border-bottom: 1px dashed rgba(0, 255, 65, 0.4); padding: 4px 0;" autocomplete="off">
+            <div style="display: flex; gap: 10px; margin-top: 6px;">
+              <input type="text" id="report-edit-author" placeholder="Nom de l'auditeur" style="font-size: 0.85rem; color: #aaa; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 2px 6px;">
+              <span id="report-edit-date" style="font-size: 0.85rem; color: #888; align-self: center;"></span>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button id="btn-save-report" class="btn btn-small" style="background: rgba(0, 200, 81, 0.2); border-color: #00C851; color: #00C851; font-weight: bold;">
+              <i class="fa-solid fa-floppy-disk"></i> Enregistrer
+            </button>
+            <button id="btn-export-pdf" class="btn btn-small" style="background: rgba(255, 68, 68, 0.2); border-color: #ff4444; color: #ff8888;">
+              <i class="fa-solid fa-file-pdf"></i> Export PDF
+            </button>
+            <button id="btn-export-docx" class="btn btn-small" style="background: rgba(33, 150, 243, 0.2); border-color: #2196F3; color: #64B5F6;">
+              <i class="fa-solid fa-file-word"></i> Export Word
+            </button>
+            <button id="btn-delete-current-report" class="btn btn-small" style="background: rgba(255, 0, 0, 0.15); border-color: #ff4444; color: #ff6666;" title="Supprimer ce rapport">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- BARRE D'OUTILS WYSIWYG -->
+        <div class="wysiwyg-toolbar" style="display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; background: rgba(0, 20, 10, 0.8); border: 1px solid rgba(0, 255, 65, 0.3); border-radius: 6px;">
+          <button class="tool-btn" data-command="bold" title="Gras"><i class="fa-solid fa-bold"></i></button>
+          <button class="tool-btn" data-command="italic" title="Italique"><i class="fa-solid fa-italic"></i></button>
+          <button class="tool-btn" data-command="underline" title="Souligné"><i class="fa-solid fa-underline"></i></button>
+          <button class="tool-btn" data-command="strikeThrough" title="Barré"><i class="fa-solid fa-strikethrough"></i></button>
+          <span style="border-right: 1px solid rgba(255,255,255,0.2); margin: 0 4px;"></span>
+          <button class="tool-btn" data-command="formatBlock" data-value="H1" title="Titre 1">H1</button>
+          <button class="tool-btn" data-command="formatBlock" data-value="H2" title="Titre 2">H2</button>
+          <button class="tool-btn" data-command="formatBlock" data-value="H3" title="Titre 3">H3</button>
+          <button class="tool-btn" data-command="formatBlock" data-value="P" title="Paragraphe">P</button>
+          <span style="border-right: 1px solid rgba(255,255,255,0.2); margin: 0 4px;"></span>
+          <button class="tool-btn" data-command="insertUnorderedList" title="Liste à puces"><i class="fa-solid fa-list-ul"></i></button>
+          <button class="tool-btn" data-command="insertOrderedList" title="Liste numérotée"><i class="fa-solid fa-list-ol"></i></button>
+          <span style="border-right: 1px solid rgba(255,255,255,0.2); margin: 0 4px;"></span>
+          <button class="tool-btn" id="btn-wysiwyg-alert-note" title="Encart Note"><i class="fa-solid fa-circle-info"></i> Note</button>
+          <button class="tool-btn" id="btn-wysiwyg-alert-warn" title="Encart Alerte" style="color: #ffbb33;"><i class="fa-solid fa-triangle-exclamation"></i> Alerte</button>
+          <button class="tool-btn" id="btn-wysiwyg-alert-crit" title="Encart Critique" style="color: #ff4444;"><i class="fa-solid fa-biohazard"></i> Critique</button>
+          <button class="tool-btn" id="btn-wysiwyg-table" title="Insérer un tableau"><i class="fa-solid fa-table"></i> Tableau</button>
+        </div>
+
+        <!-- ZONE D'ÉDITION DU CONTENU (CONTENTEDITABLE) -->
+        <div id="editor-content-editable" contenteditable="true" style="min-height: 400px; padding: 20px; background: rgba(5, 12, 7, 0.95); border: 1px solid rgba(0, 255, 65, 0.3); border-radius: 6px; color: #e0e0e0; font-family: 'Inter', sans-serif; line-height: 1.6; outline: none; overflow-y: auto;">
+        </div>
+
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #888;">
+          <span id="auto-save-status">Dernière sauvegarde : —</span>
+          <span>Conseil : utilisez le bouton ➕ sur les scans pour alimenter ce rapport</span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+{% include 'partials/modal.html' %}
+{% endblock %}
