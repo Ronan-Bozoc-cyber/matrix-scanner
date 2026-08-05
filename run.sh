@@ -35,7 +35,7 @@ show_ascii_banner() {
     echo " ║  ╚═╝     ╚═╝ ╚═╝  ╚═╝    ╚═╝   ╚═╝  ╚═╝ ╚═╝╚═╝  ╚═╝    ╚══════╝ ╚═════╝     ║"
     echo " ║                                                                             ║"
     echo -e " ║              ${CYAN}[ Professional Reconnaissance & CVE Dashboard ]${GREEN}               ║"
-    echo -e " ║                   ${WHITE}Concepteur : Ronan BOZOC${GREEN}                           ║"
+    echo -e " ║                          ${WHITE}Concepteur : Ronan BOZOC${GREEN}                           ║"
     echo " ╚═════════════════════════════════════════════════════════════════════════════╝"
     echo -e "${RESET}"
 }
