@@ -9,8 +9,10 @@
         <div class="diagram-container">
           <div class="workflow-box web-workflow">
             <h4><i class="fa-solid fa-globe"></i> Workflow : Scanner Distant (Web & Application)</h4>
-            <div class="diagram-path">
+            <div class="diagram-path" style="flex-wrap: wrap; gap: 8px;">
               <div class="node"><i class="fa-solid fa-crosshairs"></i> Cible Web</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-address-card"></i> Domaine & Sous-domaines (whois & Sublist3r)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node"><i class="fa-solid fa-shield-halved"></i> Détection WAF (Wafw00f)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
@@ -20,7 +22,7 @@
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node"><i class="fa-solid fa-bug"></i> Failles Web (Nikto, Nuclei, WPScan)</div>
             </div>
-            <p class="desc">Workflow externe automatisé : Analyse la présence d'un pare-feu applicatif (WAF), capture l'aperçu visuel (Gowitness), identifie les technologies web (WhatWeb) et sonde les vulnérabilités serveur/web (Nikto, Nuclei, WPScan).</p>
+            <p class="desc">Workflow externe automatisé : Interroge le registre WHOIS et énumère les sous-domaines (Sublist3r), analyse la présence d'un pare-feu applicatif (WAF), capture l'aperçu visuel (Gowitness), identifie les technologies web (WhatWeb) et sonde les vulnérabilités serveur/web (Nikto, Nuclei, WPScan).</p>
           </div>
 
           <div class="workflow-box local-workflow">
