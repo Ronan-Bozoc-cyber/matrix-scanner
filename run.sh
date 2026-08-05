@@ -27,12 +27,12 @@ show_ascii_banner() {
     echo -e "${GREEN}"
     echo " ╔═════════════════════════════════════════════════════════════════════════════╗"
     echo " ║                                                                             ║"
-    echo " ║  ███╗   ███╗  █████╗  ████████╗██████╗  ██╗██╗  ██╗    ███████╗ ██████╗     ║"
-    echo " ║  ████╗ ████║ ██╔══██╗ ╚══██╔══╝██╔══██╗ ██║╚██╗██╔╝    ██╔════╝██╔════╝     ║"
-    echo " ║  ██╔████╔██║ ███████║    ██║   ██████╔╝ ██║ ╚███╔╝     ███████╗██║          ║"
-    echo " ║  ██║╚██╔╝██║ ██╔══██║    ██║   ██╔══██║ ██║ ██╔██╗     ╚════██║██║          ║"
-    echo " ║  ██║ ╚═╝ ██║ ██║  ██║    ██║   ██║  ██║ ██║██╔╝ ██╗    ███████║╚██████╗     ║"
-    echo " ║  ╚═╝     ╚═╝ ╚═╝  ╚═╝    ╚═╝   ╚═╝  ╚═╝ ╚═╝╚═╝  ╚═╝    ╚══════╝ ╚═════╝     ║"
+    echo " ║  ███╗   ███╗    ███████╗  ██████╗  █████╗  ███╗   ██╗                       ║"
+    echo " ║  ████╗ ████║    ██╔════╝ ██╔════╝ ██╔══██╗ ████╗  ██║                       ║"
+    echo " ║  ██╔████╔██║ ▀▀ ███████╗ ██║      ███████║ ██╔██╗ ██║ ▀▀                    ║"
+    echo " ║  ██║╚██╔╝██║    ╚════██║ ██║      ██╔══██║ ██║╚██╗██║                       ║"
+    echo " ║  ██║ ╚═╝ ██║    ███████║ ╚██████╗ ██║  ██║ ██║ ╚████║                       ║"
+    echo " ║  ╚═╝     ╚═╝    ╚══════╝  ╚═════╝ ╚═╝  ╚═╝ ╚═╝  ╚═══╝                       ║"
     echo " ║                                                                             ║"
     echo -e " ║              ${CYAN}[ Professional Reconnaissance & CVE Dashboard ]${GREEN}               ║"
     echo -e " ║                          ${WHITE}Concepteur : Ronan BOZOC${GREEN}                           ║"
@@ -126,7 +126,7 @@ fi
         "$ONION_BIN" &>/dev/null &
     fi
 
-    echo -e "${GREEN}[🌐] Ouverture de Matrix Scanner dans le navigateur par défaut ($URL)...${RESET}"
+    echo -e "${GREEN}[🌐] Ouverture de M-SCAN dans le navigateur par défaut ($URL)...${RESET}"
     if command -v xdg-open &>/dev/null; then
         xdg-open "$URL" &>/dev/null &
     fi
@@ -134,7 +134,7 @@ fi
 
 echo ""
 echo -e "${GREEN} ┌─────────────────────────────────────────────────────────────────────────────┐${RESET}"
-echo -e "${GREEN} │ ${WHITE}[★] DÉMARRAGE DU SERVEUR FLASK SUR ${CYAN}$URL${GREEN}${RESET}"
+echo -e "${GREEN} │ ${WHITE}[★] DÉMARRAGE DE M-SCAN SUR ${CYAN}$URL${GREEN}${RESET}"
 echo -e "${GREEN} └─────────────────────────────────────────────────────────────────────────────┘${RESET}"
 echo ""
 
