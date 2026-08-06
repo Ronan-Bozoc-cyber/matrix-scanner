@@ -3231,87 +3231,19 @@ async function openAddToReportModal(title, html) {
 
 
 // =====================================================================================
-// ONIONHOP — Contrôle depuis la barre latérale
+// ONIONHOP — Lancement depuis la barre latérale
 // =====================================================================================
 
-let _onionHopPollInterval = null;
-
-function _updateOnionHopUI(running, torIp) {
-  const badge = document.getElementById("onionhop-status-badge");
-  const torIpEl = document.getElementById("onionhop-tor-ip");
-  const btnStart = document.getElementById("btn-start-onionhop");
-  const btnStop = document.getElementById("btn-stop-onionhop");
-  const widget = document.getElementById("onionhop-widget");
-
-  if (!badge) return;
-
-  if (running) {
-    badge.textContent = "ON";
-    badge.style.background = "rgba(148, 0, 211, 0.35)";
-    badge.style.color = "#d8a0f0";
-    badge.style.borderColor = "#9400d3";
-    if (widget) widget.style.boxShadow = "0 0 12px rgba(148, 0, 211, 0.5)";
-    if (btnStart) btnStart.style.display = "none";
-    if (btnStop)  btnStop.style.display  = "block";
-    if (torIpEl) torIpEl.textContent = torIp || "En attente...";
-  } else {
-    badge.textContent = "OFF";
-    badge.style.background = "rgba(255,255,255,0.05)";
-    badge.style.color = "#888";
-    badge.style.borderColor = "#444";
-    if (widget) widget.style.boxShadow = "none";
-    if (btnStart) btnStart.style.display = "block";
-    if (btnStop)  btnStop.style.display  = "none";
-    if (torIpEl) torIpEl.textContent = "—";
-  }
-}
-
-async function pollOnionHopStatus() {
-  try {
-    const r = await fetch("/api/onionhop/status");
-    if (!r.ok) return;
-    const d = await r.json();
-    _updateOnionHopUI(d.running, d.tor_ip);
-  } catch (_) {}
-}
-
 async function startOnionHop() {
-  const btn = document.getElementById("btn-start-onionhop");
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Démarrage...'; }
   try {
     const r = await fetch("/api/onionhop/start", { method: "POST" });
     const d = await r.json();
-    if (d.status === "started" || d.status === "already_running") {
-      _updateOnionHopUI(true, null);
-      if (!_onionHopPollInterval) {
-        _onionHopPollInterval = setInterval(pollOnionHopStatus, 8000);
-      }
-    } else {
-      alert("OnionHop : " + (d.message || "Erreur inconnue"));
+    if (d.status === "not_found") {
+      alert("OnionHop introuvable sur ce système.\nInstallez-le depuis : https://github.com/center2055/OnionHop");
     }
+    // Si started ou already_running : OnionHop s'ouvre visuellement, rien d'autre à faire
   } catch (e) {
-    alert("Erreur réseau OnionHop : " + e.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-play"></i> Démarrer'; }
+    alert("Impossible de joindre le serveur. Vérifiez que M-SCAN est bien lancé.");
   }
 }
-
-async function stopOnionHop() {
-  const btn = document.getElementById("btn-stop-onionhop");
-  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Arrêt...'; }
-  try {
-    await fetch("/api/onionhop/stop", { method: "POST" });
-    _updateOnionHopUI(false, null);
-    if (_onionHopPollInterval) { clearInterval(_onionHopPollInterval); _onionHopPollInterval = null; }
-  } catch (e) {
-    alert("Erreur réseau OnionHop : " + e.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-stop"></i> Arrêter'; }
-  }
-}
-
-// Vérification du statut au chargement de la page
-document.addEventListener("DOMContentLoaded", () => {
-  pollOnionHopStatus();
-});
 
