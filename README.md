@@ -118,16 +118,22 @@ Ce workflow est dédié à l'audit de cibles distantes (noms de domaine, URL web
 Ce workflow est spécialement conçu pour la reconnaissance et l'exploration de machines sur le réseau local (LAN, adresses IP privées, sous-réseaux) :
 
 ```
-[1. Détection Plage LAN] -> [2. Balayage ARP Netdiscover] -> [3. Résolution NetBIOS Nbtscan]
-   -> [4. Scan Nmap Ports Locaux] -> [5. Énumération SMB Enum4linux/Smbmap] -> [6. Corrélation CVE LAN] -> [7. Export PDF/Word & SQLite]
+[Étape 1 : Plage LAN] 
+   └─► [Étape 2 : Balayage ARP Netdiscover] 
+          └─► [Étape 3 : Résolution NetBIOS & mDNS Nbtscan] 
+                 └─► [Étape 4 : Cartographie Ports & OS Nmap] 
+                        └─► [Étape 5 : Énumération SMB Enum4linux / SMBMap] 
+                               └─► [Étape 6 : Corrélation CVE & Rapports]
 ```
 
-* **Étape 1 : identification de la plage LAN** : détection de l'interface réseau locale et de la plage IP du sous-réseau (ex: `192.168.1.0/24`).
-* **Étape 2 : découverte d'hôtes par ARP** : utilisation de `netdiscover` pour repérer toutes les machines actives sur le segment local, même si le pare-feu de la cible bloque le ping ICMP.
-* **Étape 3 : résolution NetBIOS et noms d'hôtes** : exécution de `nbtscan` pour identifier les noms de machines Windows/Samba et les groupes de travail locaux.
-* **Étape 4 : cartographie des services locaux** : scan Nmap des ports réseau de la machine locale sélectionnée (`-sS`/`-sT`).
-* **Étape 5 : énumération approfondie des partages SMB/Samba** : si les ports 139 ou 445 sont ouverts, lancement de `enum4linux` et `smbmap` pour lister les partages réseau accessibles, les utilisateurs et la politique de sécurité.
-* **Étape 6 : évaluation & rapports** : corrélation avec la base Exploit-DB, enregistrement SQLite et génération du rapport d'audit PDF/Word.
+| Étape | Action & Outils | Rôle & Pourquoi ces outils sont utilisés ? |
+| :--- | :--- | :--- |
+| **Étape 1** | 📡 **Détection d'interface LAN** | **Identification de la plage IP** : Détecte l'interface réseau active et calcule la plage du sous-réseau local (ex. `192.168.1.0/24`). |
+| **Étape 2** | 🔍 **`Netdiscover`** | **Découverte d'hôtes par paquets ARP** : Repère toutes les adresses IP et MAC actives du segment LAN.<br>👉 **Pourquoi l'ARP ?** L'ARP fonctionne au niveau de la couche 2 (Liaison). Il permet de détecter les hôtes actifs même si leur pare-feu (ex. Windows Defender) bloque les pings ICMP. |
+| **Étape 3** | 📇 **`nbtscan` + `mDNS`** | **Identification NetBIOS & Noms d'hôtes** : Interroge le service NetBIOS (UDP 137) et mDNS pour identifier le nom de machine, le domaine/groupe de travail (*WORKGROUP*) et le constructeur de la carte réseau (OUI MAC). |
+| **Étape 4** | ⚡ **`Nmap` (`-sS` / `-sT` / `-sV` / `-O`)** | **Cartographie des ports & services locaux** : Balaye les ports ouverts sur la machine sélectionnée, identifie les bannières de service (ex. *Samba 4.15*, *IIS*, *RDP*, *SSH*) et déduit le système d'exploitation. |
+| **Étape 5** | 📁 **`enum4linux` + `smbmap`** | **Énumération approfondie des partages SMB/Samba** *(si ports 139/445 ouverts)* :<br>• `enum4linux` : Extrait les utilisateurs, groupes, politiques de mots de passe et partages NTLM.<br>• `smbmap` : Vérifie visuellement les autorisations d'accès (*READ*, *WRITE*, *NO ACCESS*) sur chaque dossier partagé. |
+| **Étape 6** | 🛡️ **`Searchsploit` + `ReportLab` + `Python-Docx`** | **Corrélation CVE & Génération des livrables** : Croise les versions logicielles avec Exploit-DB, calcule le score de risque LAN et génère les rapports d'audit **PDF** et **Word (.docx)**. |
 
 ---
 
