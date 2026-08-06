@@ -251,7 +251,19 @@ document.getElementById("install-btn")?.addEventListener("click", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ packages }),
     });
-    const startData = await startRes.json();
+    
+    let startData;
+    const contentType = startRes.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      startData = await startRes.json();
+    } else {
+      const text = await startRes.text();
+      logEl.textContent = `Erreur réseau/serveur (${startRes.status}) : ${text.substring(0, 150)}`;
+      btn.disabled = false;
+      btn.textContent = "⚡ Installer les dépendances";
+      return;
+    }
+
     if (startRes.status !== 200) {
       logEl.textContent = "Erreur : " + (startData.error || "inconnue");
       btn.disabled = false;

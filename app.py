@@ -526,12 +526,12 @@ def install_deps():
     if not packages:
         packages = []
         for name, meta in REQUIRED_TOOLS.items():
-            if not _tool_is_installed(meta["check_cmd"]):
-                packages.append(meta["apt_package"])
+            if "apt_package" in meta and "check_cmd" in meta:
+                if not _tool_is_installed(meta["check_cmd"]):
+                    packages.append(meta["apt_package"])
 
-    # Liste blanche stricte : on n'autorise QUE les paquets connus de
-    # REQUIRED_TOOLS, jamais une chaîne arbitraire envoyée par le client.
-    allowed_packages = {meta["apt_package"] for meta in REQUIRED_TOOLS.values()}
+    # Liste blanche stricte des paquets apt
+    allowed_packages = {meta["apt_package"] for meta in REQUIRED_TOOLS.values() if "apt_package" in meta}
     packages = [p for p in packages if p in allowed_packages]
 
     if not packages:
