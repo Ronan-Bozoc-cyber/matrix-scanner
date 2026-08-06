@@ -2899,7 +2899,7 @@ if __name__ == "__main__":
     # Lancement d'OnionHop 3.7.8 / navigateur par défaut en arrière-plan
     threading.Thread(target=open_onionhop_or_default_browser, args=(app_url,), daemon=True).start()
 
-    # debug=True est pratique en pédagogie (affichage des erreurs)
-    # use_reloader=False empêche les redémarrages intempestifs du serveur lors des écritures SQLite en base de données
+    # debug=False — empêche le fork du processus fils Werkzeug (stable en arrière-plan)
+    # use_reloader=False — empêche les redémarrages lors des écritures SQLite
     print(f"[+] Démarrage de Matrix Scanner sur {app_url}")
-    app.run(host="127.0.0.1", port=server_port, debug=True, use_reloader=False)
+    app.run(host="127.0.0.1", port=server_port, debug=False, use_reloader=False)
