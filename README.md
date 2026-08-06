@@ -93,18 +93,23 @@ Le logiciel distingue clairement deux workflows d'analyse selon la nature de la 
 Ce workflow est dédié à l'audit de cibles distantes (noms de domaine, URL web, adresses IP publiques ou distantes) :
 
 ```
-[1. Saisie IP/Domaine] -> [2. Test Ping ICMP] -> [3. Scan Nmap -sV -O] -> [4. Audit Web & WAF]
-   -> [5. Capture d'écran Web] -> [6. Corrélation CVE Searchsploit] -> [7. Score de Risque] -> [8. Export PDF / Word & SQLite]
+[Étape 1 : WHOIS] 
+   └─► [Étape 2 : Sous-domaines Subfinder / Sublist3r / DNS Probe] 
+          └─► [Étape 3 : Détection WAF (Wafw00f)] 
+                 └─► [Étape 4 : Capture d'écran Gowitness] 
+                        └─► [Étape 5 : Empreinte CMS WhatWeb] 
+                               └─► [Étape 6 : Scan Nmap, Nuclei & CVE Searchsploit]
 ```
 
-* **Étape 1 : normalisation de la cible** : extrait et valide l'IP ou le domaine pour éliminer tout risque d'injection de commande.
-* **Étape 2 : test de réactivité distante** : envoi de requêtes ICMP/Ping pour vérifier si la cible répond.
-* **Étape 3 : scan Nmap des services distants** : identification des ports ouverts, résolution des versions de services (`-sV`) et empreinte du système d'exploitation (`-O`).
-* **Étape 4 : audit web approfondi et WAF** : si des services web (80, 443, 8080...) sont ouverts, détection du pare-feu applicatif via `wafw00f`, analyse des technologies web via `whatweb` et `nikto`, puis audit des en-têtes de sécurité HTTP (*HSTS, CSP, X-Frame-Options, X-Content-Type-Options*).
-* **Étape 5 : capture d'écran headless** : génération automatique d'un visuel de l'application web distante via `gowitness`.
-* **Étape 6 : corrélation CVE** : recherche automatique des failles connues dans la base locale Exploit-DB via `searchsploit --json` et vérification de modèles `nuclei`.
-* **Étape 7 : score de risque web distant (0 à 100)** : calcul d'un score de sévérité basé sur la vulnérabilité des en-têtes HTTP, l'exposition des ports et les CVE identifiées.
-* **Étape 8 : exportation & archivage** : sauvegarde dans la base SQLite locale et génération optionnelle de rapports professionnels PDF ou Word (`.docx`).
+| Étape | Action & Outils | Rôle & Pourquoi ces outils sont utilisés ? |
+| :--- | :--- | :--- |
+| **Étape 1** | **`WHOIS`** | **Information de domaine passive** : Extrait le registrar, les serveurs DNS d'autorité (NS), les dates d'enregistrement et la configuration DNSSEC sans toucher directement à l'application web. |
+| **Étape 2** | 🔍 **`Subfinder` + `Sublist3r` + `DNS Probe` (`dnsprobe`)** | **Énumération hybride des sous-domaines (OSINT & DNS)** :<br>• `Subfinder` : Interroge les certificats TLS (*CT Logs*), SecurityTrails et Chaos.<br>• `Sublist3r` : Recherche passive sur les moteurs de recherche.<br>• **`DNS Probe` (`dnsprobe` / sondage DNS direct)** : Réalise des résolutions DNS multithreadées sur les préfixes fréquents (`api.`, `dev.`, `admin.`, `vpn.`, `cloud.`) avec **filtre anti-Wildcard DNS** pour éliminer les faux positifs (`*.domaine.com`). |
+| **Étape 3** | 🔴 **`Wafw00f`** | **Détection du Pare-Feu Applicatif (WAF)** : Identifie si un WAF (*Cloudflare, ModSecurity, AWS WAF, Imperva*) filtre le trafic.<br>👉 **Placé avant les scans actifs** pour savoir si les requêtes futures risquent d'être bloquées ou altérées. |
+| **Étape 4** | 📷 **`Gowitness`** | **Capture d'écran Web Headless** : Rendu visuel automatique de la page d'accueil de la cible. |
+| **Étape 5** | 🧩 **`WhatWeb`** | **Empreinte technologique & CMS** : Détection de la pile logicielle (WordPress, Joomla, Nginx, Apache, PHP, en-têtes HTTP de sécurité). |
+| **Étape 6** | ⚡ **`Nmap` + `Nuclei` + `Searchsploit`** | **Cartographie réseau & Audit CVE** : Balayage des ports/services (`nmap`), exécution de templates de vulnérabilités (`nuclei`) et corrélation des versions logicielles avec la base d'exploits Exploit-DB (`searchsploit`). |
+| **Livrables** | 📄 **`ReportLab` (PDF) + `Python-Docx` (Word)** | **Rapports d'audit & SQLite** : Calcul du score de risque global (0 à 100) et génération immédiate des rapports téléchargeables. |
 
 ---
 
