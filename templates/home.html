@@ -12,13 +12,13 @@
             <div class="diagram-path" style="flex-wrap: wrap; gap: 8px;">
               <div class="node"><i class="fa-solid fa-crosshairs"></i> Cible Web</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-address-card"></i> Domaine (WHOIS, Subfinder, Sublist3r & DNS Probe)</div>
+              <div class="node" style="border-color: #9b59b6;"><i class="fa-solid fa-address-card"></i> Domaine (WHOIS, Subfinder, Sublist3r & DNS Probe)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-shield-halved"></i> Détection WAF (Wafw00f)</div>
+              <div class="node" style="border-color: #e74c3c;"><i class="fa-solid fa-shield-halved"></i> Détection WAF (Wafw00f)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-camera"></i> Capture (Gowitness)</div>
+              <div class="node" style="border-color: #3498db;"><i class="fa-solid fa-camera"></i> Capture (Gowitness)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-code"></i> Empreinte (WhatWeb)</div>
+              <div class="node" style="border-color: #2ecc71;"><i class="fa-solid fa-code"></i> Empreinte (WhatWeb)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #00ff41;"><i class="fa-solid fa-network-wired"></i> Nmap</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
@@ -34,15 +34,15 @@
             <div class="diagram-path">
               <div class="node"><i class="fa-solid fa-server"></i> Cible LAN</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</div>
+              <div class="node" style="border-color: #2ecc71;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-id-card"></i> Identité & NetBIOS (mDNS & nbtscan)</div>
+              <div class="node" style="border-color: #f1c40f;"><i class="fa-solid fa-id-card"></i> Identité & NetBIOS (mDNS & nbtscan)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-tags"></i> Ports & OS (Nmap)</div>
+              <div class="node" style="border-color: #00ff41;"><i class="fa-solid fa-tags"></i> Ports & OS (Nmap)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-folder-open"></i> Énumération SMB (Enum4linux, SMBMap)</div>
+              <div class="node" style="border-color: #e67e22;"><i class="fa-solid fa-folder-open"></i> Énumération SMB (Enum4linux, SMBMap)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-biohazard"></i> CVE & Exploits (Exploit-DB)</div>
+              <div class="node" style="border-color: #ff4444;"><i class="fa-solid fa-biohazard"></i> CVE & Exploits (Exploit-DB)</div>
             </div>
             <p class="desc">Workflow interne automatisé : Cartographie les équipements (IP/MAC) via ARP (Netdiscover), identifie la marque/catégorie via NetBIOS/mDNS, sonde les ports et OS (Nmap), énumère les partages Windows/Samba (Enum4linux, SMBMap) et croise les bannières avec la base d'exploits (Searchsploit/CVE).</p>
           </div>
