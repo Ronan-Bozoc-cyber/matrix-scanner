@@ -172,6 +172,12 @@ async function checkDependencies() {
       "Rendus Visuels, Rapports & Télémétrie"
     ];
 
+    Object.keys(categoriesMap).forEach(catName => {
+      if (!categoryOrder.includes(catName)) {
+        categoryOrder.push(catName);
+      }
+    });
+
     categoryOrder.forEach(catName => {
       if (!categoriesMap[catName]) return;
 
