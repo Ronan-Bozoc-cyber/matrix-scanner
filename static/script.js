@@ -983,7 +983,15 @@ async function runNmapScan(target, mode, modeToggle) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ target, mode, options }),
     });
-    const data = await res.json();
+
+    let data;
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      throw new Error(`Réponse serveur invalide (${res.status}) : ${text.substring(0, 150)}`);
+    }
 
     if (res.status !== 200) {
       if (errorBox) {
@@ -1004,7 +1012,7 @@ async function runNmapScan(target, mode, modeToggle) {
     pollScanStatus(data.job_id);
   } catch (err) {
     if (errorBox) {
-      errorBox.textContent = "Erreur réseau : " + err.message;
+      errorBox.textContent = "Erreur de communication : " + err.message;
       errorBox.classList.remove("hidden");
     }
     setScanningState(false);
@@ -1203,7 +1211,15 @@ function pollScanStatus(jobId) {
         }
         return;
       }
-      const job = await res.json();
+      
+      let job;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        job = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Statut non JSON (${res.status}) : ${text.substring(0, 150)}`);
+      }
 
       if (progressText) progressText.textContent = `Scan en cours (statut: ${job.status})...`;
       if (terminalContent) updateTerminal(terminalContent, job.log || []);

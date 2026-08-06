@@ -1021,11 +1021,28 @@ def _run_scan_thread(job_id, cmd, target, mode="distant"):
     full_stdout = "".join(stdout_chunks)
 
     if process.returncode != 0 and not full_stdout.strip():
-        SCAN_JOBS[job_id]["status"] = "error"
-        SCAN_JOBS[job_id]["error"] = (
-            "\n".join(SCAN_JOBS[job_id]["log"][-15:]) or "nmap a échoué sans sortie."
-        )
-        return
+        err_log = "\n".join(SCAN_JOBS[job_id]["log"])
+        if "-sS" in cmd and ("root" in err_log.lower() or "privilèg" in err_log.lower()):
+            append_log("[!] Note : Le scan SYN (-sS) nécessite les privilèges root. Basculement automatique en mode TCP Connect (-sT)...")
+            fallback_cmd = [c if c != "-sS" else "-sT" for c in cmd]
+            try:
+                fb_proc = subprocess.run(fallback_cmd, capture_output=True, text=True, timeout=600)
+                if fb_proc.returncode == 0 and fb_proc.stdout.strip():
+                    full_stdout = fb_proc.stdout
+                else:
+                    SCAN_JOBS[job_id]["status"] = "error"
+                    SCAN_JOBS[job_id]["error"] = fb_proc.stderr or "Échec du scan nmap fallback."
+                    return
+            except Exception as e:
+                SCAN_JOBS[job_id]["status"] = "error"
+                SCAN_JOBS[job_id]["error"] = f"Erreur lors du fallback nmap : {e}"
+                return
+        else:
+            SCAN_JOBS[job_id]["status"] = "error"
+            SCAN_JOBS[job_id]["error"] = (
+                "\n".join(SCAN_JOBS[job_id]["log"][-15:]) or "nmap a échoué sans sortie."
+            )
+            return
 
     try:
         parsed = parse_nmap_xml(full_stdout)
