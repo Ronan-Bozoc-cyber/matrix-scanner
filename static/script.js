@@ -787,6 +787,7 @@ async function runWebPentestPipeline(target, modeToggle) {
   await runAuditSQLMap(target);
 
   if (progressText) progressText.textContent = "✅ Pentest Web complet — Toutes les étapes sont terminées.";
+  setScanningState(false);
 }
 
 async function executeGowitnessScreenshot(target) {
@@ -1347,15 +1348,15 @@ async function runNmapScan(target, mode, modeToggle) {
 
   const options = modeToggle === "manual" ? collectOptions() : {
     scan_type: "sS",
-    port_mode: mode === "web" ? "fast" : "top_1000",
+    port_mode: mode === "web" ? "all" : "top_1000",
     service_version: true,
     os_detection: false,
     default_scripts: false,
     vuln_scripts: false,
     skip_host_discovery: true,
     max_retries: 2,
-    host_timeout: "3m",
-    min_rate: 200
+    host_timeout: "5m",
+    min_rate: mode === "web" ? 3000 : 200
   };
   options.is_local = (mode === "local");
 
@@ -1391,7 +1392,7 @@ async function runNmapScan(target, mode, modeToggle) {
       if (previewText) previewText.textContent = data.command_preview;
     }
 
-    pollScanStatus(data.job_id);
+    return pollScanStatus(data.job_id, mode === "web" && modeToggle !== "manual");
   } catch (err) {
     if (errorBox) {
       errorBox.textContent = "Erreur de communication : " + err.message;
@@ -1399,6 +1400,7 @@ async function runNmapScan(target, mode, modeToggle) {
     }
     setScanningState(false);
     if (progressBox) progressBox.classList.add("hidden");
+    return null;
   }
 }
 
@@ -1574,58 +1576,64 @@ function attachNetdiscoverEvents() {
   }
 }
 
-function pollScanStatus(jobId) {
-  const progressBox = document.getElementById("scan-progress");
-  const progressText = document.getElementById("scan-progress-text");
-  const errorBox = document.getElementById("scan-error");
-  const terminalContent = document.getElementById("scan-terminal-content");
+function pollScanStatus(jobId, keepScanningState = false) {
+  return new Promise((resolve) => {
+    const progressBox = document.getElementById("scan-progress");
+    const progressText = document.getElementById("scan-progress-text");
+    const errorBox = document.getElementById("scan-error");
+    const terminalContent = document.getElementById("scan-terminal-content");
 
-  const poll = setInterval(async () => {
-    try {
-      const res = await fetch(`/api/scan-status/${jobId}`);
-      if (res.status !== 200) {
-        clearInterval(poll);
-        setScanningState(false);
-        if (progressBox) progressBox.classList.add("hidden");
-        if (errorBox) {
-          errorBox.textContent = "Erreur : Tâche de scan introuvable ou serveur réinitialisé.";
-          errorBox.classList.remove("hidden");
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/scan-status/${jobId}`);
+        if (res.status !== 200) {
+          clearInterval(poll);
+          if (!keepScanningState) setScanningState(false);
+          if (progressBox) progressBox.classList.add("hidden");
+          if (errorBox) {
+            errorBox.textContent = "Erreur : Tâche de scan introuvable ou serveur réinitialisé.";
+            errorBox.classList.remove("hidden");
+          }
+          resolve(null);
+          return;
         }
-        return;
-      }
-      
-      let job;
-      const contentType = res.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        job = await res.json();
-      } else {
-        const text = await res.text();
-        throw new Error(`Statut non JSON (${res.status}) : ${text.substring(0, 150)}`);
-      }
-
-      if (progressText) progressText.textContent = `Scan en cours (statut: ${job.status})...`;
-      if (terminalContent) updateTerminal(terminalContent, job.log || []);
-
-      if (job.status === "done") {
-        setScanningState(false);
-        clearInterval(poll);
-        if (progressBox) progressBox.classList.add("hidden");
-        renderResults(job.result);
-      } else if (job.status === "error") {
-        setScanningState(false);
-        clearInterval(poll);
-        if (progressBox) progressBox.classList.add("hidden");
-        if (errorBox) {
-          errorBox.textContent = "Erreur pendant le scan : " + job.error;
-          errorBox.classList.remove("hidden");
+        
+        let job;
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          job = await res.json();
+        } else {
+          const text = await res.text();
+          throw new Error(`Statut non JSON (${res.status}) : ${text.substring(0, 150)}`);
         }
+
+        if (progressText) progressText.textContent = `Scan en cours (statut: ${job.status})...`;
+        if (terminalContent) updateTerminal(terminalContent, job.log || []);
+
+        if (job.status === "done") {
+          if (!keepScanningState) setScanningState(false);
+          clearInterval(poll);
+          if (progressBox) progressBox.classList.add("hidden");
+          renderResults(job.result);
+          resolve(job.result);
+        } else if (job.status === "error") {
+          if (!keepScanningState) setScanningState(false);
+          clearInterval(poll);
+          if (progressBox) progressBox.classList.add("hidden");
+          if (errorBox) {
+            errorBox.textContent = "Erreur pendant le scan : " + job.error;
+            errorBox.classList.remove("hidden");
+          }
+          resolve(null);
+        }
+      } catch (err) {
+        clearInterval(poll);
+        if (!keepScanningState) setScanningState(false);
+        resolve(null);
       }
-    } catch (err) {
-      clearInterval(poll);
-      setScanningState(false);
-    }
-  }, 1000);
-  window.activePollInterval = poll;
+    }, 1000);
+    window.activePollInterval = poll;
+  });
 }
 
 function updateTerminal(terminalEl, logLines) {
@@ -1648,7 +1656,6 @@ function updateTerminal(terminalEl, logLines) {
 let portsChartInstance = null;
 
 function renderResults(hosts) {
-  setScanningState(false);
   const resultsCard = document.getElementById("results-card");
   const summaryEl = document.getElementById("results-summary");
   const hostsDetailEl = document.getElementById("hosts-detail");
