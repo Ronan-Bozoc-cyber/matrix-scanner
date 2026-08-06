@@ -219,6 +219,8 @@ REQUIRED_TOOLS = {
         "description": "Scanner spécialisé de vulnérabilités pour le CMS Joomla",
     },
     "droopescan": {
+        "py_module": "droopescan",
+        "pip_package": "droopescan",
         "check_cmd": ["droopescan", "--help"],
         "apt_package": "droopescan",
         "description": "Scanner de vulnérabilités pour CMS Drupal et SilverStripe",
@@ -251,17 +253,9 @@ REQUIRED_TOOLS = {
 # =====================================================================================
 
 def _tool_is_installed(cmd):
-    """Vérifie qu'un binaire est présent et exécutable, sans planter si absent."""
+    """Vérifie qu'un binaire est présent et exécutable dans le PATH système."""
     binary = cmd[0]
-    if shutil.which(binary) is None:
-        return False
-    try:
-        subprocess.run(
-            cmd, capture_output=True, timeout=10, check=False
-        )
-        return True
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return False
+    return shutil.which(binary) is not None
 
 def _py_module_is_installed(mod_name):
     """Vérifie si un module Python est installé et importable."""
@@ -281,12 +275,13 @@ def check_deps():
     status = {}
     missing_packages = []
     for name, meta in REQUIRED_TOOLS.items():
+        installed = False
         if "py_module" in meta:
             installed = _py_module_is_installed(meta["py_module"])
-            pkg_name = meta.get("pip_package", name)
-        else:
+        if not installed and "check_cmd" in meta:
             installed = _tool_is_installed(meta["check_cmd"])
-            pkg_name = meta.get("apt_package", name)
+
+        pkg_name = meta.get("pip_package") or meta.get("apt_package", name)
 
         if not installed:
             missing_packages.append(pkg_name)
