@@ -973,6 +973,8 @@ def _run_scan_thread(job_id, cmd, target, mode="distant"):
     elif shutil.which("stdbuf"):
         run_cmd = ["stdbuf", "-oL", "-eL"] + cmd
 
+    run_cmd = _wrap_with_proxy(run_cmd, use_sudo=bool(CONFIGURED_SUDO_PASSWORD))
+
     def append_log(line):
         log = SCAN_JOBS[job_id]["log"]
         log.append(line)
@@ -1257,6 +1259,8 @@ def _run_nuclei_thread(job_id, target_url, tags="", options=None):
     if rate_limit:
         cmd.extend(["-rl", str(rate_limit)])
     
+    cmd = _wrap_with_proxy(cmd)
+    
     def append_log(line):
         log = NUCLEI_JOBS[job_id]["log"]
         log.append(line)
@@ -1452,6 +1456,8 @@ def _run_whatweb_thread(job_id, target_url, options):
 
     cmd += ["--log-json", tmp_path, "--colour=never", target_url]
     WHATWEB_JOBS[job_id]["command"] = " ".join(cmd)
+    
+    cmd = _wrap_with_proxy(cmd)
 
     try:
         process = subprocess.run(
@@ -1618,6 +1624,7 @@ def _run_wpscan_thread(job_id, target_url):
         target_url = "http://" + target_url
 
     cmd = ["wpscan", "--url", target_url, "--random-user-agent", "--format", "json", "--no-update"]
+    cmd = _wrap_with_proxy(cmd)
 
     try:
         process = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -1702,6 +1709,7 @@ def _run_nikto_thread(job_id, target_url):
         target_url = "http://" + target_url
 
     cmd = ["nikto", "-h", target_url, "-nointeractive", "-Format", "txt"]
+    cmd = _wrap_with_proxy(cmd)
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         lines = (proc.stdout + proc.stderr).splitlines()
@@ -1740,6 +1748,7 @@ def _run_gobuster_thread(job_id, target_url):
         return
 
     cmd = ["gobuster", "dir", "-u", target_url, "-w", wordlist, "-t", "20", "-q", "--no-progress", "-k"]
+    cmd = _wrap_with_proxy(cmd)
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         lines = proc.stdout.splitlines()
@@ -1767,6 +1776,7 @@ def _run_sqlmap_thread(job_id, target_url):
     cmd = ["sqlmap", "-u", target_url, "--batch", "--level=1", "--risk=1",
            "--timeout=10", "--retries=1", "--output-dir=/tmp/sqlmap_out",
            "--disable-coloring", "--no-cast"]
+    cmd = _wrap_with_proxy(cmd)
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         lines = (proc.stdout + proc.stderr).splitlines()
@@ -1807,6 +1817,7 @@ def _run_cms_scanner_thread(job_id, cms_type, target_url):
             # Fallback générique droopescan
             cmd = ["droopescan", "scan", "-u", target_url]
 
+        cmd = _wrap_with_proxy(cmd)
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         lines = (proc.stdout + proc.stderr).splitlines()
         AUDIT_JOBS[job_id]["status"] = "done"
@@ -2774,6 +2785,24 @@ def find_available_port(preferred_port=5000, start_fallback=10001, host="127.0.0
 # =====================================================================================
 
 _ONIONHOP_PROCESS = None  # Référence globale au processus OnionHop en cours
+
+def _wrap_with_proxy(cmd, use_sudo=False):
+    """
+    Si OnionHop (Tor) est actif, encapsule la commande avec proxychains4.
+    Prend en compte sudo car 'proxychains sudo' échoue à cause du nettoyage LD_PRELOAD.
+    Il faut faire 'sudo proxychains'.
+    """
+    global _ONIONHOP_PROCESS
+    if _ONIONHOP_PROCESS and _ONIONHOP_PROCESS.poll() is None:
+        import shutil
+        pc = "proxychains4" if shutil.which("proxychains4") else ("proxychains" if shutil.which("proxychains") else None)
+        if pc:
+            if use_sudo:
+                # ex: on a ["sudo", "-S", "nmap"] -> ["sudo", "-S", "proxychains4", "-q", "nmap"]
+                return ["sudo", "-S", pc, "-q"] + cmd[2:]
+            else:
+                return [pc, "-q"] + cmd
+    return cmd
 
 def _find_onionhop_binary():
     """Retourne le chemin du binaire OnionHop si disponible, sinon None."""
