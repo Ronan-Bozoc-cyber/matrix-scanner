@@ -755,19 +755,38 @@ async function runWebPentestPipeline(target, modeToggle) {
     const cmsData = await cmsRes.json();
 
     if (cmsRes.status === 200 && cmsData.job_id) {
-      await pollWhatwebJob(cmsData.job_id, cmsProgress, cmsContent);
+      const detectedCms = await pollWhatwebJob(cmsData.job_id, cmsProgress, cmsContent);
+      window._lastDetectedCms = detectedCms; // Mémorise pour l'étape Audit
     } else {
+      window._lastDetectedCms = null;
       if (cmsProgress) cmsProgress.classList.add("hidden");
       if (cmsContent) cmsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Empreinte CMS non disponible (${cmsData.error || 'Erreur WhatWeb'}).</div>`;
     }
   } catch (err) {
+    window._lastDetectedCms = null;
     if (cmsProgress) cmsProgress.classList.add("hidden");
     if (cmsContent) cmsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Détection CMS indisponible (${err.message}).</div>`;
   }
 
-  // --- ÉTAPE 6 : PENTEST DE VULNÉRABILITÉS (Nmap, Nuclei, WPScan) ---
-  if (progressText) progressText.textContent = "Étape 6/6 : Détection des services, ports & vulnérabilités...";
+  // --- ÉTAPE 6 : PENTEST DE VULNÉRABILITÉS (Nmap) ---
+  if (progressText) progressText.textContent = "Étape 6/7 : Détection des services, ports & vulnérabilités (Nmap)...";
   await runNmapScan(target, "web", modeToggle);
+
+  // --- ÉTAPE 7 : AUDIT COMPLET (Nikto + Gobuster + SQLMap + CMS Scanner) ---
+  if (progressText) progressText.textContent = "Étape 7/7 : Audit de sécurité approfondi (Nikto, Gobuster, SQLMap, CMS)...";
+
+  // Lancer Nikto et Gobuster en parallèle (ils partagent la même carte)
+  const cmsAuditPromise = runAuditCMSScan(target, window._lastDetectedCms || null);
+  const niktoPromise = runAuditNikto(target);
+  await Promise.all([cmsAuditPromise, niktoPromise]);
+
+  // Gobuster séquentiel après Nikto (pour ne pas surcharger)
+  await runAuditGobuster(target);
+
+  // SQLMap sur l'URL cible
+  await runAuditSQLMap(target);
+
+  if (progressText) progressText.textContent = "✅ Pentest Web complet — Toutes les étapes sont terminées.";
 }
 
 async function executeGowitnessScreenshot(target) {
@@ -834,46 +853,51 @@ function pollWhatwebJob(jobId, cmsProgress, cmsContent) {
         if (data.status === "done") {
           clearInterval(interval);
           if (cmsProgress) cmsProgress.classList.add("hidden");
-          renderWhatWebCmsResults(data.result, cmsContent);
-          resolve();
+          const detectedCms = renderWhatWebCmsResults(data.result, cmsContent);
+          resolve(detectedCms);
         } else if (data.status === "error") {
           clearInterval(interval);
           if (cmsProgress) cmsProgress.classList.add("hidden");
           if (cmsContent) cmsContent.innerHTML = `<div style="color: #ffaa00; font-size: 0.85rem;">⚠️ ${data.error}</div>`;
-          resolve();
+          resolve(null);
         }
       } catch (err) {
         clearInterval(interval);
         if (cmsProgress) cmsProgress.classList.add("hidden");
         if (cmsContent) cmsContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Erreur de suivi WhatWeb (${err.message}).</div>`;
-        resolve();
+        resolve(null);
       }
     }, 2000);
   });
 }
 
 function renderWhatWebCmsResults(results, cmsContent) {
-  if (!cmsContent) return;
+  if (!cmsContent) return null;
   if (!results || results.length === 0) {
     cmsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Aucune technologie ou CMS identifié pour cette cible.</div>`;
-    return;
+    return null;
   }
 
   const targetData = results[0] || {};
   const plugins = targetData.plugins || {};
 
   let cmsDetected = "Non identifié / Personnalisé";
+  let cmsKey = null; // Clé machine: wordpress, joomla, drupal, moodle
   let phpVersion = "Non détectée";
   let serverInfo = "Non détecté";
   let techBadges = [];
+
+  const KNOWN_CMS = ["wordpress", "joomla", "drupal", "moodle", "prestashop", "shopify", "magento", "typo3", "spip", "ghost", "wix", "squarespace", "bitrix"];
+  const SCANNABLE_CMS = ["wordpress", "joomla", "drupal", "moodle"]; // CMS ayant un scanner dédié
 
   for (const [pluginName, pluginInfo] of Object.entries(plugins)) {
     const nameLower = pluginName.toLowerCase();
     const versionStr = (pluginInfo.version && pluginInfo.version.length > 0) ? pluginInfo.version.join(", ") : "";
 
     // CMS connus
-    if (["wordpress", "joomla", "drupal", "prestashop", "shopify", "magento", "typo3", "spip", "ghost", "wix", "squarespace", "bitrix"].includes(nameLower)) {
+    if (KNOWN_CMS.includes(nameLower)) {
       cmsDetected = `<strong style="color:#2ecc71;">${pluginName}</strong> ${versionStr ? `(v${versionStr})` : ''}`;
+      if (SCANNABLE_CMS.includes(nameLower)) cmsKey = nameLower;
     }
 
     // PHP
@@ -951,6 +975,328 @@ function renderWhatWebCmsResults(results, cmsContent) {
 
     ${cveTableHtml}
   `;
+
+  // Retourner la clé CMS machine pour le Smart Branching Audit
+  return cmsKey;
+}
+
+// =====================================================================================
+// AUDIT PHASE — Nikto, Gobuster, SQLMap, CMS-Specific Scanner
+// =====================================================================================
+
+function pollAuditJob(jobId, onDone) {
+  return new Promise((resolve) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/audit/status/${jobId}`);
+        const data = await res.json();
+        if (data.status === "done" || data.status === "error") {
+          clearInterval(interval);
+          resolve(data);
+          if (onDone) onDone(data);
+        }
+      } catch (err) {
+        clearInterval(interval);
+        resolve({ status: "error", error: err.message });
+        if (onDone) onDone({ status: "error", error: err.message });
+      }
+    }, 2500);
+  });
+}
+
+async function runAuditNikto(target) {
+  const card = document.getElementById("gobuster-card"); // On réutilise gobuster pour afficher Nikto+Gobuster ensemble
+  const niktoProgress = document.getElementById("gobuster-progress");
+  const niktoContent = document.getElementById("gobuster-results-content");
+  const niktoProgressText = document.getElementById("gobuster-progress-text");
+
+  if (card) card.classList.remove("hidden");
+  if (niktoProgress) niktoProgress.classList.remove("hidden");
+  if (niktoProgressText) niktoProgressText.textContent = "🔍 Nikto — Analyse de vulnérabilités web en cours (5-10 min)...";
+  if (niktoContent) niktoContent.innerHTML = "";
+
+  try {
+    const res = await fetch("/api/audit/nikto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const data = await res.json();
+
+    if (res.status === 412) {
+      if (niktoProgress) niktoProgress.classList.add("hidden");
+      if (niktoContent) niktoContent.innerHTML = `<div style="color: #f39c12; font-size: 0.85rem;">⚠️ Nikto non installé — installez-le via la page Vérification Système.</div>`;
+      return;
+    }
+
+    if (data.job_id) {
+      const result = await pollAuditJob(data.job_id, null);
+      if (niktoProgress) niktoProgress.classList.add("hidden");
+      renderNiktoResults(result, niktoContent);
+    }
+  } catch (err) {
+    if (niktoProgress) niktoProgress.classList.add("hidden");
+    if (niktoContent) niktoContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Nikto indisponible (${err.message}).</div>`;
+  }
+}
+
+function renderNiktoResults(data, container) {
+  if (!container) return;
+  if (data.status === "error") {
+    container.innerHTML = `<div style="color: #e74c3c; font-size: 0.85rem;">❌ Erreur Nikto : ${data.error}</div>`;
+    return;
+  }
+  const findings = data.findings || [];
+  const allLines = data.output || [];
+
+  let html = `<div style="margin-bottom: 10px; padding: 10px 14px; background: rgba(155, 89, 182, 0.1); border-left: 3px solid #9b59b6; border-radius: 4px;">`;
+  html += `<div style="font-size: 0.85rem; color: #d6a2e8; font-weight: bold; margin-bottom: 8px;"><i class="fa-solid fa-bug"></i> Nikto — ${findings.length} Résultat(s) de Vulnérabilités Web</div>`;
+
+  if (findings.length > 0) {
+    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #fff; max-height: 280px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px;">`;
+    findings.forEach(line => {
+      const isVuln = line.includes("OSVDB") || line.includes("CVE") || line.includes("vulnerability");
+      const color = isVuln ? "#ff9999" : "#a3e9a4";
+      html += `<div style="color: ${color}; margin-bottom: 3px;">${escapeHtml(line)}</div>`;
+    });
+    html += `</div>`;
+  } else {
+    html += `<div style="color: #888; font-size: 0.83rem;">Aucune vulnérabilité critique détectée par Nikto.</div>`;
+  }
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+async function runAuditGobuster(target) {
+  const card = document.getElementById("gobuster-card");
+  const progress = document.getElementById("gobuster-progress");
+  const content = document.getElementById("gobuster-results-content");
+  const progressText = document.getElementById("gobuster-progress-text");
+
+  if (card) card.classList.remove("hidden");
+  if (progress) progress.classList.remove("hidden");
+  if (progressText) progressText.textContent = "📁 Gobuster — Exploration de répertoires et fichiers cachés (5 min)...";
+  // Nikto has already populated or will populate the card, so we append
+
+  try {
+    const res = await fetch("/api/audit/gobuster", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const data = await res.json();
+
+    if (res.status === 412) {
+      if (progress) progress.classList.add("hidden");
+      if (content) content.innerHTML += `<div style="color: #f39c12; font-size: 0.85rem; margin-top: 8px;">⚠️ Gobuster non installé — installez-le via la page Vérification Système.</div>`;
+      return;
+    }
+
+    if (data.job_id) {
+      const result = await pollAuditJob(data.job_id, null);
+      if (progress) progress.classList.add("hidden");
+      renderGobusterResults(result, content);
+    }
+  } catch (err) {
+    if (progress) progress.classList.add("hidden");
+    if (content) content.innerHTML += `<div style="color: #888; font-size: 0.85rem; margin-top: 8px;">Gobuster indisponible (${err.message}).</div>`;
+  }
+}
+
+function renderGobusterResults(data, container) {
+  if (!container) return;
+  if (data.status === "error") {
+    container.innerHTML += `<div style="color: #e74c3c; font-size: 0.85rem; margin-top: 8px;">❌ Erreur Gobuster : ${data.error}</div>`;
+    return;
+  }
+  const paths = data.found_paths || [];
+
+  let html = `<div style="margin-top: 10px; padding: 10px 14px; background: rgba(155, 89, 182, 0.08); border-left: 3px solid #8e44ad; border-radius: 4px;">`;
+  html += `<div style="font-size: 0.85rem; color: #c39bd3; font-weight: bold; margin-bottom: 8px;"><i class="fa-solid fa-folder-tree"></i> Gobuster — ${paths.length} Chemin(s) Découvert(s)</div>`;
+
+  if (paths.length > 0) {
+    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #fff; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px;">`;
+    paths.forEach(line => {
+      const statusMatch = line.match(/\(Status: (\d+)\)/);
+      const status = statusMatch ? parseInt(statusMatch[1]) : 0;
+      const color = status === 200 ? "#2ecc71" : status === 301 || status === 302 ? "#f1c40f" : "#aaa";
+      html += `<div style="color: ${color}; margin-bottom: 2px;">${escapeHtml(line)}</div>`;
+    });
+    html += `</div>`;
+  } else {
+    html += `<div style="color: #888; font-size: 0.83rem;">Aucun répertoire ou fichier sensible découvert par Gobuster.</div>`;
+  }
+  html += `</div>`;
+  container.innerHTML += html;
+}
+
+async function runAuditSQLMap(target) {
+  const card = document.getElementById("db-audit-card");
+  const progress = document.getElementById("db-audit-progress");
+  const content = document.getElementById("db-audit-results-content");
+  const progressText = document.getElementById("db-audit-progress-text");
+
+  if (card) card.classList.remove("hidden");
+  if (progress) progress.classList.remove("hidden");
+  if (progressText) progressText.textContent = "💉 SQLMap — Analyse d'injections SQL sur la cible (3-5 min)...";
+  if (content) content.innerHTML = "";
+
+  try {
+    const res = await fetch("/api/audit/sqlmap", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const data = await res.json();
+
+    if (res.status === 412) {
+      if (progress) progress.classList.add("hidden");
+      if (content) content.innerHTML = `<div style="color: #f39c12; font-size: 0.85rem;">⚠️ SQLMap non installé — installez-le via la page Vérification Système.</div>`;
+      return;
+    }
+
+    if (data.job_id) {
+      const result = await pollAuditJob(data.job_id, null);
+      if (progress) progress.classList.add("hidden");
+      renderSQLMapResults(result, content);
+    }
+  } catch (err) {
+    if (progress) progress.classList.add("hidden");
+    if (content) content.innerHTML = `<div style="color: #888; font-size: 0.85rem;">SQLMap indisponible (${err.message}).</div>`;
+  }
+}
+
+function renderSQLMapResults(data, container) {
+  if (!container) return;
+  if (data.status === "error") {
+    container.innerHTML = `<div style="color: #e74c3c; font-size: 0.85rem;">❌ Erreur SQLMap : ${data.error}</div>`;
+    return;
+  }
+  const vulns = data.vulnerabilities || [];
+  const summary = data.summary_lines || [];
+  const isVulnerable = vulns.length > 0;
+
+  let html = `<div style="padding: 10px 14px; background: rgba(230, 126, 34, 0.08); border-left: 3px solid #e67e22; border-radius: 4px;">`;
+
+  if (isVulnerable) {
+    html += `<div style="font-size: 0.85rem; color: #ff8888; font-weight: bold; margin-bottom: 8px;">
+      <i class="fa-solid fa-triangle-exclamation"></i> 🚨 INJECTIONS SQL DÉTECTÉES — Cible vulnérable !</div>`;
+    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #ff9999; background: rgba(231,76,60,0.1); padding: 8px; border-radius: 4px; max-height: 200px; overflow-y: auto;">`;
+    vulns.forEach(v => { html += `<div style="margin-bottom: 2px;">${escapeHtml(v)}</div>`; });
+    html += `</div>`;
+  } else {
+    html += `<div style="font-size: 0.85rem; color: #2ecc71; font-weight: bold; margin-bottom: 8px;">
+      <i class="fa-solid fa-shield-halved"></i> Aucune injection SQL évidente détectée par SQLMap.</div>`;
+  }
+
+  if (summary.length > 0) {
+    html += `<div style="margin-top: 10px; font-size: 0.75rem; color: #aaa; max-height: 160px; overflow-y: auto; font-family: monospace; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px;">`;
+    summary.slice(0, 30).forEach(l => { html += `<div>${escapeHtml(l)}</div>`; });
+    html += `</div>`;
+  }
+
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+async function runAuditCMSScan(target, cmsKey) {
+  const card = document.getElementById("cms-audit-card");
+  const progress = document.getElementById("cms-audit-progress");
+  const content = document.getElementById("cms-audit-results-content");
+  const progressText = document.getElementById("cms-audit-progress-text");
+  const titleEl = document.getElementById("cms-audit-title");
+
+  if (!cmsKey) {
+    // Pas de CMS reconnu -> on masque la carte
+    if (card) card.classList.add("hidden");
+    return;
+  }
+
+  const cmsLabel = { wordpress: "WordPress", joomla: "Joomla", drupal: "Drupal", moodle: "Moodle" }[cmsKey] || cmsKey;
+  const scannerLabel = { wordpress: "WPScan", joomla: "JoomScan", drupal: "Droopescan", moodle: "Moodlescan" }[cmsKey] || "Droopescan";
+
+  if (card) card.classList.remove("hidden");
+  if (progress) progress.classList.remove("hidden");
+  if (titleEl) titleEl.textContent = `${cmsLabel} — ${scannerLabel}`;
+  if (progressText) progressText.textContent = `🔍 ${scannerLabel} — Audit approfondi du CMS ${cmsLabel} en cours...`;
+  if (content) content.innerHTML = "";
+
+  try {
+    const res = await fetch("/api/audit/cms-scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target, cms_type: cmsKey })
+    });
+    const data = await res.json();
+
+    if (res.status === 412) {
+      if (progress) progress.classList.add("hidden");
+      if (content) content.innerHTML = `
+        <div style="padding: 12px; background: rgba(241, 196, 15, 0.1); border-left: 3px solid #f1c40f; color: #f7dc6f; font-size: 0.85rem;">
+          ⚠️ ${scannerLabel} n'est pas installé. Installez-le depuis la page <strong>Vérification Système</strong>.
+        </div>`;
+      return;
+    }
+
+    if (data.job_id) {
+      const result = await pollAuditJob(data.job_id, null);
+      if (progress) progress.classList.add("hidden");
+      renderCMSScanResults(result, content, cmsLabel, scannerLabel);
+    }
+  } catch (err) {
+    if (progress) progress.classList.add("hidden");
+    if (content) content.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Scanner CMS indisponible (${err.message}).</div>`;
+  }
+}
+
+function renderCMSScanResults(data, container, cmsLabel, scannerLabel) {
+  if (!container) return;
+  if (data.status === "error") {
+    container.innerHTML = `<div style="color: #e74c3c; font-size: 0.85rem;">❌ Erreur ${scannerLabel} : ${data.error}</div>`;
+    return;
+  }
+  const lines = data.output || [];
+  // Filtrer les lignes significatives
+  const keyLines = lines.filter(l => {
+    const lower = l.toLowerCase();
+    return l.trim() && (
+      lower.includes("vulnerab") || lower.includes("plugin") || lower.includes("theme") ||
+      lower.includes("user") || lower.includes("version") || lower.includes("cve") ||
+      lower.includes("error") || lower.includes("found") || lower.includes("detected") ||
+      lower.includes("exploit") || lower.includes("critical") || l.startsWith("[") || l.startsWith("+")
+    );
+  });
+
+  let html = `<div style="padding: 10px 14px; background: rgba(22, 160, 133, 0.08); border-left: 3px solid #16a085; border-radius: 4px;">`;
+  html += `<div style="font-size: 0.85rem; color: #1abc9c; font-weight: bold; margin-bottom: 8px;">
+    <i class="fa-solid fa-cube"></i> ${scannerLabel} — Audit CMS ${cmsLabel} — ${keyLines.length} élément(s) notable(s)
+  </div>`;
+
+  if (keyLines.length > 0) {
+    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #fff; max-height: 320px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px;">`;
+    keyLines.forEach(line => {
+      const lower = line.toLowerCase();
+      let color = "#ddd";
+      if (lower.includes("vulnerab") || lower.includes("cve") || lower.includes("exploit") || lower.includes("critical")) color = "#ff8888";
+      else if (lower.includes("found") || lower.includes("detected") || lower.includes("version")) color = "#f1c40f";
+      else if (line.startsWith("+") || lower.includes("plugin") || lower.includes("theme")) color = "#a3e9a4";
+      html += `<div style="color: ${color}; margin-bottom: 2px;">${escapeHtml(line)}</div>`;
+    });
+    html += `</div>`;
+  } else if (lines.length > 0) {
+    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #aaa; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">`;
+    lines.slice(0, 50).forEach(line => { html += `<div>${escapeHtml(line)}</div>`; });
+    html += `</div>`;
+  } else {
+    html += `<div style="color: #888; font-size: 0.83rem;">Aucun résultat retourné par le scanner ${cmsLabel}.</div>`;
+  }
+
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 async function runNmapScan(target, mode, modeToggle) {
@@ -968,12 +1314,15 @@ async function runNmapScan(target, mode, modeToggle) {
 
   const options = modeToggle === "manual" ? collectOptions() : {
     scan_type: "sS",
-    port_mode: "top_1000",
+    port_mode: mode === "web" ? "fast" : "top_1000",
     service_version: true,
-    os_detection: true,
+    os_detection: false,
     default_scripts: false,
     vuln_scripts: false,
-    skip_host_discovery: true
+    skip_host_discovery: true,
+    max_retries: 2,
+    host_timeout: "3m",
+    min_rate: 200
   };
   options.is_local = (mode === "local");
 

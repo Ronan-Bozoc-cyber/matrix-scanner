@@ -746,11 +746,30 @@ def build_nmap_command(options):
             "meaning": "Désactive le ping préalable : Nmap scanne directement les ports sans vérifier d'abord si l’hôte répond aux ICMP/Echo.",
         })
 
+    # Optimisations de vitesse & performance (évite les blocages sur cibles filtrées)
+    max_retries = str(options.get("max_retries", "2"))
+    cmd.extend(["--max-retries", max_retries])
+    explanation.append({
+        "flag": f"--max-retries {max_retries}",
+        "meaning": f"Limite le nombre de tentatives de retransmission à {max_retries} par port (accélère le traitement des ports filtrés).",
+    })
+
+    host_timeout = str(options.get("host_timeout", "5m"))
+    cmd.extend(["--host-timeout", host_timeout])
+    explanation.append({
+        "flag": f"--host-timeout {host_timeout}",
+        "meaning": f"Délai d'attente maximum global accordé à l'hôte ({host_timeout}).",
+    })
+
+    if options.get("min_rate"):
+        min_rate = str(options.get("min_rate"))
+        cmd.extend(["--min-rate", min_rate])
+        explanation.append({
+            "flag": f"--min-rate {min_rate}",
+            "meaning": f"Impose un débit d'émission minimal de {min_rate} paquets/seconde.",
+        })
+
     # Mode verbeux + rapport de statistiques périodique.
-    # nmap écrit alors des lignes de progression ("Stats: xx:xx elapsed;
-    # xx% done; ETC: ...") sur stderr, PENDANT que stdout reste réservé au
-    # flux XML propre (-oX -). C'est ce qui permet d'afficher un suivi en
-    # temps réel côté frontend sans corrompre le parsing XML final.
     cmd.append("-v")
     cmd.extend(["--stats-every", "2s"])
     explanation.append({
@@ -1667,6 +1686,217 @@ def wpscan_status(job_id):
     if job is None:
         return jsonify({"error": "job_id inconnu"}), 404
     return jsonify(job)
+
+# =====================================================================================
+# SECTION 7.45 : AUDIT WEB — NIKTO, GOBUSTER, SQLMAP, JOOMSCAN, DROOPESCAN, MOODLESCAN
+# =====================================================================================
+
+AUDIT_JOBS = {}
+
+def _run_nikto_thread(job_id, target_url):
+    """Lance Nikto en arrière-plan et stocke les résultats."""
+    AUDIT_JOBS[job_id]["status"] = "running"
+    AUDIT_JOBS[job_id]["output"] = []
+
+    if not target_url.startswith("http://") and not target_url.startswith("https://"):
+        target_url = "http://" + target_url
+
+    cmd = ["nikto", "-h", target_url, "-nointeractive", "-Format", "txt"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        lines = (proc.stdout + proc.stderr).splitlines()
+        findings = [l for l in lines if l.strip() and not l.startswith("- ") or l.startswith("+ ") or "OSVDB" in l or "CVE" in l or "Server:" in l or "X-" in l]
+        AUDIT_JOBS[job_id]["status"] = "done"
+        AUDIT_JOBS[job_id]["output"] = lines
+        AUDIT_JOBS[job_id]["findings"] = [l for l in lines if l.startswith("+ ") or "OSVDB" in l or "CVE" in l]
+        save_history("nikto", target_url, {"lines": lines[:200]})
+    except subprocess.TimeoutExpired:
+        AUDIT_JOBS[job_id]["status"] = "error"
+        AUDIT_JOBS[job_id]["error"] = "Délai dépassé pour Nikto (5 min)."
+    except Exception as e:
+        AUDIT_JOBS[job_id]["status"] = "error"
+        AUDIT_JOBS[job_id]["error"] = str(e)
+
+
+def _run_gobuster_thread(job_id, target_url):
+    """Lance Gobuster en arrière-plan pour la découverte de répertoires."""
+    AUDIT_JOBS[job_id]["status"] = "running"
+    AUDIT_JOBS[job_id]["output"] = []
+
+    if not target_url.startswith("http://") and not target_url.startswith("https://"):
+        target_url = "http://" + target_url
+
+    # Wordlist standard Kali
+    wordlist_candidates = [
+        "/usr/share/wordlists/dirb/common.txt",
+        "/usr/share/dirb/wordlists/common.txt",
+        "/usr/share/wordlists/dirbuster/directory-list-2.3-small.txt",
+    ]
+    wordlist = next((w for w in wordlist_candidates if os.path.exists(w)), None)
+
+    if not wordlist:
+        AUDIT_JOBS[job_id]["status"] = "error"
+        AUDIT_JOBS[job_id]["error"] = "Aucune wordlist trouvée (dirb/dirbuster non installé)."
+        return
+
+    cmd = ["gobuster", "dir", "-u", target_url, "-w", wordlist, "-t", "20", "-q", "--no-progress", "-k"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        lines = proc.stdout.splitlines()
+        found = [l for l in lines if l.strip() and "(Status:" in l]
+        AUDIT_JOBS[job_id]["status"] = "done"
+        AUDIT_JOBS[job_id]["output"] = lines
+        AUDIT_JOBS[job_id]["found_paths"] = found
+        save_history("gobuster", target_url, {"paths": found[:100]})
+    except subprocess.TimeoutExpired:
+        AUDIT_JOBS[job_id]["status"] = "error"
+        AUDIT_JOBS[job_id]["error"] = "Délai dépassé pour Gobuster (5 min)."
+    except Exception as e:
+        AUDIT_JOBS[job_id]["status"] = "error"
+        AUDIT_JOBS[job_id]["error"] = str(e)
+
+
+def _run_sqlmap_thread(job_id, target_url):
+    """Lance SQLMap en mode batch sur l'URL cible."""
+    AUDIT_JOBS[job_id]["status"] = "running"
+    AUDIT_JOBS[job_id]["output"] = []
+
+    if not target_url.startswith("http://") and not target_url.startswith("https://"):
+        target_url = "http://" + target_url
+
+    cmd = ["sqlmap", "-u", target_url, "--batch", "--level=1", "--risk=1",
+           "--timeout=10", "--retries=1", "--output-dir=/tmp/sqlmap_out",
+           "--disable-coloring", "--no-cast"]
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        lines = (proc.stdout + proc.stderr).splitlines()
+        vulns = [l for l in lines if "injectable" in l.lower() or "Parameter:" in l or "[VULNERABLE]" in l or "[WARNING]" in l or "[INFO]" in l]
+        AUDIT_JOBS[job_id]["status"] = "done"
+        AUDIT_JOBS[job_id]["output"] = lines
+        AUDIT_JOBS[job_id]["vulnerabilities"] = [l for l in lines if "injectable" in l.lower() or "[VULNERABLE]" in l]
+        AUDIT_JOBS[job_id]["summary_lines"] = vulns[:50]
+        save_history("sqlmap", target_url, {"summary": vulns[:30]})
+    except subprocess.TimeoutExpired:
+        AUDIT_JOBS[job_id]["status"] = "error"
+        AUDIT_JOBS[job_id]["error"] = "Délai dépassé pour SQLMap (5 min)."
+    except Exception as e:
+        AUDIT_JOBS[job_id]["status"] = "error"
+        AUDIT_JOBS[job_id]["error"] = str(e)
+
+
+def _run_cms_scanner_thread(job_id, cms_type, target_url):
+    """Lance le scanner CMS approprié (wpscan, joomscan, droopescan, moodlescan)."""
+    AUDIT_JOBS[job_id]["status"] = "running"
+    AUDIT_JOBS[job_id]["output"] = []
+    AUDIT_JOBS[job_id]["cms_type"] = cms_type
+
+    if not target_url.startswith("http://") and not target_url.startswith("https://"):
+        target_url = "http://" + target_url
+
+    try:
+        if cms_type == "wordpress":
+            cmd = ["wpscan", "--url", target_url, "--random-user-agent", "--no-update",
+                   "--enumerate", "p,t,u", "--format", "cli-no-colour"]
+        elif cms_type == "joomla":
+            cmd = ["joomscan", "--url", target_url]
+        elif cms_type == "drupal":
+            cmd = ["droopescan", "scan", "drupal", "-u", target_url]
+        elif cms_type == "moodle":
+            cmd = ["moodlescan", "-u", target_url]
+        else:
+            # Fallback générique droopescan
+            cmd = ["droopescan", "scan", "-u", target_url]
+
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        lines = (proc.stdout + proc.stderr).splitlines()
+        AUDIT_JOBS[job_id]["status"] = "done"
+        AUDIT_JOBS[job_id]["output"] = lines
+        save_history(f"{cms_type}_scan", target_url, {"lines": lines[:200]})
+    except subprocess.TimeoutExpired:
+        AUDIT_JOBS[job_id]["status"] = "error"
+        AUDIT_JOBS[job_id]["error"] = f"Délai dépassé pour le scanner {cms_type} (5 min)."
+    except Exception as e:
+        AUDIT_JOBS[job_id]["status"] = "error"
+        AUDIT_JOBS[job_id]["error"] = str(e)
+
+
+@app.route("/api/audit/nikto", methods=["POST"])
+def start_nikto():
+    data = request.get_json(silent=True) or {}
+    target_url = data.get("target_url", "").strip()
+    if not target_url:
+        return jsonify({"error": "URL cible manquante."}), 400
+    if not _tool_is_installed(["nikto"]):
+        return jsonify({"error": "nikto n'est pas installé.", "not_installed": True}), 412
+    job_id = str(uuid.uuid4())
+    AUDIT_JOBS[job_id] = {"status": "queued", "output": [], "findings": [], "error": None, "target_url": target_url, "tool": "nikto", "started_at": datetime.now().isoformat()}
+    threading.Thread(target=_run_nikto_thread, args=(job_id, target_url), daemon=True).start()
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/audit/gobuster", methods=["POST"])
+def start_gobuster():
+    data = request.get_json(silent=True) or {}
+    target_url = data.get("target_url", "").strip()
+    if not target_url:
+        return jsonify({"error": "URL cible manquante."}), 400
+    if not _tool_is_installed(["gobuster"]):
+        return jsonify({"error": "gobuster n'est pas installé.", "not_installed": True}), 412
+    job_id = str(uuid.uuid4())
+    AUDIT_JOBS[job_id] = {"status": "queued", "output": [], "found_paths": [], "error": None, "target_url": target_url, "tool": "gobuster", "started_at": datetime.now().isoformat()}
+    threading.Thread(target=_run_gobuster_thread, args=(job_id, target_url), daemon=True).start()
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/audit/sqlmap", methods=["POST"])
+def start_sqlmap():
+    data = request.get_json(silent=True) or {}
+    target_url = data.get("target_url", "").strip()
+    if not target_url:
+        return jsonify({"error": "URL cible manquante."}), 400
+    if not _tool_is_installed(["sqlmap"]):
+        return jsonify({"error": "sqlmap n'est pas installé.", "not_installed": True}), 412
+    job_id = str(uuid.uuid4())
+    AUDIT_JOBS[job_id] = {"status": "queued", "output": [], "vulnerabilities": [], "summary_lines": [], "error": None, "target_url": target_url, "tool": "sqlmap", "started_at": datetime.now().isoformat()}
+    threading.Thread(target=_run_sqlmap_thread, args=(job_id, target_url), daemon=True).start()
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/audit/cms-scan", methods=["POST"])
+def start_cms_scan():
+    """Déclenche le scanner CMS approprié selon le CMS détecté par WhatWeb."""
+    data = request.get_json(silent=True) or {}
+    target_url = data.get("target_url", "").strip()
+    cms_type = data.get("cms_type", "unknown").strip().lower()  # wordpress, joomla, drupal, moodle
+
+    if not target_url:
+        return jsonify({"error": "URL cible manquante."}), 400
+
+    # Vérification de la disponibilité du scanner approprié
+    scanner_checks = {
+        "wordpress": ["wpscan"],
+        "joomla": ["joomscan"],
+        "drupal": ["droopescan"],
+        "moodle": ["moodlescan"],
+    }
+    check = scanner_checks.get(cms_type, ["droopescan"])
+    if not _tool_is_installed(check):
+        return jsonify({"error": f"Scanner {cms_type} ({check[0]}) n'est pas installé.", "not_installed": True}), 412
+
+    job_id = str(uuid.uuid4())
+    AUDIT_JOBS[job_id] = {"status": "queued", "output": [], "error": None, "target_url": target_url, "tool": f"{cms_type}_scan", "cms_type": cms_type, "started_at": datetime.now().isoformat()}
+    threading.Thread(target=_run_cms_scanner_thread, args=(job_id, cms_type, target_url), daemon=True).start()
+    return jsonify({"job_id": job_id})
+
+
+@app.route("/api/audit/status/<job_id>", methods=["GET"])
+def audit_status(job_id):
+    """Retourne le statut d'un job d'audit (Nikto/Gobuster/SQLMap/CMS)."""
+    job = AUDIT_JOBS.get(job_id)
+    if job is None:
+        return jsonify({"error": "job_id inconnu"}), 404
+    return jsonify(job)
+
 
 # =====================================================================================
 # SECTION 7.5 : WAFW00F (WAF DETECTION)
