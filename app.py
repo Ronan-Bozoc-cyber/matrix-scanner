@@ -51,6 +51,7 @@ import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
 import urllib.request
+from urllib.parse import urlparse
 import socket
 import concurrent.futures
 import sqlite3
