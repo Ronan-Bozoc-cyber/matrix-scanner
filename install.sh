@@ -136,10 +136,49 @@ declare -A TOOL_PKGS=(
 )
 
 for cmd in "${!TOOL_PKGS[@]}"; do
-    if ! command -v "$cmd" &>/dev/null; then
-        MISSING_PACKAGES+=("${TOOL_PKGS[$cmd]}")
+    if ! command -v "$cmd" &>/dev/null && [ ! -f "venv/bin/$cmd" ]; then
+        # Exclure les outils gérés directement par pip/git
+        if [[ "$cmd" != "droopescan" && "$cmd" != "moodlescan" && "$cmd" != "nosqlmap" ]]; then
+            MISSING_PACKAGES+=("${TOOL_PKGS[$cmd]}")
+        fi
     fi
 done
+
+# Installation des outils GitHub / PyPI spécifiques
+mkdir -p tools_git
+
+if ! command -v droopescan &>/dev/null && [ ! -f "venv/bin/droopescan" ]; then
+    log "Installation de droopescan via pip..."
+    venv/bin/pip install droopescan -q || true
+fi
+
+if [ ! -d "tools_git/moodlescan" ]; then
+    log "Clonage de moodlescan depuis GitHub (inc0d3/moodlescan)..."
+    git clone https://github.com/inc0d3/moodlescan.git tools_git/moodlescan -q || true
+fi
+if [ -d "tools_git/moodlescan" ] && [ ! -f "venv/bin/moodlescan" ]; then
+    cat << 'EOF' > venv/bin/moodlescan
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+exec "$ROOT_DIR/venv/bin/python3" "$ROOT_DIR/tools_git/moodlescan/moodlescan.py" "$@"
+EOF
+    chmod +x venv/bin/moodlescan
+fi
+
+if [ ! -d "tools_git/NoSQLMap" ]; then
+    log "Clonage de NoSQLMap depuis GitHub (codingo/NoSQLMap)..."
+    git clone https://github.com/codingo/NoSQLMap.git tools_git/NoSQLMap -q || true
+fi
+if [ -d "tools_git/NoSQLMap" ] && [ ! -f "venv/bin/nosqlmap" ]; then
+    cat << 'EOF' > venv/bin/nosqlmap
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+exec "$ROOT_DIR/venv/bin/python3" "$ROOT_DIR/tools_git/NoSQLMap/nosqlmap.py" "$@"
+EOF
+    chmod +x venv/bin/nosqlmap
+fi
 
 if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
     warn "Paquets système manquants : ${MISSING_PACKAGES[*]}"

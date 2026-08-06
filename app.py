@@ -277,9 +277,14 @@ REQUIRED_TOOLS = {
 # =====================================================================================
 
 def _tool_is_installed(cmd):
-    """Vérifie qu'un binaire est présent et exécutable dans le PATH système."""
+    """Vérifie qu'un binaire est présent et exécutable dans le PATH système ou le venv local."""
     binary = cmd[0]
-    return shutil.which(binary) is not None
+    if shutil.which(binary) is not None:
+        return True
+    venv_bin = os.path.join(os.path.dirname(os.path.abspath(__file__)), "venv", "bin", binary)
+    if os.path.isfile(venv_bin) and os.access(venv_bin, os.X_OK):
+        return True
+    return False
 
 def _py_module_is_installed(mod_name):
     """Vérifie si un module Python est installé et importable."""
