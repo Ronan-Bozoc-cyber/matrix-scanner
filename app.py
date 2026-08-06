@@ -126,96 +126,115 @@ REQUIRED_TOOLS = {
     "nmap": {
         "check_cmd": ["nmap", "--version"],
         "apt_package": "nmap",
+        "category": "Scans Réseau & Exploration LAN",
         "description": "Scanner de ports et de services réseau",
     },
     "searchsploit": {
         "check_cmd": ["searchsploit", "-h"],
         "apt_package": "exploitdb",
+        "category": "Fuzzing & Recherche de Vulnérabilités",
         "description": "Recherche d'exploits/CVE connus (base Exploit-DB locale)",
     },
     "nuclei": {
         "check_cmd": ["nuclei", "-version"],
         "apt_package": "nuclei",
+        "category": "Fuzzing & Recherche de Vulnérabilités",
         "description": "Scanner de vulnérabilités basé sur des templates (web/réseau)",
     },
     "whatweb": {
         "check_cmd": ["whatweb", "--version"],
         "apt_package": "whatweb",
+        "category": "Reconnaissance & OSINT",
         "description": "Scanner d'empreintes technologiques Web",
     },
     "wafw00f": {
         "check_cmd": ["wafw00f", "--version"],
         "apt_package": "wafw00f",
+        "category": "Reconnaissance & OSINT",
         "description": "Détection de pare-feux applicatifs web (WAF)",
     },
     "wpscan": {
         "check_cmd": ["wpscan", "--version"],
         "apt_package": "wpscan",
+        "category": "Audit Web & CMS Spécifiques",
         "description": "Scanner spécialisé de vulnérabilités WordPress",
     },
     "gowitness": {
         "check_cmd": ["gowitness", "version"],
         "apt_package": "gowitness",
+        "category": "Rendus Visuels, Rapports & Télémétrie",
         "description": "Outil de capture d'écran web en masse",
     },
     "netdiscover": {
         "check_cmd": ["netdiscover", "-h"],
         "apt_package": "netdiscover",
+        "category": "Scans Réseau & Exploration LAN",
         "description": "Exploration ARP active/passive pour réseau local",
     },
     "nbtscan": {
         "check_cmd": ["nbtscan", "-h"],
         "apt_package": "nbtscan",
+        "category": "Scans Réseau & Exploration LAN",
         "description": "Résolution de nom d'hôte et groupes de travail NetBIOS",
     },
     "nikto": {
         "check_cmd": ["nikto", "-Version"],
         "apt_package": "nikto",
+        "category": "Audit Web & CMS Spécifiques",
         "description": "Scanner de vulnérabilités et fichiers dangereux pour serveurs Web",
     },
     "enum4linux": {
         "check_cmd": ["enum4linux", "-h"],
         "apt_package": "enum4linux",
+        "category": "Scans Réseau & Exploration LAN",
         "description": "Énumération complète des informations Windows et partages Samba/SMB",
     },
     "smbmap": {
         "check_cmd": ["smbmap", "-h"],
         "apt_package": "smbmap",
+        "category": "Scans Réseau & Exploration LAN",
         "description": "Énumération des droits d'accès et partages réseau SMB",
     },
     "psutil": {
         "py_module": "psutil",
         "pip_package": "psutil",
+        "category": "Rendus Visuels, Rapports & Télémétrie",
         "description": "Statistiques système et monitoring CPU/RAM",
     },
     "python-docx": {
         "py_module": "docx",
         "pip_package": "python-docx",
+        "category": "Rendus Visuels, Rapports & Télémétrie",
         "description": "Génération et exportation de rapports Word (.docx)",
     },
     "whois": {
         "check_cmd": ["whois", "--version"],
         "apt_package": "whois",
+        "category": "Reconnaissance & OSINT",
         "description": "Consultation des informations du registre de nom de domaine (WHOIS)",
     },
     "sublist3r": {
         "check_cmd": ["sublist3r", "-h"],
         "apt_package": "sublist3r",
+        "category": "Reconnaissance & OSINT",
         "description": "Énumération OSINT passive de sous-domaines web",
     },
     "subfinder": {
         "check_cmd": ["subfinder", "-version"],
         "apt_package": "subfinder",
+        "category": "Reconnaissance & OSINT",
         "description": "Découverte rapide multi-sources de sous-domaines web",
     },
     "reportlab": {
         "py_module": "reportlab",
         "pip_package": "reportlab",
+        "category": "Rendus Visuels, Rapports & Télémétrie",
         "description": "Génération et exportation de rapports PDF",
     },
     "joomscan": {
         "check_cmd": ["joomscan", "--help"],
         "apt_package": "joomscan",
+        "category": "Audit Web & CMS Spécifiques",
         "description": "Scanner spécialisé de vulnérabilités pour le CMS Joomla",
     },
     "droopescan": {
@@ -223,26 +242,31 @@ REQUIRED_TOOLS = {
         "pip_package": "droopescan",
         "check_cmd": ["droopescan", "--help"],
         "apt_package": "droopescan",
+        "category": "Audit Web & CMS Spécifiques",
         "description": "Scanner de vulnérabilités pour CMS Drupal et SilverStripe",
     },
     "moodlescan": {
         "check_cmd": ["moodlescan", "-h"],
         "apt_package": "moodlescan",
+        "category": "Audit Web & CMS Spécifiques",
         "description": "Scanner spécialisé dans l'audit de sécurité des plateformes Moodle",
     },
     "sqlmap": {
         "check_cmd": ["sqlmap", "--version"],
         "apt_package": "sqlmap",
+        "category": "Audit & Injections Bases de Données",
         "description": "Outil automatique de détection et d'exploitation d'injections SQL",
     },
     "nosqlmap": {
         "check_cmd": ["nosqlmap", "-h"],
         "apt_package": "nosqlmap",
+        "category": "Audit & Injections Bases de Données",
         "description": "Outil d'audit d'injection et de sécurité pour bases de données NoSQL",
     },
     "gobuster": {
         "check_cmd": ["gobuster", "version"],
         "apt_package": "gobuster",
+        "category": "Fuzzing & Recherche de Vulnérabilités",
         "description": "Fuzzer d'arborescence réseau, de répertoires web et de sous-domaines",
     },
 }
@@ -289,6 +313,7 @@ def check_deps():
         status[name] = {
             "installed": installed,
             "description": meta["description"],
+            "category": meta.get("category", "Divers / Système"),
             "is_python": "py_module" in meta,
         }
     return jsonify({

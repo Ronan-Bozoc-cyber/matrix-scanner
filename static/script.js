@@ -142,20 +142,77 @@ async function checkDependencies() {
 
     const counterDiv = document.createElement("div");
     counterDiv.style.width = "100%";
-    counterDiv.style.marginBottom = "12px";
-    counterDiv.style.fontSize = "0.9em";
+    counterDiv.style.marginBottom = "16px";
+    counterDiv.style.fontSize = "0.95rem";
     counterDiv.style.color = "#fff";
+    counterDiv.style.padding = "10px 14px";
+    counterDiv.style.background = "rgba(0,0,0,0.4)";
+    counterDiv.style.border = "1px solid rgba(0, 255, 65, 0.3)";
+    counterDiv.style.borderRadius = "6px";
     counterDiv.innerHTML = `
-      <span>Statut des outils : <b>${installedCount}/${totalCount}</b> outils installés.</span>
-      ${missingCount > 0 ? `<span style="color:#ff4444; margin-left:10px;">(<b>${missingCount}</b> outil(s) manquant(s))</span>` : `<span style="color:#00C851; margin-left:10px;">(Tous les outils sont prêts !)</span>`}
+      <span style="font-weight: bold;"><i class="fa-solid fa-microchip"></i> Statut global du système : <b>${installedCount}/${totalCount}</b> outils installés et prêts.</span>
+      ${missingCount > 0 ? `<span style="color:#ff5555; margin-left:12px; font-weight: bold;">⚠️ (<b>${missingCount}</b> outil(s) manquant(s))</span>` : `<span style="color:#00ff41; margin-left:12px; font-weight: bold;"><i class="fa-solid fa-circle-check"></i> Tous les ${totalCount} outils sont prêts !</span>`}
     `;
     listEl.appendChild(counterDiv);
 
+    // Groupement par rubriques
+    const categoriesMap = {};
     toolEntries.forEach(([name, info]) => {
-      const span = document.createElement("span");
-      span.className = "dep-item " + (info.installed ? "ok" : "missing");
-      span.textContent = `${info.installed ? "✔" : "✘"} ${name} — ${info.description}`;
-      listEl.appendChild(span);
+      const cat = info.category || "Divers / Système";
+      if (!categoriesMap[cat]) categoriesMap[cat] = [];
+      categoriesMap[cat].push({ name, ...info });
+    });
+
+    const categoryOrder = [
+      "Reconnaissance & OSINT",
+      "Scans Réseau & Exploration LAN",
+      "Audit Web & CMS Spécifiques",
+      "Fuzzing & Recherche de Vulnérabilités",
+      "Audit & Injections Bases de Données",
+      "Rendus Visuels, Rapports & Télémétrie"
+    ];
+
+    categoryOrder.forEach(catName => {
+      if (!categoriesMap[catName]) return;
+
+      const catHeader = document.createElement("div");
+      catHeader.style.width = "100%";
+      catHeader.style.marginTop = "14px";
+      catHeader.style.marginBottom = "8px";
+      catHeader.style.color = "#00ff41";
+      catHeader.style.fontSize = "0.85rem";
+      catHeader.style.fontWeight = "bold";
+      catHeader.style.textTransform = "uppercase";
+      catHeader.style.letterSpacing = "1px";
+      catHeader.style.borderBottom = "1px solid rgba(0, 255, 65, 0.2)";
+      catHeader.style.paddingBottom = "4px";
+      catHeader.innerHTML = `<i class="fa-solid fa-layer-group"></i> ${catName}`;
+      listEl.appendChild(catHeader);
+
+      // Tri par ordre alphabétique au sein de la rubrique
+      const toolsInCat = categoriesMap[catName].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+
+      const gridDiv = document.createElement("div");
+      gridDiv.className = "deps-grid";
+      gridDiv.style.display = "grid";
+      gridDiv.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
+      gridDiv.style.gap = "8px";
+      gridDiv.style.marginBottom = "10px";
+
+      toolsInCat.forEach(tool => {
+        const item = document.createElement("div");
+        item.className = "dep-item " + (tool.installed ? "ok" : "missing");
+        item.style.margin = "0";
+        item.style.padding = "6px 10px";
+        item.style.fontSize = "0.8rem";
+        item.innerHTML = `
+          <span style="font-weight: bold; font-family: monospace;">${tool.installed ? "✔" : "✘"} ${tool.name}</span>
+          <span style="color: #aaa; font-size: 0.75rem; display: block; margin-top: 2px;">${tool.description}</span>
+        `;
+        gridDiv.appendChild(item);
+      });
+
+      listEl.appendChild(gridDiv);
     });
 
     if (missingAlert) {
