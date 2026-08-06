@@ -2931,4 +2931,6 @@ if __name__ == "__main__":
     # debug=False — empêche le fork du processus fils Werkzeug (stable en arrière-plan)
     # use_reloader=False — empêche les redémarrages lors des écritures SQLite
     print(f"[+] Démarrage de Matrix Scanner sur {app_url}")
-    app.run(host="127.0.0.1", port=server_port, debug=False, use_reloader=False)
+    # Expose to Docker container network if FLASK_HOST is provided, otherwise bind to localhost
+    flask_host = os.environ.get("FLASK_HOST", "127.0.0.1")
+    app.run(host=flask_host, port=server_port, debug=False, use_reloader=False)

@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # ==============================================================================
+  # SERVICE 1: LE VPN (SIDECAR)
+  # Ce conteneur gère la connexion réseau. 
+  # Le trafic du scanner passera OBLIGATOIREMENT par ici.
+  # ==============================================================================
+  vpn:
+    image: linuxserver/wireguard:latest
+    container_name: matrix-vpn
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Paris
+    volumes:
+      # Vous devez placer votre fichier de configuration VPN (ex: wg0.conf)
+      # dans un dossier local ./config/wg0.conf 
+      # Il sera lu par Wireguard automatiquement.
+      - ./config:/config
+      - /lib/modules:/lib/modules
+    ports:
+      # On expose le port 5000 (celui de l'appli web) DEPUIS LE VPN,
+      # car le scanner n'a pas sa propre carte réseau publique.
+      - "5000:5000"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+    restart: unless-stopped
+
+  # ==============================================================================
+  # SERVICE 2: MATRIX SCANNER
+  # Les outils Kali Linux + Serveur Flask
+  # ==============================================================================
+  matrix-scanner:
+    build: .
+    container_name: matrix-scanner
+    # MAGIE DU SIDECAR : Le scanner utilise l'interface réseau du conteneur VPN.
+    # S'il n'y a pas de VPN, il n'y a pas d'Internet = Zéro fuite d'IP (Kill Switch).
+    network_mode: "service:vpn"
+    depends_on:
+      - vpn
+    restart: unless-stopped
+    volumes:
+      # Sauvegarde la base de données de l'historique sur l'hôte
+      - ./scanner_history.db:/app/scanner_history.db
