@@ -107,18 +107,19 @@ Au chargement, le backend vérifie la présence des **24 outils** sur le systèm
 
 Ce workflow réalise un **pentest externe complet** avec un **Aiguillage Conditionnel Intelligent (*Smart Branching*)** basé sur le CMS détecté :
 
-```
-[Étape 1 : WHOIS]
-   └─► [Étape 2 : Sous-domaines Subfinder / Sublist3r / DNS Probe]
-          └─► [Étape 3 : Détection WAF (Wafw00f)]
-                 └─► [Étape 4 : Capture d'écran (Gowitness)]
-                        └─► [Étape 5 : Empreinte CMS (WhatWeb)]
-                               └─► [Étape 6 : Cartographie réseau (Nmap)]
-                                      └─► [Étape 7 : Audit de sécurité complet]
-                                             ├─ CMS détecté ➔ WPScan / JoomScan / Droopescan / Moodlescan
-                                             ├─ Nikto       ➔ Vulnérabilités web & fichiers dangereux
-                                             ├─ Gobuster    ➔ Fuzzing de répertoires cachés
-                                             └─ SQLMap      ➔ Détection d'injections SQL
+```mermaid
+graph TD
+    A[1. WHOIS] --> B[2. Sous-domaines]
+    B --> C[3. Détection WAF]
+    C --> D[4. Capture d'écran]
+    D --> E[5. Empreinte CMS]
+    E --> F[6. Cartographie Nmap]
+    F --> G[7. Recherche CVE]
+    G --> H{8. Audits Spécifiques}
+    H --> I(CMS : WPScan / JoomScan...)
+    H --> J(Nikto : Vulnérabilités web)
+    H --> K(Gobuster : Fuzzing)
+    H --> L(SQLMap : Injections SQL)
 ```
 
 | Étape | Outils | Rôle |
@@ -127,22 +128,23 @@ Ce workflow réalise un **pentest externe complet** avec un **Aiguillage Conditi
 | **2 — Sous-domaines** | `Subfinder` + `Sublist3r` + DNS Probe | Énumération hybride : CT Logs, OSINT moteurs de recherche, sondage DNS multithreadé avec **filtre anti-Wildcard DNS** (élimination des faux positifs `*.domaine.com`). |
 | **3 — WAF** | `Wafw00f` | Détection du pare-feu applicatif (Cloudflare, ModSecurity, AWS WAF, Imperva). Placé **avant** les scans actifs pour anticiper les blocages. |
 | **4 — Capture** | `Gowitness` | Rendu visuel headless de la page d'accueil de la cible (JPEG intégré au rapport). |
-| **5 — Empreinte CMS** | `WhatWeb` | Détection de la pile logicielle (WordPress, Joomla, Drupal, Moodle, Nginx, Apache, PHP, en-têtes HTTP). Retourne le **type de CMS** pour le Smart Branching de l'étape 7. |
-| **6 — Nmap** | `Nmap` + `Nuclei` + `Searchsploit` | Cartographie ports/services, exécution de templates vulnérabilités, corrélation Exploit-DB. Fallback automatique `-sT` si `-sS` refusé (sans root). |
-| **7 — Audit complet** | `Nikto` + `Gobuster` + `SQLMap` + CMS Scanner | **Smart Branching** : WPScan si WordPress, JoomScan si Joomla, Droopescan si Drupal, Moodlescan si Moodle. En parallèle : Nikto (vulnérabilités & fichiers cachés) + Gobuster (fuzzing de répertoires). Puis SQLMap (injections SQL). Résultats affichés dans des cartes dédiées avec ajout au rapport en 1 clic. |
+| **5 — Empreinte CMS** | `WhatWeb` | Détection de la pile logicielle (WordPress, Joomla, Drupal, Moodle, Nginx, Apache, PHP, en-têtes HTTP). Retourne le **type de CMS** pour le Smart Branching de l'étape 8. |
+| **6 — Nmap** | `Nmap` + `Nuclei` | Cartographie ports/services, exécution de templates vulnérabilités. Fallback automatique `-sT` si `-sS` refusé (sans root). |
+| **7 — Recherche CVE** | `Searchsploit` (Exploit-DB) | Recherche hors-ligne ou via API de vulnérabilités et d'exploits connus pour chaque service et version détectés à l'étape 6. |
+| **8 — Audit complet** | `Nikto` + `Gobuster` + `SQLMap` + CMS Scanner | **Smart Branching** : WPScan si WordPress, JoomScan si Joomla, Droopescan si Drupal, Moodlescan si Moodle. En parallèle : Nikto (vulnérabilités & fichiers cachés) + Gobuster (fuzzing de répertoires). Puis SQLMap (injections SQL). Résultats affichés dans des cartes dédiées avec ajout au rapport en 1 clic. |
 | **Livrables** | `ReportLab` + `python-docx` | Rapport PDF & Word avec score de risque global, export 1 clic. |
 
 ---
 
 ### 🏠 2. Workflow du scan réseau local (`/local`)
 
-```
-[Étape 1 : Plage LAN]
-   └─► [Étape 2 : Balayage ARP Netdiscover]
-          └─► [Étape 3 : Résolution NetBIOS & mDNS (Nbtscan)]
-                 └─► [Étape 4 : Cartographie Ports & OS (Nmap)]
-                        └─► [Étape 5 : Énumération SMB (Enum4linux / SMBMap)]
-                               └─► [Étape 6 : Corrélation CVE & Rapports]
+```mermaid
+graph TD
+    A[1. Plage LAN] --> B[2. Balayage ARP]
+    B --> C[3. Résolution NetBIOS]
+    C --> D[4. Cartographie Nmap]
+    D --> E[5. Énumération SMB]
+    E --> F[6. Corrélation CVE & Rapports]
 ```
 
 | Étape | Outils | Rôle |
