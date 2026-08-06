@@ -31,10 +31,12 @@ Il permet de réaliser des audits de reconnaissance réseau avec `nmap`, d'analy
 
 ## ⚠️ Avertissement légal et éthique
 
-**L'utilisation de cet outil doit se faire exclusivement sur des systèmes dont vous êtes propriétaire ou pour lesquels vous possédez une autorisation écrite explicite.**
+**Règle d'or** : L'utilisation de ces outils doit se faire exclusivement sur des systèmes dont vous êtes propriétaire ou pour lesquels vous possédez une autorisation écrite explicite.
 
-* **Cadre légal** : en France, l'accès ou le maintien frauduleux dans un système de traitement automatisé de données est puni par l'article 323-1 et suivants du Code pénal.
-* **Usage recommandé** : environnements de TP isolés, machines virtuelles de laboratoire (*Metasploitable, VulnHub, TryHackMe*), ou missions de test d'intrusion duly autorisées.
+* 🇫🇷 **Cadre légal en France** : L'accès ou le maintien frauduleux dans un système de traitement automatisé de données est puni par l'article 323-1 et suivants du Code pénal.
+* 🇨🇲 **Cadre légal au Cameroun** : Les infractions liées à la cybercriminalité sont encadrées par la loi n° 2010/012 du 21 décembre 2010 relative à la cybersécurité et à la cybercriminalité. L'article 65 de cette loi sanctionne l'accès non autorisé aux données par des moyens techniques, l'interception illégale, ou l'accès illicite portant atteinte à l'intégrité, la confidentialité ou la disponibilité d'un réseau ou d'un système d'information. Ces actes sont punis d'un emprisonnement allant de cinq (05) à dix (10) ans et/ou d'une amende allant de 5 000 000 à 10 000 000 de francs CFA.
+
+**Usage recommandé** : Environnements de TP isolés, machines virtuelles de laboratoire (*Metasploitable, VulnHub, TryHackMe*), ou missions de test d'intrusion dûment autorisées.
 
 ---
 
