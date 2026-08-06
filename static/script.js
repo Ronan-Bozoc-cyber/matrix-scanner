@@ -1050,18 +1050,25 @@ function renderNiktoResults(data, container) {
   const allLines = data.output || [];
 
   let html = `<div style="margin-bottom: 10px; padding: 10px 14px; background: rgba(155, 89, 182, 0.1); border-left: 3px solid #9b59b6; border-radius: 4px;">`;
-  html += `<div style="font-size: 0.85rem; color: #d6a2e8; font-weight: bold; margin-bottom: 8px;"><i class="fa-solid fa-bug"></i> Nikto — ${findings.length} Résultat(s) de Vulnérabilités Web</div>`;
+  html += `<div style="font-size: 0.85rem; color: #d6a2e8; font-weight: bold; margin-bottom: 8px;"><i class="fa-solid fa-bug"></i> Nikto — ${findings.length} Vulnérabilité(s) Web potentielle(s)</div>`;
 
   if (findings.length > 0) {
-    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #fff; max-height: 280px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px;">`;
+    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #ff9999; background: rgba(231,76,60,0.1); padding: 8px; border-radius: 4px; margin-bottom: 10px;">`;
     findings.forEach(line => {
-      const isVuln = line.includes("OSVDB") || line.includes("CVE") || line.includes("vulnerability");
-      const color = isVuln ? "#ff9999" : "#a3e9a4";
-      html += `<div style="color: ${color}; margin-bottom: 3px;">${escapeHtml(line)}</div>`;
+      html += `<div style="margin-bottom: 3px;">${escapeHtml(line)}</div>`;
     });
     html += `</div>`;
   } else {
-    html += `<div style="color: #888; font-size: 0.83rem;">Aucune vulnérabilité critique détectée par Nikto.</div>`;
+    html += `<div style="color: #888; font-size: 0.83rem; margin-bottom: 10px;"><i class="fa-solid fa-check"></i> Aucune vulnérabilité critique évidente détectée par Nikto.</div>`;
+  }
+  
+  if (allLines.length > 0) {
+    html += `
+      <details style="margin-top: 5px;">
+        <summary style="cursor: pointer; font-size: 0.78rem; color: #9b59b6; user-select: none;"><i class="fa-solid fa-terminal"></i> Voir les retours complets de la console</summary>
+        <div style="font-family: monospace; font-size: 0.7rem; color: #aaa; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; margin-top: 8px; white-space: pre-wrap;">${escapeHtml(allLines.join("\n"))}</div>
+      </details>
+    `;
   }
   html += `</div>`;
   container.innerHTML = html;
@@ -1110,12 +1117,13 @@ function renderGobusterResults(data, container) {
     return;
   }
   const paths = data.found_paths || [];
+  const allLines = data.output || [];
 
   let html = `<div style="margin-top: 10px; padding: 10px 14px; background: rgba(155, 89, 182, 0.08); border-left: 3px solid #8e44ad; border-radius: 4px;">`;
   html += `<div style="font-size: 0.85rem; color: #c39bd3; font-weight: bold; margin-bottom: 8px;"><i class="fa-solid fa-folder-tree"></i> Gobuster — ${paths.length} Chemin(s) Découvert(s)</div>`;
 
   if (paths.length > 0) {
-    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #fff; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px;">`;
+    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #fff; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px; margin-bottom: 10px;">`;
     paths.forEach(line => {
       const statusMatch = line.match(/\(Status: (\d+)\)/);
       const status = statusMatch ? parseInt(statusMatch[1]) : 0;
@@ -1124,7 +1132,16 @@ function renderGobusterResults(data, container) {
     });
     html += `</div>`;
   } else {
-    html += `<div style="color: #888; font-size: 0.83rem;">Aucun répertoire ou fichier sensible découvert par Gobuster.</div>`;
+    html += `<div style="color: #888; font-size: 0.83rem; margin-bottom: 10px;"><i class="fa-solid fa-check"></i> Aucun répertoire ou fichier caché découvert.</div>`;
+  }
+  
+  if (allLines.length > 0) {
+    html += `
+      <details style="margin-top: 5px;">
+        <summary style="cursor: pointer; font-size: 0.78rem; color: #8e44ad; user-select: none;"><i class="fa-solid fa-terminal"></i> Voir les retours complets de la console</summary>
+        <div style="font-family: monospace; font-size: 0.7rem; color: #aaa; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; margin-top: 8px; white-space: pre-wrap;">${escapeHtml(allLines.join("\n"))}</div>
+      </details>
+    `;
   }
   html += `</div>`;
   container.innerHTML += html;
@@ -1174,25 +1191,36 @@ function renderSQLMapResults(data, container) {
   }
   const vulns = data.vulnerabilities || [];
   const summary = data.summary_lines || [];
+  const allLines = data.output || [];
   const isVulnerable = vulns.length > 0;
 
   let html = `<div style="padding: 10px 14px; background: rgba(230, 126, 34, 0.08); border-left: 3px solid #e67e22; border-radius: 4px;">`;
 
   if (isVulnerable) {
     html += `<div style="font-size: 0.85rem; color: #ff8888; font-weight: bold; margin-bottom: 8px;">
-      <i class="fa-solid fa-triangle-exclamation"></i> 🚨 INJECTIONS SQL DÉTECTÉES — Cible vulnérable !</div>`;
-    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #ff9999; background: rgba(231,76,60,0.1); padding: 8px; border-radius: 4px; max-height: 200px; overflow-y: auto;">`;
+      <i class="fa-solid fa-triangle-exclamation"></i> 🚨 ${vulns.length} INJECTION(S) SQL DÉTECTÉE(S)</div>`;
+    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #ff9999; background: rgba(231,76,60,0.1); padding: 8px; border-radius: 4px; max-height: 200px; overflow-y: auto; margin-bottom: 10px;">`;
     vulns.forEach(v => { html += `<div style="margin-bottom: 2px;">${escapeHtml(v)}</div>`; });
     html += `</div>`;
   } else {
-    html += `<div style="font-size: 0.85rem; color: #2ecc71; font-weight: bold; margin-bottom: 8px;">
-      <i class="fa-solid fa-shield-halved"></i> Aucune injection SQL évidente détectée par SQLMap.</div>`;
+    html += `<div style="font-size: 0.85rem; color: #2ecc71; font-weight: bold; margin-bottom: 10px;">
+      <i class="fa-solid fa-shield-halved"></i> Aucune injection SQL évidente détectée.</div>`;
   }
 
-  if (summary.length > 0) {
-    html += `<div style="margin-top: 10px; font-size: 0.75rem; color: #aaa; max-height: 160px; overflow-y: auto; font-family: monospace; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 4px;">`;
-    summary.slice(0, 30).forEach(l => { html += `<div>${escapeHtml(l)}</div>`; });
+  if (summary.length > 0 && !isVulnerable) {
+    html += `<div style="margin-bottom: 10px; font-size: 0.75rem; color: #e67e22; background: rgba(230, 126, 34, 0.1); padding: 6px; border-radius: 4px;">`;
+    html += `<strong>Points notables :</strong><br>`;
+    summary.slice(0, 15).forEach(l => { html += `<div>- ${escapeHtml(l)}</div>`; });
     html += `</div>`;
+  }
+
+  if (allLines.length > 0) {
+    html += `
+      <details style="margin-top: 5px;">
+        <summary style="cursor: pointer; font-size: 0.78rem; color: #e67e22; user-select: none;"><i class="fa-solid fa-terminal"></i> Voir les retours complets de la console</summary>
+        <div style="font-family: monospace; font-size: 0.7rem; color: #aaa; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; margin-top: 8px; white-space: pre-wrap;">${escapeHtml(allLines.join("\n"))}</div>
+      </details>
+    `;
   }
 
   html += `</div>`;
@@ -1256,7 +1284,7 @@ function renderCMSScanResults(data, container, cmsLabel, scannerLabel) {
     return;
   }
   const lines = data.output || [];
-  // Filtrer les lignes significatives
+  // Filtrer les lignes significatives pour le résumé
   const keyLines = lines.filter(l => {
     const lower = l.toLowerCase();
     return l.trim() && (
@@ -1269,11 +1297,11 @@ function renderCMSScanResults(data, container, cmsLabel, scannerLabel) {
 
   let html = `<div style="padding: 10px 14px; background: rgba(22, 160, 133, 0.08); border-left: 3px solid #16a085; border-radius: 4px;">`;
   html += `<div style="font-size: 0.85rem; color: #1abc9c; font-weight: bold; margin-bottom: 8px;">
-    <i class="fa-solid fa-cube"></i> ${scannerLabel} — Audit CMS ${cmsLabel} — ${keyLines.length} élément(s) notable(s)
+    <i class="fa-solid fa-cube"></i> Résumé Audit ${cmsLabel} — ${keyLines.length} élément(s) notable(s)
   </div>`;
 
   if (keyLines.length > 0) {
-    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #fff; max-height: 320px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px;">`;
+    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #fff; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px; margin-bottom: 10px;">`;
     keyLines.forEach(line => {
       const lower = line.toLowerCase();
       let color = "#ddd";
@@ -1283,12 +1311,17 @@ function renderCMSScanResults(data, container, cmsLabel, scannerLabel) {
       html += `<div style="color: ${color}; margin-bottom: 2px;">${escapeHtml(line)}</div>`;
     });
     html += `</div>`;
-  } else if (lines.length > 0) {
-    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #aaa; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px;">`;
-    lines.slice(0, 50).forEach(line => { html += `<div>${escapeHtml(line)}</div>`; });
-    html += `</div>`;
   } else {
-    html += `<div style="color: #888; font-size: 0.83rem;">Aucun résultat retourné par le scanner ${cmsLabel}.</div>`;
+    html += `<div style="color: #888; font-size: 0.83rem; margin-bottom: 10px;"><i class="fa-solid fa-check"></i> Aucun élément critique ou particulier mis en évidence.</div>`;
+  }
+  
+  if (lines.length > 0) {
+    html += `
+      <details style="margin-top: 5px;">
+        <summary style="cursor: pointer; font-size: 0.78rem; color: #16a085; user-select: none;"><i class="fa-solid fa-terminal"></i> Voir les retours complets de la console</summary>
+        <div style="font-family: monospace; font-size: 0.7rem; color: #aaa; max-height: 350px; overflow-y: auto; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; margin-top: 8px; white-space: pre-wrap;">${escapeHtml(lines.join("\n"))}</div>
+      </details>
+    `;
   }
 
   html += `</div>`;
