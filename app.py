@@ -2769,6 +2769,93 @@ def find_available_port(preferred_port=5000, start_fallback=10001, host="127.0.0
     return preferred_port
 
 
+# =====================================================================================
+# SECTION ONIONHOP — Démarrage / Arrêt / Statut depuis le dashboard
+# =====================================================================================
+
+_ONIONHOP_PROCESS = None  # Référence globale au processus OnionHop en cours
+
+def _find_onionhop_binary():
+    """Retourne le chemin du binaire OnionHop si disponible, sinon None."""
+    home_dir = os.path.expanduser("~")
+    candidates = [
+        os.path.join(home_dir, ".local", "bin", "OnionHop-x86_64.AppImage"),
+        os.path.join(home_dir, ".local", "bin", "onionhop"),
+        "/usr/local/bin/OnionHop-x86_64.AppImage",
+        "onionhop",
+        "OnionHop",
+    ]
+    for c in candidates:
+        path = shutil.which(c) if not os.path.isabs(c) else (c if os.access(c, os.X_OK) else None)
+        if path:
+            return path
+    return None
+
+
+@app.route("/api/onionhop/start", methods=["POST"])
+def onionhop_start():
+    global _ONIONHOP_PROCESS
+    # Vérifier si déjà lancé
+    if _ONIONHOP_PROCESS and _ONIONHOP_PROCESS.poll() is None:
+        return jsonify({"status": "already_running", "message": "OnionHop est déjà en cours d'exécution."})
+    path = _find_onionhop_binary()
+    if not path:
+        return jsonify({"status": "not_found", "message": "OnionHop introuvable sur ce système."}), 404
+    try:
+        env = os.environ.copy()
+        env["DISPLAY"] = env.get("DISPLAY", ":0")
+        _ONIONHOP_PROCESS = subprocess.Popen([path], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return jsonify({"status": "started", "pid": _ONIONHOP_PROCESS.pid, "message": f"OnionHop lancé (PID {_ONIONHOP_PROCESS.pid})."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/onionhop/stop", methods=["POST"])
+def onionhop_stop():
+    global _ONIONHOP_PROCESS
+    # Tuer aussi les processus OnionHop restants
+    try:
+        subprocess.run(["pkill", "-f", "OnionHop"], capture_output=True)
+    except Exception:
+        pass
+    if _ONIONHOP_PROCESS:
+        try:
+            _ONIONHOP_PROCESS.terminate()
+            _ONIONHOP_PROCESS.wait(timeout=3)
+        except Exception:
+            try:
+                _ONIONHOP_PROCESS.kill()
+            except Exception:
+                pass
+        _ONIONHOP_PROCESS = None
+    return jsonify({"status": "stopped", "message": "OnionHop arrêté."})
+
+
+@app.route("/api/onionhop/status", methods=["GET"])
+def onionhop_status():
+    global _ONIONHOP_PROCESS
+    running = _ONIONHOP_PROCESS is not None and _ONIONHOP_PROCESS.poll() is None
+    # Récupérer l'IP publique actuelle (via Tor si actif, sinon IP réelle)
+    tor_ip = None
+    if running:
+        try:
+            import socks
+            s = socks.socksocket()
+            s.set_proxy(socks.SOCKS5, "127.0.0.1", 9050)
+            s.settimeout(5)
+            s.connect(("api.ipify.org", 80))
+            s.send(b"GET /?format=json HTTP/1.0\r\nHost: api.ipify.org\r\n\r\n")
+            resp = s.recv(4096).decode("utf-8", errors="ignore")
+            s.close()
+            import re
+            m = re.search(r'"ip"\s*:\s*"([\d\.]+)"', resp)
+            if m:
+                tor_ip = m.group(1)
+        except Exception:
+            tor_ip = None
+    return jsonify({"running": running, "tor_ip": tor_ip})
+
+
 def open_onionhop_or_default_browser(url="http://127.0.0.1:5000"):
     """
     Lance OnionHop 3.7.8 (si présent) et ouvre toujours Matrix Scanner dans le navigateur par défaut.

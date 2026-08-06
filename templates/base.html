@@ -13,7 +13,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <!-- On inclura script.js ici, mais defer permet le chargement async -->
-  <script src="{{ url_for('static', filename='script.js') }}?v=22" defer></script>
+  <script src="{{ url_for('static', filename='script.js') }}?v=23" defer></script>
 </head>
 <body>
   <canvas id="matrix-bg"></canvas>
@@ -74,6 +74,25 @@
           <button id="btn-stop-global-scan" class="btn" style="margin-top: 10px; width: 100%; background: rgba(255, 0, 0, 0.2); border: 1px solid #ff4444; color: #ff8888; font-weight: bold; padding: 6px 12px; cursor: pointer; border-radius: 4px; font-size: 0.85em;">
             <i class="fa-solid fa-hand"></i> Arrêter le scan
           </button>
+        </div>
+
+        <!-- WIDGET ONIONHOP / TOR -->
+        <div id="onionhop-widget" style="background: rgba(75, 0, 130, 0.25); border: 1px solid rgba(148, 0, 211, 0.5); border-radius: 6px; padding: 10px 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="color: #c39bd3; font-size: 0.82rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">
+              <i class="fa-solid fa-circle-nodes"></i> OnionHop / Tor
+            </span>
+            <span id="onionhop-status-badge" style="font-size: 0.7rem; padding: 2px 7px; border-radius: 10px; background: rgba(255,255,255,0.05); color: #888; border: 1px solid #444;">OFF</span>
+          </div>
+          <div id="onionhop-ip-line" style="font-family: monospace; font-size: 0.75rem; color: #aaa; margin-bottom: 8px; min-height: 16px;">IP Tor : <span id="onionhop-tor-ip" style="color: #c39bd3;">—</span></div>
+          <div style="display: flex; gap: 6px;">
+            <button id="btn-start-onionhop" onclick="startOnionHop()" class="btn btn-small" style="flex:1; background: rgba(148,0,211,0.25); border-color: #9400d3; color: #d8a0f0; font-size: 0.78rem; padding: 5px 8px;">
+              <i class="fa-solid fa-play"></i> Démarrer
+            </button>
+            <button id="btn-stop-onionhop" onclick="stopOnionHop()" class="btn btn-small" style="flex:1; background: rgba(255,0,0,0.1); border-color: #c0392b; color: #ff8888; font-size: 0.78rem; padding: 5px 8px; display:none;">
+              <i class="fa-solid fa-stop"></i> Arrêter
+            </button>
+          </div>
         </div>
 
         <!-- WIDGET DE SURVEILLANCE SYSTÈME (CPU, RAM, INTERNET) (EN SECOND) -->
