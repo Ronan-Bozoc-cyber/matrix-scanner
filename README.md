@@ -52,9 +52,9 @@ M-SCAN n'est pas une boîte noire : il est spécialement conçu pour transmettre
 
 ---
 
-## 🛠️ Outils de sécurité et modules système (18 outils au total)
+## 🛠️ Outils de sécurité et modules système (24 outils au total)
 
-M-SCAN s'appuie sur une suite complète de **18 outils de référence** issus de Kali Linux et de modules Python spécialisés :
+M-SCAN s'appuie sur une suite complète de **24 outils de référence** issus de Kali Linux et de modules Python spécialisés :
 
 1. **`nmap`** : scanner de ports, résolution de services et détection d'empreinte système.
 2. **`searchsploit` (exploitdb)** : recherche d'exploits et de vulnérabilités réelles (CVE) dans la base locale Exploit-DB.
@@ -62,21 +62,27 @@ M-SCAN s'appuie sur une suite complète de **18 outils de référence** issus de
 4. **`whatweb`** : analyseur d'empreintes technologiques web (CMS, serveurs web, frameworks).
 5. **`wafw00f`** : outil de détection des pare-feux applicatifs web (WAF).
 6. **`wpscan`** : scanner spécialisé dans la détection des failles sur le CMS WordPress.
-7. **`gowitness`** : outil automatisé de capture d'écran d'applications web.
-8. **`netdiscover`** : outil de découverte d'hôtes et d'exploration ARP active ou passive sur le réseau local.
-9. **`nbtscan`** : résolution de noms d'hôtes et énumération des groupes de travail NetBIOS.
-10. **`nikto`** : scanner de vulnérabilités web et recherche de fichiers dangereux.
-11. **`enum4linux`** : énumération complète des informations Windows, utilisateurs et partages Samba/SMB.
-12. **`smbmap`** : analyse fine des autorisations et des droits d'accès aux partages réseau SMB.
-13. **`whois`** : consultation des informations de registre des noms de domaine (WHOIS).
-14. **`sublist3r`** : énumération passive OSINT de sous-domaines web.
-15. **`subfinder`** : découverte rapide multi-sources de sous-domaines web.
-16. **`reportlab`** : moteur de génération et d'exportation de rapports PDF professionnels.
-17. **`python-docx`** : moteur de génération et d'exportation de rapports Word (.docx).
-18. **`psutil`** : télémétrie système, statistiques de processeur (CPU) et mémoire (RAM) en temps réel.
+7. **`joomscan`** : scanner de vulnérabilités et composants pour le CMS Joomla.
+8. **`droopescan`** : scanner de vulnérabilités et plugins pour les CMS Drupal et SilverStripe.
+9. **`moodlescan`** : scanner spécialisé d'audit de sécurité des plateformes Moodle.
+10. **`gobuster`** : fuzzer d'arborescence réseau, de répertoires web et de sous-domaines.
+11. **`nikto`** : scanner de vulnérabilités web et recherche de fichiers dangereux sur serveur web.
+12. **`sqlmap`** : outil automatique de détection et d'exploitation d'injections SQL.
+13. **`nosqlmap`** : audit d'injection et de sécurité pour bases de données NoSQL.
+14. **`gowitness`** : outil automatisé de capture d'écran d'applications web.
+15. **`netdiscover`** : outil de découverte d'hôtes et d'exploration ARP active ou passive sur le réseau local.
+16. **`nbtscan`** : résolution de noms d'hôtes et énumération des groupes de travail NetBIOS.
+17. **`enum4linux`** : énumération complète des informations Windows, utilisateurs et partages Samba/SMB.
+18. **`smbmap`** : analyse fine des autorisations et des droits d'accès aux partages réseau SMB.
+19. **`whois`** : consultation des informations de registre des noms de domaine (WHOIS).
+20. **`sublist3r`** : énumération passive OSINT de sous-domaines web.
+21. **`subfinder`** : découverte rapide multi-sources de sous-domaines web.
+22. **`reportlab`** : moteur de génération et d'exportation de rapports PDF professionnels.
+23. **`python-docx`** : moteur de génération et d'exportation de rapports Word (.docx).
+24. **`psutil`** : télémétrie système, statistiques de processeur (CPU) et mémoire (RAM) en temps réel.
 
 ### 🔍 Vérification automatique et installation en un clic
-Au chargement de l'application, le backend exécute automatiquement une vérification de la présence de chacun de ces 18 outils et modules sur le système hôte.
+Au chargement de l'application, le backend exécute automatiquement une vérification de la présence de chacun de ces **24 outils et modules** sur le système hôte.
 
 Si un ou plusieurs outils sont absents :
 * L'interface affiche automatiquement un bandeau d'alerte listant les paquets manquants.
@@ -92,7 +98,7 @@ Le logiciel distingue clairement deux workflows d'analyse selon la nature de la 
 
 ### 🌐 1. Workflow du scan web et à distance (`/web`)
 
-Ce workflow est dédié à l'audit de cibles distantes (noms de domaine, URL web, adresses IP publiques ou distantes) :
+Ce workflow est dédié à l'audit de cibles distantes avec un **Aiguillage Conditionnel Intelligent (*Smart Branching*)** :
 
 ```
 [Étape 1 : WHOIS] 
@@ -100,7 +106,10 @@ Ce workflow est dédié à l'audit de cibles distantes (noms de domaine, URL web
           └─► [Étape 3 : Détection WAF (Wafw00f)] 
                  └─► [Étape 4 : Capture d'écran Gowitness] 
                         └─► [Étape 5 : Empreinte CMS WhatWeb] 
-                               └─► [Étape 6 : Scan Nmap, Nuclei & CVE Searchsploit]
+                               └─► [Étape 6 : Aiguillage Conditionnel GUI ("Smart Branching")]
+                                      ├─ CMS détecté ➔ WPScan / JoomScan / Droopescan / Moodlescan
+                                      ├─ Serveur Web ➔ Nikto & Gobuster (Fuzzing d'arborescence)
+                                      └─ Base de données ➔ SQLMap & NoSQLMap
 ```
 
 | Étape | Action & Outils | Rôle & Pourquoi ces outils sont utilisés ? |
@@ -109,8 +118,9 @@ Ce workflow est dédié à l'audit de cibles distantes (noms de domaine, URL web
 | **Étape 2** | 🔍 **`Subfinder` + `Sublist3r` + `DNS Probe` (`dnsprobe`)** | **Énumération hybride des sous-domaines (OSINT & DNS)** :<br>• `Subfinder` : Interroge les certificats TLS (*CT Logs*), SecurityTrails et Chaos.<br>• `Sublist3r` : Recherche passive sur les moteurs de recherche.<br>• **`DNS Probe` (`dnsprobe` / sondage DNS direct)** : Réalise des résolutions DNS multithreadées sur les préfixes fréquents (`api.`, `dev.`, `admin.`, `vpn.`, `cloud.`) avec **filtre anti-Wildcard DNS** pour éliminer les faux positifs (`*.domaine.com`). |
 | **Étape 3** | 🔴 **`Wafw00f`** | **Détection du Pare-Feu Applicatif (WAF)** : Identifie si un WAF (*Cloudflare, ModSecurity, AWS WAF, Imperva*) filtre le trafic.<br>👉 **Placé avant les scans actifs** pour savoir si les requêtes futures risquent d'être bloquées ou altérées. |
 | **Étape 4** | 📷 **`Gowitness`** | **Capture d'écran Web Headless** : Rendu visuel automatique de la page d'accueil de la cible. |
-| **Étape 5** | 🧩 **`WhatWeb`** | **Empreinte technologique & CMS** : Détection de la pile logicielle (WordPress, Joomla, Nginx, Apache, PHP, en-têtes HTTP de sécurité). |
-| **Étape 6** | ⚡ **`Nmap` + `Nuclei` + `Searchsploit`** | **Cartographie réseau & Audit CVE** : Balayage des ports/services (`nmap`), exécution de templates de vulnérabilités (`nuclei`) et corrélation des versions logicielles avec la base d'exploits Exploit-DB (`searchsploit`). |
+| **Étape 5** | 🧩 **`WhatWeb`** | **Empreinte technologique & CMS** : Détection de la pile logicielle (WordPress, Joomla, Drupal, Moodle, Nginx, Apache, PHP, en-têtes HTTP de sécurité). |
+| **Étape 6** | 🔀 **Aiguillage Conditionnel GUI (*Smart Branching*)** | **Déclenchement Dynamique & Graphique des Scanners** :<br>• **CMS spécifique** : Si WordPress ➔ `WPScan` ; Si Joomla ➔ `JoomScan` ; Si Drupal ➔ `Droopescan` ; Si Moodle ➔ `Moodlescan`.<br>• **Arborescence & Fuzzing** : `Gobuster` explore l'arborescence sous forme d'arbre de fichiers interactif.<br>• **Auditeur Serveur Web** : `Nikto` identifie les erreurs de configuration et fichiers cachés.<br>• **Bases de Données** : Si un port BDD (MySQL 3306, Mongo 27017) ou un paramètre URL est exposé ➔ `SQLMap` / `NoSQLMap`. |
+| **Étape 7** | ⚡ **`Nmap` + `Nuclei` + `Searchsploit`** | **Cartographie réseau & Audit CVE** : Balayage des ports/services (`nmap`), exécution de templates de vulnérabilités (`nuclei`) et corrélation des versions logicielles avec la base d'exploits Exploit-DB (`searchsploit`). |
 | **Livrables** | 📄 **`ReportLab` (PDF) + `Python-Docx` (Word)** | **Rapports d'audit & SQLite** : Calcul du score de risque global (0 à 100) et génération immédiate des rapports téléchargeables. |
 
 ---

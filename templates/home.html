@@ -8,21 +8,23 @@
 
         <div class="diagram-container">
           <div class="workflow-box web-workflow">
-            <h4><i class="fa-solid fa-globe"></i> Workflow : Scanner Distant (Web & Application)</h4>
+            <h4><i class="fa-solid fa-globe"></i> Workflow : Scanner Distant (Aiguillage Intelligent "Smart Branching")</h4>
             <div class="diagram-path" style="flex-wrap: wrap; gap: 8px;">
               <div class="node"><i class="fa-solid fa-crosshairs"></i> Cible Web</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-address-card"></i> Domaine & Sous-domaines (whois, Subfinder & Sublist3r + DNS Probe)</div>
+              <div class="node"><i class="fa-solid fa-address-card"></i> Domaine (WHOIS, Subfinder, Sublist3r & DNS Probe)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node"><i class="fa-solid fa-shield-halved"></i> Détection WAF (Wafw00f)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-code"></i> Empreinte (WhatWeb)</div>
-              <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node"><i class="fa-solid fa-camera"></i> Capture (Gowitness)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node"><i class="fa-solid fa-bug"></i> Failles Web (Nikto, Nuclei, WPScan)</div>
+              <div class="node"><i class="fa-solid fa-code"></i> Empreinte (WhatWeb)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node" style="border-color: #1abc9c; background: rgba(22, 160, 133, 0.2);"><i class="fa-solid fa-sitemap"></i> Aiguillage CMS / Fuzzing / BDD</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node"><i class="fa-solid fa-bug"></i> Audit Failles (Nmap, Nuclei, Nikto, WPScan, Joomscan, Droopescan, SQLMap, Gobuster)</div>
             </div>
-            <p class="desc">Workflow externe automatisé : Interroge le registre WHOIS et énumère les sous-domaines via une triple hybridation (Subfinder, Sublist3r & sondage DNS direct), analyse le pare-feu applicatif (WAF), capture l'aperçu visuel (Gowitness), identifie les technologies (WhatWeb) et sonde les vulnérabilités (Nikto, Nuclei, WPScan).</p>
+            <p class="desc">Workflow externe automatisé avec <strong>Aiguillage Intelligent (24 Outils Kali)</strong> : Interroge le WHOIS et énumère les sous-domaines (Subfinder/Sublist3r/DNS Probe), détecte le WAF (Wafw00f), capture le site (Gowitness), analyse l'empreinte (WhatWeb) puis déclenche dynamiquement les scanners dédiés : <strong>CMS</strong> (WPScan, Joomscan, Droopescan, Moodlescan), <strong>Fuzzing d'arborescence</strong> (Gobuster), <strong>Serveur Web</strong> (Nikto) et <strong>Bases de données</strong> (SQLMap/NoSQLMap).</p>
           </div>
 
           <div class="workflow-box local-workflow">

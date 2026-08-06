@@ -213,6 +213,36 @@ REQUIRED_TOOLS = {
         "pip_package": "reportlab",
         "description": "Génération et exportation de rapports PDF",
     },
+    "joomscan": {
+        "check_cmd": ["joomscan", "--help"],
+        "apt_package": "joomscan",
+        "description": "Scanner spécialisé de vulnérabilités pour le CMS Joomla",
+    },
+    "droopescan": {
+        "check_cmd": ["droopescan", "--help"],
+        "apt_package": "droopescan",
+        "description": "Scanner de vulnérabilités pour CMS Drupal et SilverStripe",
+    },
+    "moodlescan": {
+        "check_cmd": ["moodlescan", "-h"],
+        "apt_package": "moodlescan",
+        "description": "Scanner spécialisé dans l'audit de sécurité des plateformes Moodle",
+    },
+    "sqlmap": {
+        "check_cmd": ["sqlmap", "--version"],
+        "apt_package": "sqlmap",
+        "description": "Outil automatique de détection et d'exploitation d'injections SQL",
+    },
+    "nosqlmap": {
+        "check_cmd": ["nosqlmap", "-h"],
+        "apt_package": "nosqlmap",
+        "description": "Outil d'audit d'injection et de sécurité pour bases de données NoSQL",
+    },
+    "gobuster": {
+        "check_cmd": ["gobuster", "version"],
+        "apt_package": "gobuster",
+        "description": "Fuzzer d'arborescence réseau, de répertoires web et de sous-domaines",
+    },
 }
 
 

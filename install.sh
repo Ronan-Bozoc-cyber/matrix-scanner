@@ -107,25 +107,48 @@ python3 -m pip install -r requirements.txt -q
 log "Dépendances Python installées."
 
 # -------------------------------------------------------------------------------
-# 4. Installation des outils système (nmap, exploitdb) si absents
+# 4. Installation des outils système si absents
 # -------------------------------------------------------------------------------
 MISSING_PACKAGES=()
 
-if ! command -v nmap &>/dev/null; then
-    MISSING_PACKAGES+=("nmap")
-fi
-if ! command -v searchsploit &>/dev/null; then
-    MISSING_PACKAGES+=("exploitdb")
-fi
+declare -A TOOL_PKGS=(
+    ["nmap"]="nmap"
+    ["searchsploit"]="exploitdb"
+    ["nuclei"]="nuclei"
+    ["whatweb"]="whatweb"
+    ["wafw00f"]="wafw00f"
+    ["wpscan"]="wpscan"
+    ["gowitness"]="gowitness"
+    ["netdiscover"]="netdiscover"
+    ["nbtscan"]="nbtscan"
+    ["nikto"]="nikto"
+    ["enum4linux"]="enum4linux"
+    ["smbmap"]="smbmap"
+    ["whois"]="whois"
+    ["sublist3r"]="sublist3r"
+    ["subfinder"]="subfinder"
+    ["joomscan"]="joomscan"
+    ["droopescan"]="droopescan"
+    ["moodlescan"]="moodlescan"
+    ["sqlmap"]="sqlmap"
+    ["nosqlmap"]="nosqlmap"
+    ["gobuster"]="gobuster"
+)
+
+for cmd in "${!TOOL_PKGS[@]}"; do
+    if ! command -v "$cmd" &>/dev/null; then
+        MISSING_PACKAGES+=("${TOOL_PKGS[$cmd]}")
+    fi
+done
 
 if [ ${#MISSING_PACKAGES[@]} -gt 0 ]; then
     warn "Paquets système manquants : ${MISSING_PACKAGES[*]}"
     warn "Installation via apt-get (authentification root requise)..."
     sudo apt-get update -qq
-    sudo apt-get install -y "${MISSING_PACKAGES[@]}"
-    log "Paquets système installés : ${MISSING_PACKAGES[*]}"
+    sudo apt-get install -y "${MISSING_PACKAGES[@]}" || warn "Certains paquets facultatifs n'ont pas pu être installés via apt."
+    log "Vérification/Installation des paquets terminée."
 else
-    log "nmap et searchsploit sont déjà installés."
+    log "Tous les outils système requis sont déjà installés."
 fi
 
 # S'assurer que policykit-1 est présent (nécessaire pour le bouton "Installer les

@@ -119,6 +119,51 @@
           <div id="cms-results-content" style="margin-top: 10px;"></div>
         </div>
 
+        <!-- CARTE DE DÉCLENCHEMENT CONDITIONNEL CMS (WPScan / JoomScan / Droopescan / Moodlescan) -->
+        <div id="cms-audit-card" class="card hidden" style="margin-bottom: 20px; border-color: #16a085;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="card-title" style="color: #1abc9c; margin: 0;"><i class="fa-solid fa-cube"></i> Audit Spécifique CMS (<span id="cms-audit-title">CMS Détecté</span>)</h3>
+            <button id="btn-add-cms-audit-to-report" class="btn btn-small" style="background: rgba(22, 160, 133, 0.15); border-color: #16a085; color: #1abc9c; font-weight: bold; font-size: 0.75rem;">
+              <i class="fa-solid fa-plus"></i> Ajouter l'audit CMS au rapport
+            </button>
+          </div>
+          <div id="cms-audit-progress" class="scan-progress hidden">
+            <div class="loader"></div>
+            <span id="cms-audit-progress-text">Scan approfondi du CMS en cours...</span>
+          </div>
+          <div id="cms-audit-results-content" style="margin-top: 10px;"></div>
+        </div>
+
+        <!-- CARTE FUZZING ARBORESCENCE & REPERTOIRES (Gobuster) -->
+        <div id="gobuster-card" class="card hidden" style="margin-bottom: 20px; border-color: #9b59b6;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="card-title" style="color: #9b59b6; margin: 0;"><i class="fa-solid fa-folder-tree"></i> Exploration & Fuzzing d'Arborescence Web (Gobuster)</h3>
+            <button id="btn-add-gobuster-to-report" class="btn btn-small" style="background: rgba(155, 89, 182, 0.15); border-color: #9b59b6; color: #d6a2e8; font-weight: bold; font-size: 0.75rem;">
+              <i class="fa-solid fa-plus"></i> Ajouter l'arborescence au rapport
+            </button>
+          </div>
+          <div id="gobuster-progress" class="scan-progress hidden">
+            <div class="loader"></div>
+            <span id="gobuster-progress-text">Recherche de répertoires et fichiers cachés avec Gobuster...</span>
+          </div>
+          <div id="gobuster-results-content" style="margin-top: 10px;"></div>
+        </div>
+
+        <!-- CARTE AUDIT BD & INJECTIONS (SQLMap / NoSQLMap) -->
+        <div id="db-audit-card" class="card hidden" style="margin-bottom: 20px; border-color: #e67e22;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="card-title" style="color: #e67e22; margin: 0;"><i class="fa-solid fa-database"></i> Audit de Sécurité Base de Données (SQLMap / NoSQLMap)</h3>
+            <button id="btn-add-db-audit-to-report" class="btn btn-small" style="background: rgba(230, 126, 34, 0.15); border-color: #e67e22; color: #f39c12; font-weight: bold; font-size: 0.75rem;">
+              <i class="fa-solid fa-plus"></i> Ajouter l'audit BDD au rapport
+            </button>
+          </div>
+          <div id="db-audit-progress" class="scan-progress hidden">
+            <div class="loader"></div>
+            <span id="db-audit-progress-text">Analyse d'injection et d'exposition BDD en cours...</span>
+          </div>
+          <div id="db-audit-results-content" style="margin-top: 10px;"></div>
+        </div>
+
 <div class="card hidden" id="results-card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
       <h2 style="margin: 0;">03_ // Résultats du scan</h2>

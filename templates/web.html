@@ -7,19 +7,21 @@
         </div>
         
         <div class="workflow-box web-workflow" style="margin-bottom: 20px;">
-          <h4><i class="fa-solid fa-globe"></i> Rappel du Workflow Web</h4>
+          <h4><i class="fa-solid fa-globe"></i> Rappel du Workflow Web (Aiguillage Intelligent "Smart Branching")</h4>
           <div class="diagram-path" style="flex-wrap: wrap; gap: 8px;">
             <div class="node"><i class="fa-solid fa-crosshairs"></i> Cible Web</div>
             <i class="fa-solid fa-arrow-right arrow"></i>
-            <div class="node"><i class="fa-solid fa-address-card"></i> Domaine & Sous-domaines (whois, Subfinder & Sublist3r + DNS Probe)</div>
+            <div class="node"><i class="fa-solid fa-address-card"></i> WHOIS & Sous-domaines</div>
             <i class="fa-solid fa-arrow-right arrow"></i>
-            <div class="node"><i class="fa-solid fa-shield-halved"></i> Détection WAF (Wafw00f)</div>
-            <i class="fa-solid fa-arrow-right arrow"></i>
-            <div class="node"><i class="fa-solid fa-code"></i> Empreinte (WhatWeb)</div>
+            <div class="node"><i class="fa-solid fa-shield-halved"></i> WAF (Wafw00f)</div>
             <i class="fa-solid fa-arrow-right arrow"></i>
             <div class="node"><i class="fa-solid fa-camera"></i> Capture (Gowitness)</div>
             <i class="fa-solid fa-arrow-right arrow"></i>
-            <div class="node"><i class="fa-solid fa-bug"></i> Failles (Nuclei & WPScan)</div>
+            <div class="node"><i class="fa-solid fa-code"></i> Empreinte (WhatWeb)</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node" style="border-color: #1abc9c; background: rgba(22, 160, 133, 0.2);"><i class="fa-solid fa-sitemap"></i> Smart Branching CMS/Fuzzing/BDD</div>
+            <i class="fa-solid fa-arrow-right arrow"></i>
+            <div class="node"><i class="fa-solid fa-bug"></i> Audit (Nikto, Gobuster, SQLMap, WP/Joom/DroopeScan)</div>
           </div>
         </div>
 
