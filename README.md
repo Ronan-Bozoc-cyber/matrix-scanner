@@ -1,31 +1,10 @@
-# 🟢 M-SCAN : plateforme d'audit réseau, de sécurité web, de CVE et de génération de rapports
+# 🟢 M-SCAN — Plateforme d'audit réseau, de sécurité web, de CVE et de génération de rapports
 
 > **Concepteur & Développeur** : **Ronan BOZOC**
 
 **M-SCAN** est un tableau de bord web interactif, visuel et professionnel conçu par **Ronan BOZOC** pour les élèves ingénieurs, les professionnels de la cybersécurité et les experts en test d'intrusion.
 
-Il permet de réaliser des audits de reconnaissance réseau avec `nmap`, d'analyser des applications web (en-têtes de sécurité, pare-feu applicatif WAF, empreintes technologiques), d'explorer des réseaux locaux (LAN, partages SMB, NetBIOS), de corréler des vulnérabilités réelles (CVE) via Exploit-DB, d'exporter des **rapports d'audit professionnels aux formats PDF et Word (.docx)**, ainsi que de **protéger son IP publique via le réseau Tor avec OnionHop 3.7.8**.
-
----
-
-## 🚀 Nouvelles fonctionnalités clés
-
-### 📄 1. Génération & Exportation de rapports d'audit (PDF & Word .docx)
-* **Exportation PDF (`reportlab`)** : génère automatiquement un document d'audit PDF complet avec en-tête professionnel, résumé exécutif, matrice d'évaluation des risques, liste des ports/services découverts et détails des vulnérabilités CVE.
-* **Exportation Word (.docx) (`python-docx`)** : produit un document `.docx` entièrement modifiable, prêt à être intégré dans un livrable de test d'intrusion ou un rapport de TP académique.
-* **Accès instantané** : téléchargeable directement en 1-clic depuis la page des résultats de scan ou depuis l'historique des analyses.
-
-### 🧅 2. Protection de l'IP publique & Intégration d'OnionHop (Réseau Tor)
-* **Protection de l'IP d'origine** : lors du lancement avec `./run.sh`, l'utilisateur peut choisir de démarrer **OnionHop 3.7.8** pour faire transiter les requêtes et masquer son IP publique réelle derrière le réseau Tor.
-* **Installation automatisée depuis GitHub** : si OnionHop n'est pas détecté sur le système Linux, `./run.sh` propose de le télécharger et d'installer l'AppImage v3.7.8 depuis le dépôt officiel GitHub (`center2055/OnionHop`).
-* **Moniteur d'IP publique en temps réel** : la barre latérale du dashboard interroge dynamiquement l'IP publique active. Lorsque OnionHop est en cours d'exécution, l'adresse IP du nœud de sortie Tor est immédiatement détectée et affichée avec un **bouton de copie rapide en 1 clic**.
-
-### 💻 3. Interface de lancement ASCII Art & Cyberpunk (`M-SCAN`)
-* **Terminal Cyberpunk Vert Matrix** : le script `./run.sh` arbore un design ASCII Art en vert phosphore Matrix (`#00FF00`), proposant un menu interactif avec minuteur de démarrage automatique (15s par défaut).
-* **Gestion dynamique des ports réseau** : le serveur vérifie la disponibilité des ports. Si le port par défaut `5000` est déjà utilisé sur la machine, l'application sélectionne automatiquement le premier port libre supérieur ou égal à `10001`.
-
-### 📊 4. Télémétrie et moniteur système en direct
-* **Barre latérale interactive** : affichage de l'horloge système en temps réel, de l'utilisation du processeur (% CPU), de la mémoire (% RAM) et du débit réseau avec graphique dynamique Canvas (Sparkline).
+Il permet de réaliser des **pentests web externes automatisés en 7 étapes** (WHOIS, sous-domaines, WAF, capture, empreinte CMS, Nmap, puis audit complet Nikto / Gobuster / SQLMap / CMS-Scan), d'explorer des **réseaux locaux** (LAN, partages SMB, NetBIOS), de corréler des vulnérabilités réelles (CVE) via Exploit-DB, d'exporter des **rapports d'audit professionnels aux formats PDF et Word (.docx)**, et de **protéger son IP publique via le réseau Tor avec OnionHop 3.7.8**.
 
 ---
 
@@ -33,198 +12,244 @@ Il permet de réaliser des audits de reconnaissance réseau avec `nmap`, d'analy
 
 **Règle d'or** : L'utilisation de ces outils doit se faire exclusivement sur des systèmes dont vous êtes propriétaire ou pour lesquels vous possédez une autorisation écrite explicite.
 
-* 🇫🇷 **Cadre légal en France** : L'accès ou le maintien frauduleux dans un système de traitement automatisé de données est puni par l'article 323-1 et suivants du Code pénal.
-* 🇨🇲 **Cadre légal au Cameroun** : Les infractions liées à la cybercriminalité sont encadrées par la loi n° 2010/012 du 21 décembre 2010 relative à la cybersécurité et à la cybercriminalité. L'article 65 de cette loi sanctionne l'accès non autorisé aux données par des moyens techniques, l'interception illégale, ou l'accès illicite portant atteinte à l'intégrité, la confidentialité ou la disponibilité d'un réseau ou d'un système d'information. Ces actes sont punis d'un emprisonnement allant de cinq (05) à dix (10) ans et/ou d'une amende allant de 5 000 000 à 10 000 000 de francs CFA.
+- 🇫🇷 **Cadre légal en France** : L'accès ou le maintien frauduleux dans un système de traitement automatisé de données est puni par l'article 323-1 et suivants du Code pénal.
+- 🇨🇲 **Cadre légal au Cameroun** : Les infractions liées à la cybercriminalité sont encadrées par la loi n° 2010/012 du 21 décembre 2010 (art. 65) — accès non autorisé, interception illégale, atteinte à l'intégrité d'un réseau — punissables de 5 à 10 ans d'emprisonnement et/ou de 5 000 000 à 10 000 000 de francs CFA d'amende.
 
 **Usage recommandé** : Environnements de TP isolés, machines virtuelles de laboratoire (*Metasploitable, VulnHub, TryHackMe*), ou missions de test d'intrusion dûment autorisées.
 
 ---
 
-## 🎓 Objectifs pédagogiques
+## 🚀 Fonctionnalités clés
 
-M-SCAN n'est pas une boîte noire : il est spécialement conçu pour transmettre les concepts fondamentaux de la sécurité offensive et défensive :
+### 📄 1. Génération & Exportation de rapports d'audit (PDF & Word .docx)
+- **PDF (`reportlab`)** : rapport complet avec en-tête professionnel, résumé exécutif, matrice de risque, ports/services et CVE.
+- **Word (.docx) (`python-docx`)** : document `.docx` entièrement modifiable, prêt pour un livrable de pentest.
+- **Accès 1-clic** : téléchargeable depuis les résultats ou l'historique.
 
-1. **Faire le lien UI vers CLI** : chaque option sélectionnée dans l'interface reconstruit et affiche en temps réel la commande exacte qui est exécutée (`Command Preview`).
-2. **Comprendre la mécanique des paquets réseau** : différencier un scan TCP SYN (`-sS`) discret d'un scan TCP Connect (`-sT`) ou d'un scan furtif FIN/NULL/Xmas, et comprendre l'exigence de privilèges (*raw sockets*).
-3. **Évaluer la sécurité d'une application web à distance** : détecter la présence d'un pare-feu applicatif (WAF) et vérifier l'absence d'en-têtes HTTP de protection (*HSTS, CSP, X-Frame-Options, etc.*).
-4. **Explorer un réseau local (LAN)** : réaliser la découverte d'hôtes par ARP, l'énumération NetBIOS et l'audit des partages SMB.
-5. **Pratiquer la gestion des vulnérabilités & rapports** : associer chaque service et version logicielle détectés (`-sV`) à des failles réelles répertoriées dans Exploit-DB et générer un rapport PDF / Word récapitulatif.
+### 🧅 2. Protection de l'IP publique & Intégration OnionHop (Réseau Tor)
+- **Masquage d'IP** : au lancement via `./run.sh`, OnionHop 3.7.8 fait transiter les requêtes via Tor.
+- **Installation automatique** : si absent, `./run.sh` télécharge l'AppImage depuis GitHub (`center2055/OnionHop`).
+- **Moniteur d'IP en temps réel** : affiche l'IP du nœud de sortie Tor dans la barre latérale avec copie en 1 clic.
 
----
+### 💻 3. Interface de lancement ASCII Art & Cyberpunk
+- **Terminal Matrix vert** : menu interactif avec minuteur de démarrage automatique (15 s).
+- **Ports dynamiques** : sélection automatique d'un port libre ≥ 10 001 si le port 5000 est occupé.
 
-## 🛠️ Outils de sécurité et modules système (24 outils au total)
-
-M-SCAN s'appuie sur une suite complète de **24 outils de référence** issus de Kali Linux et de modules Python spécialisés :
-
-1. **`nmap`** : scanner de ports, résolution de services et détection d'empreinte système.
-2. **`searchsploit` (exploitdb)** : recherche d'exploits et de vulnérabilités réelles (CVE) dans la base locale Exploit-DB.
-3. **`nuclei`** : scanner de vulnérabilités basé sur des modèles de détection réseau et web.
-4. **`whatweb`** : analyseur d'empreintes technologiques web (CMS, serveurs web, frameworks).
-5. **`wafw00f`** : outil de détection des pare-feux applicatifs web (WAF).
-6. **`wpscan`** : scanner spécialisé dans la détection des failles sur le CMS WordPress.
-7. **`joomscan`** : scanner de vulnérabilités et composants pour le CMS Joomla.
-8. **`droopescan`** : scanner de vulnérabilités et plugins pour les CMS Drupal et SilverStripe.
-9. **`moodlescan`** : scanner spécialisé d'audit de sécurité des plateformes Moodle.
-10. **`gobuster`** : fuzzer d'arborescence réseau, de répertoires web et de sous-domaines.
-11. **`nikto`** : scanner de vulnérabilités web et recherche de fichiers dangereux sur serveur web.
-12. **`sqlmap`** : outil automatique de détection et d'exploitation d'injections SQL.
-13. **`nosqlmap`** : audit d'injection et de sécurité pour bases de données NoSQL.
-14. **`gowitness`** : outil automatisé de capture d'écran d'applications web.
-15. **`netdiscover`** : outil de découverte d'hôtes et d'exploration ARP active ou passive sur le réseau local.
-16. **`nbtscan`** : résolution de noms d'hôtes et énumération des groupes de travail NetBIOS.
-17. **`enum4linux`** : énumération complète des informations Windows, utilisateurs et partages Samba/SMB.
-18. **`smbmap`** : analyse fine des autorisations et des droits d'accès aux partages réseau SMB.
-19. **`whois`** : consultation des informations de registre des noms de domaine (WHOIS).
-20. **`sublist3r`** : énumération passive OSINT de sous-domaines web.
-21. **`subfinder`** : découverte rapide multi-sources de sous-domaines web.
-22. **`reportlab`** : moteur de génération et d'exportation de rapports PDF professionnels.
-23. **`python-docx`** : moteur de génération et d'exportation de rapports Word (.docx).
-24. **`psutil`** : télémétrie système, statistiques de processeur (CPU) et mémoire (RAM) en temps réel.
-
-### 🔍 Vérification automatique et installation en un clic
-Au chargement de l'application, le backend exécute automatiquement une vérification de la présence de chacun de ces **24 outils et modules** sur le système hôte.
-
-Si un ou plusieurs outils sont absents :
-* L'interface affiche automatiquement un bandeau d'alerte listant les paquets manquants.
-* Un bouton d'installation **"Installer les outils manquants"** est proposé à l'utilisateur.
-* En cliquant sur ce bouton, l'application fait appel à `pkexec` (Polkit) qui affiche la boîte de dialogue d'authentification graphique native du système Linux.
-* L'utilisateur saisit son mot de passe administrateur et le système installe automatiquement les outils requis via `apt-get` / `pip`, sans que le serveur Flask n'ait besoin d'être lancé en root.
+### 📊 4. Télémétrie système en direct
+- Affichage horloge, % CPU, % RAM et débit réseau avec graphique Sparkline Canvas.
 
 ---
 
-## ⚡ Fonctionnalités et workflows détaillés
+## 🛠️ 24 outils de sécurité — par catégorie
 
-Le logiciel distingue clairement deux workflows d'analyse selon la nature de la cible :
+M-SCAN intègre **24 outils et modules** vérifiés automatiquement au démarrage, classés par rubrique thématique :
 
-### 🌐 1. Workflow du scan web et à distance (`/web`)
+### 🔍 Reconnaissance & OSINT
+| # | Outil | Rôle |
+|---|-------|------|
+| 1 | `searchsploit` (exploitdb) | Recherche d'exploits CVE dans la base locale Exploit-DB |
+| 2 | `subfinder` | Découverte rapide multi-sources de sous-domaines (CT Logs, SecurityTrails) |
+| 3 | `sublist3r` | Énumération passive OSINT de sous-domaines via moteurs de recherche |
+| 4 | `whois` | Consultation des registres de noms de domaine (WHOIS) |
 
-Ce workflow est dédié à l'audit de cibles distantes avec un **Aiguillage Conditionnel Intelligent (*Smart Branching*)** :
+### 🌐 Scans Réseau & Exploration LAN
+| # | Outil | Rôle |
+|---|-------|------|
+| 5 | `enum4linux` | Énumération complète des utilisateurs, groupes et partages Windows/Samba |
+| 6 | `nbtscan` | Résolution NetBIOS et identification des groupes de travail |
+| 7 | `netdiscover` | Découverte d'hôtes actifs par ARP (couche 2, passe les firewalls ICMP) |
+| 8 | `nmap` | Scanner de ports, services, OS et vulnérabilités réseau |
+| 9 | `smbmap` | Audit des autorisations d'accès aux partages SMB (READ/WRITE/NO ACCESS) |
+
+### 🕵️ Empreinte & Analyse Web
+| # | Outil | Rôle |
+|---|-------|------|
+| 10 | `gowitness` | Capture d'écran automatisée d'applications web (headless) |
+| 11 | `nuclei` | Scanner de vulnérabilités basé sur des templates réseau et web |
+| 12 | `wafw00f` | Détection de pare-feux applicatifs web (WAF) |
+| 13 | `whatweb` | Empreinte technologique web (CMS, serveurs, frameworks, PHP) |
+
+### 🔐 Audit Web & CMS Spécifiques
+| # | Outil | Rôle |
+|---|-------|------|
+| 14 | `droopescan` | Scanner de vulnérabilités pour les CMS Drupal et SilverStripe |
+| 15 | `gobuster` | Fuzzing de répertoires et fichiers cachés (wordlists Kali) |
+| 16 | `joomscan` | Scanner de vulnérabilités pour le CMS Joomla |
+| 17 | `moodlescan` | Audit de sécurité spécialisé des plateformes Moodle |
+| 18 | `nikto` | Scanner de vulnérabilités web, fichiers dangereux et erreurs de config |
+| 19 | `wpscan` | Scanner de failles spécifique WordPress (plugins, thèmes, utilisateurs) |
+
+### 💉 Audit & Injections Bases de Données
+| # | Outil | Rôle |
+|---|-------|------|
+| 20 | `nosqlmap` | Audit d'injection et de sécurité pour bases de données NoSQL |
+| 21 | `sqlmap` | Détection et exploitation automatique des injections SQL |
+
+### 📊 Rendus Visuels, Rapports & Télémétrie
+| # | Outil | Rôle |
+|---|-------|------|
+| 22 | `psutil` | Télémétrie CPU, RAM et réseau en temps réel |
+| 23 | `python-docx` | Génération et exportation de rapports Word (.docx) |
+| 24 | `reportlab` | Génération et exportation de rapports PDF professionnels |
+
+### 🔎 Vérification automatique et installation en un clic
+
+Au chargement, le backend vérifie la présence des **24 outils** sur le système hôte, classe les résultats par rubrique dans le tableau de bord, et propose :
+- Un **bandeau d'alerte** listant les paquets manquants.
+- Un bouton **"Installer les outils manquants"** qui appelle `pkexec` (Polkit) pour installer via `apt-get` / `pip` sans avoir besoin de lancer Flask en root.
+- Pour les outils non disponibles en dépôt (`droopescan`, `moodlescan`, `nosqlmap`), une **installation automatique depuis leur dépôt GitHub officiel**.
+
+---
+
+## ⚡ Workflows détaillés
+
+### 🌐 1. Workflow du scan web distant (`/web`) — 7 étapes
+
+Ce workflow réalise un **pentest externe complet** avec un **Aiguillage Conditionnel Intelligent (*Smart Branching*)** basé sur le CMS détecté :
 
 ```
-[Étape 1 : WHOIS] 
-   └─► [Étape 2 : Sous-domaines Subfinder / Sublist3r / DNS Probe] 
-          └─► [Étape 3 : Détection WAF (Wafw00f)] 
-                 └─► [Étape 4 : Capture d'écran Gowitness] 
-                        └─► [Étape 5 : Empreinte CMS WhatWeb] 
-                               └─► [Étape 6 : Aiguillage Conditionnel GUI ("Smart Branching")]
-                                      ├─ CMS détecté ➔ WPScan / JoomScan / Droopescan / Moodlescan
-                                      ├─ Serveur Web ➔ Nikto & Gobuster (Fuzzing d'arborescence)
-                                      └─ Base de données ➔ SQLMap & NoSQLMap
+[Étape 1 : WHOIS]
+   └─► [Étape 2 : Sous-domaines Subfinder / Sublist3r / DNS Probe]
+          └─► [Étape 3 : Détection WAF (Wafw00f)]
+                 └─► [Étape 4 : Capture d'écran (Gowitness)]
+                        └─► [Étape 5 : Empreinte CMS (WhatWeb)]
+                               └─► [Étape 6 : Cartographie réseau (Nmap)]
+                                      └─► [Étape 7 : Audit de sécurité complet]
+                                             ├─ CMS détecté ➔ WPScan / JoomScan / Droopescan / Moodlescan
+                                             ├─ Nikto       ➔ Vulnérabilités web & fichiers dangereux
+                                             ├─ Gobuster    ➔ Fuzzing de répertoires cachés
+                                             └─ SQLMap      ➔ Détection d'injections SQL
 ```
 
-| Étape | Action & Outils | Rôle & Pourquoi ces outils sont utilisés ? |
+| Étape | Outils | Rôle |
 | :--- | :--- | :--- |
-| **Étape 1** | **`WHOIS`** | **Information de domaine passive** : Extrait le registrar, les serveurs DNS d'autorité (NS), les dates d'enregistrement et la configuration DNSSEC sans toucher directement à l'application web. |
-| **Étape 2** | 🔍 **`Subfinder` + `Sublist3r` + `DNS Probe` (`dnsprobe`)** | **Énumération hybride des sous-domaines (OSINT & DNS)** :<br>• `Subfinder` : Interroge les certificats TLS (*CT Logs*), SecurityTrails et Chaos.<br>• `Sublist3r` : Recherche passive sur les moteurs de recherche.<br>• **`DNS Probe` (`dnsprobe` / sondage DNS direct)** : Réalise des résolutions DNS multithreadées sur les préfixes fréquents (`api.`, `dev.`, `admin.`, `vpn.`, `cloud.`) avec **filtre anti-Wildcard DNS** pour éliminer les faux positifs (`*.domaine.com`). |
-| **Étape 3** | 🔴 **`Wafw00f`** | **Détection du Pare-Feu Applicatif (WAF)** : Identifie si un WAF (*Cloudflare, ModSecurity, AWS WAF, Imperva*) filtre le trafic.<br>👉 **Placé avant les scans actifs** pour savoir si les requêtes futures risquent d'être bloquées ou altérées. |
-| **Étape 4** | 📷 **`Gowitness`** | **Capture d'écran Web Headless** : Rendu visuel automatique de la page d'accueil de la cible. |
-| **Étape 5** | 🧩 **`WhatWeb`** | **Empreinte technologique & CMS** : Détection de la pile logicielle (WordPress, Joomla, Drupal, Moodle, Nginx, Apache, PHP, en-têtes HTTP de sécurité). |
-| **Étape 6** | 🔀 **Aiguillage Conditionnel GUI (*Smart Branching*)** | **Déclenchement Dynamique & Graphique des Scanners** :<br>• **CMS spécifique** : Si WordPress ➔ `WPScan` ; Si Joomla ➔ `JoomScan` ; Si Drupal ➔ `Droopescan` ; Si Moodle ➔ `Moodlescan`.<br>• **Arborescence & Fuzzing** : `Gobuster` explore l'arborescence sous forme d'arbre de fichiers interactif.<br>• **Auditeur Serveur Web** : `Nikto` identifie les erreurs de configuration et fichiers cachés.<br>• **Bases de Données** : Si un port BDD (MySQL 3306, Mongo 27017) ou un paramètre URL est exposé ➔ `SQLMap` / `NoSQLMap`. |
-| **Étape 7** | ⚡ **`Nmap` + `Nuclei` + `Searchsploit`** | **Cartographie réseau & Audit CVE** : Balayage des ports/services (`nmap`), exécution de templates de vulnérabilités (`nuclei`) et corrélation des versions logicielles avec la base d'exploits Exploit-DB (`searchsploit`). |
-| **Livrables** | 📄 **`ReportLab` (PDF) + `Python-Docx` (Word)** | **Rapports d'audit & SQLite** : Calcul du score de risque global (0 à 100) et génération immédiate des rapports téléchargeables. |
+| **1 — WHOIS** | `whois` | Registrar, serveurs DNS (NS), dates, DNSSEC — information passive sans contact avec la cible. |
+| **2 — Sous-domaines** | `Subfinder` + `Sublist3r` + DNS Probe | Énumération hybride : CT Logs, OSINT moteurs de recherche, sondage DNS multithreadé avec **filtre anti-Wildcard DNS** (élimination des faux positifs `*.domaine.com`). |
+| **3 — WAF** | `Wafw00f` | Détection du pare-feu applicatif (Cloudflare, ModSecurity, AWS WAF, Imperva). Placé **avant** les scans actifs pour anticiper les blocages. |
+| **4 — Capture** | `Gowitness` | Rendu visuel headless de la page d'accueil de la cible (JPEG intégré au rapport). |
+| **5 — Empreinte CMS** | `WhatWeb` | Détection de la pile logicielle (WordPress, Joomla, Drupal, Moodle, Nginx, Apache, PHP, en-têtes HTTP). Retourne le **type de CMS** pour le Smart Branching de l'étape 7. |
+| **6 — Nmap** | `Nmap` + `Nuclei` + `Searchsploit` | Cartographie ports/services, exécution de templates vulnérabilités, corrélation Exploit-DB. Fallback automatique `-sT` si `-sS` refusé (sans root). |
+| **7 — Audit complet** | `Nikto` + `Gobuster` + `SQLMap` + CMS Scanner | **Smart Branching** : WPScan si WordPress, JoomScan si Joomla, Droopescan si Drupal, Moodlescan si Moodle. En parallèle : Nikto (vulnérabilités & fichiers cachés) + Gobuster (fuzzing de répertoires). Puis SQLMap (injections SQL). Résultats affichés dans des cartes dédiées avec ajout au rapport en 1 clic. |
+| **Livrables** | `ReportLab` + `python-docx` | Rapport PDF & Word avec score de risque global, export 1 clic. |
 
 ---
 
 ### 🏠 2. Workflow du scan réseau local (`/local`)
 
-Ce workflow est spécialement conçu pour la reconnaissance et l'exploration de machines sur le réseau local (LAN, adresses IP privées, sous-réseaux) :
-
 ```
-[Étape 1 : Plage LAN] 
-   └─► [Étape 2 : Balayage ARP Netdiscover] 
-          └─► [Étape 3 : Résolution NetBIOS & mDNS Nbtscan] 
-                 └─► [Étape 4 : Cartographie Ports & OS Nmap] 
-                        └─► [Étape 5 : Énumération SMB Enum4linux / SMBMap] 
+[Étape 1 : Plage LAN]
+   └─► [Étape 2 : Balayage ARP Netdiscover]
+          └─► [Étape 3 : Résolution NetBIOS & mDNS (Nbtscan)]
+                 └─► [Étape 4 : Cartographie Ports & OS (Nmap)]
+                        └─► [Étape 5 : Énumération SMB (Enum4linux / SMBMap)]
                                └─► [Étape 6 : Corrélation CVE & Rapports]
 ```
 
-| Étape | Action & Outils | Rôle & Pourquoi ces outils sont utilisés ? |
+| Étape | Outils | Rôle |
 | :--- | :--- | :--- |
-| **Étape 1** | 📡 **Détection d'interface LAN** | **Identification de la plage IP** : Détecte l'interface réseau active et calcule la plage du sous-réseau local (ex. `192.168.1.0/24`). |
-| **Étape 2** | 🔍 **`Netdiscover`** | **Découverte d'hôtes par paquets ARP** : Repère toutes les adresses IP et MAC actives du segment LAN.<br>👉 **Pourquoi l'ARP ?** L'ARP fonctionne au niveau de la couche 2 (Liaison). Il permet de détecter les hôtes actifs même si leur pare-feu (ex. Windows Defender) bloque les pings ICMP. |
-| **Étape 3** | 📇 **`nbtscan` + `mDNS`** | **Identification NetBIOS & Noms d'hôtes** : Interroge le service NetBIOS (UDP 137) et mDNS pour identifier le nom de machine, le domaine/groupe de travail (*WORKGROUP*) et le constructeur de la carte réseau (OUI MAC). |
-| **Étape 4** | ⚡ **`Nmap` (`-sS` / `-sT` / `-sV` / `-O`)** | **Cartographie des ports & services locaux** : Balaye les ports ouverts sur la machine sélectionnée, identifie les bannières de service (ex. *Samba 4.15*, *IIS*, *RDP*, *SSH*) et déduit le système d'exploitation. |
-| **Étape 5** | 📁 **`enum4linux` + `smbmap`** | **Énumération approfondie des partages SMB/Samba** *(si ports 139/445 ouverts)* :<br>• `enum4linux` : Extrait les utilisateurs, groupes, politiques de mots de passe et partages NTLM.<br>• `smbmap` : Vérifie visuellement les autorisations d'accès (*READ*, *WRITE*, *NO ACCESS*) sur chaque dossier partagé. |
-| **Étape 6** | 🛡️ **`Searchsploit` + `ReportLab` + `Python-Docx`** | **Corrélation CVE & Génération des livrables** : Croise les versions logicielles avec Exploit-DB, calcule le score de risque LAN et génère les rapports d'audit **PDF** et **Word (.docx)**. |
+| **1 — Interface LAN** | Détection auto | Identifie l'interface réseau active et calcule la plage du sous-réseau (ex. `192.168.1.0/24`). |
+| **2 — ARP** | `Netdiscover` | Découverte d'hôtes par paquets ARP (couche 2 — détecte même si ICMP bloqué par Windows Defender). |
+| **3 — NetBIOS** | `nbtscan` + mDNS | Identifie le nom de machine, groupe de travail et OUI MAC. |
+| **4 — Nmap** | `Nmap` (`-sS`/`-sT`/`-sV`/`-O`) | Ports ouverts, bannières de services, détection OS. |
+| **5 — SMB** | `enum4linux` + `smbmap` | Utilisateurs, groupes, politiques mots de passe, droits READ/WRITE sur partages Samba. |
+| **6 — CVE & Rapports** | `Searchsploit` + `ReportLab` + `python-docx` | Croise les versions avec Exploit-DB, calcule le score de risque, génère PDF & Word. |
 
 ---
 
 ### ⚙️ 3. Workflow du scan manuel avancé
 
-Permet aux utilisateurs de configurer et d'expérimenter finement les options avancées de `nmap` :
+Configuration fine des options `nmap` :
 
-#### Types de scans pris en charge :
-* **TCP SYN Scan (`-sS`)** : furtif ("half-open"), envoie un SYN et attend SYN-ACK sans finaliser la connexion. Nécessite les capacités réseau `cap_net_raw`.
-* **TCP Connect Scan (`-sT`)** : établit une connexion TCP complète via l'API `connect()` du système. Utilisable sans privilèges root.
-* **UDP Scan (`-sU`)** : balaye les services UDP (DNS, DHCP, SNMP...).
-* **Scans furtifs (`-sF`, `-sN`, `-sX`)** : scans FIN, NULL et Xmas tirant parti des spécifications RFC TCP.
-* **TCP ACK Scan (`-sA`)** : détermine si les ports sont filtrés par un pare-feu à état (*stateful*).
+**Types de scans :**
+- **TCP SYN (`-sS`)** — furtif (half-open), nécessite `cap_net_raw`.
+- **TCP Connect (`-sT`)** — connexion complète, sans privilèges root.
+- **UDP (`-sU`)** — services UDP (DNS, DHCP, SNMP).
+- **Scans furtifs (`-sF`, `-sN`, `-sX`)** — FIN, NULL, Xmas (RFC TCP).
+- **TCP ACK (`-sA`)** — détecte les firewalls à état (stateful).
 
-#### Options d'évasion et timing :
-* **Contrôle de vitesse (`-T0` à `-T5`)** : de Paranoid (esquive IDS) à Insane (scans ultra-rapides).
-* **Fragmentation de paquets (`-f`)** : scinde les en-têtes TCP en petits paquets pour échapper aux IDS.
-* **Leurres IP (`-D RND:5`)** : masque l'IP réelle du scanner au milieu d'IP fictives générées aléatoirement.
-* **Traceroute (`--traceroute`)** : cartographie les sauts réseau jusqu'à la cible.
+**Options d'évasion & timing :**
+- Vitesse `-T0` à `-T5` (Paranoid → Insane).
+- Fragmentation de paquets `-f` (contournement IDS).
+- Leurres IP `-D RND:5`.
+- Traceroute `--traceroute`.
 
 ---
 
 ### 📊 4. Historique, rapports & base SQLite (`scanner_history.db`)
 
-Tous les scans réalisés (web, local ou manuel) sont enregistrés localement dans une base SQLite.
-* Conserve le contexte de chaque scan (cible, type de scan, horodatage, résultats JSON complets).
-* Permet la consultation ultérieure, le rechargement interactif des résultats, la suppression d'entrées et le **téléchargement immédiat de rapports PDF ou Word**.
+Tous les scans (web, local, manuel, audit) sont enregistrés localement :
+- Contexte complet (cible, type, horodatage, résultats JSON).
+- Consultation, rechargement interactif, suppression et **export PDF/Word en 1 clic**.
 
 ---
 
-## 🔒 Privilèges Linux et sécurité (`setcap`)
+## 🔒 Privilèges Linux & sécurité (`setcap`)
 
-Pourquoi les scans `-sS` et `-O` nécessitent-ils des privilèges spéciaux ?
-Les paquets réseau sur mesure (Raw Sockets) requièrent traditionnellement d'exécuter la commande en `root`.
+Les scans `-sS` (TCP SYN) et `-O` (détection OS) nécessitent les *raw sockets*. Plutôt que de lancer Flask en root, le script d'installation utilise les **Linux Capabilities** :
 
-Pour éviter la mauvaise pratique de sécurité qui consisterait à exécuter le serveur Flask avec `sudo`, le script d'installation utilise la fonctionnalité **Linux Capabilities** :
 ```bash
 sudo setcap cap_net_raw,cap_net_admin+eip $(readlink -f venv/bin/python3)
 ```
-Cela attribue uniquement à l'interpréteur Python du venv les privilèges stricts d'émission de paquets bruts, garantissant une sécurité maximale.
+
+Seul l'interpréteur Python du venv reçoit les privilèges stricts d'émission de paquets bruts.
 
 ---
 
-## 🚀 Guide d'installation et lancement pas à pas
+## 🎓 Objectifs pédagogiques
 
-### Méthode 1 : installation automatisée (recommandée)
+M-SCAN est conçu pour transmettre les fondamentaux de la sécurité offensive et défensive :
+
+1. **Liaison UI → CLI** : chaque option reconstruite et affichée en temps réel (`Command Preview`).
+2. **Mécanique des paquets** : SYN vs TCP Connect vs FIN/NULL/Xmas, exigences de privilèges.
+3. **Sécurité applicative web** : détecter un WAF, vérifier les en-têtes HTTP (HSTS, CSP, X-Frame-Options).
+4. **Exploration LAN** : découverte ARP, NetBIOS, audit SMB.
+5. **Gestion des vulnérabilités** : corrélation CVE Exploit-DB, génération de rapports PDF/Word.
+6. **Smart Branching CMS** : comprendre pourquoi WPScan ≠ JoomScan ≠ Droopescan et comment l'outil choisit automatiquement le bon scanner.
+
+---
+
+## 🚀 Installation et lancement
+
+### Méthode 1 : automatisée (recommandée)
 
 ```bash
-# 1. Cloner le projet et se placer dans le dossier
+# 1. Cloner et accéder au dossier
+git clone https://github.com/Ronan-Bozoc-cyber/matrix-scanner.git
 cd matrix-scanner
 
 # 2. Rendre les scripts exécutables
 chmod +x install.sh run.sh
 
-# 3. Lancer le script d'installation (demande sudo uniquement pour apt et setcap)
+# 3. Installation complète (venv, apt, pip, setcap)
 ./install.sh
 
-# 4. Lancer le serveur avec l'interface ASCII Matrix Green
+# 4. Lancement avec interface ASCII Matrix
 ./run.sh
 ```
 
-### Méthode 2 : installation manuelle
+### Méthode 2 : manuelle
 
 ```bash
-# 1. Créer et activer l'environnement virtuel Python
-python3 -m venv venv
-source venv/bin/activate
+# 1. Environnement virtuel Python
+python3 -m venv venv && source venv/bin/activate
 
-# 2. Installer les dépendances Python (Flask, ReportLab, Python-Docx, PySocks)
+# 2. Dépendances Python
 pip install -r requirements.txt
 
-# 3. Installer les outils système (sur Debian/Ubuntu/Kali)
+# 3. Outils système Kali/Debian/Ubuntu
 sudo apt-get update
-sudo apt-get install -y nmap exploitdb whatweb wafw00f nikto nuclei wpscan gowitness netdiscover nbtscan enum4linux smbmap policykit-1 libcap2-bin curl
+sudo apt-get install -y nmap exploitdb whatweb wafw00f nikto nuclei wpscan \
+  gowitness netdiscover nbtscan enum4linux smbmap gobuster sqlmap \
+  policykit-1 libcap2-bin curl
 
-# 4. Attribuer les capacités réseau au Python du venv
+# 4. Outils depuis GitHub (non disponibles en apt)
+pip install droopescan moodlescan nosqlmap 2>/dev/null || \
+  git clone https://github.com/droope/droopescan tools_git/droopescan
+
+# 5. Capacités réseau
 sudo setcap cap_net_raw,cap_net_admin+eip $(readlink -f venv/bin/python3)
 
-# 5. Lancer l'application
+# 6. Lancement
 python3 app.py
 ```
 
@@ -234,29 +259,57 @@ python3 app.py
 
 ```
 matrix-scanner/
-├── app.py                 # Backend Flask : routes API REST, export PDF/DOCX, proxy OnionHop, SQLite, CVE
-├── install.sh             # Script d'installation automatisé (venv, apt-get, setcap)
-├── run.sh                 # Script de lancement interactive (ASCII Art M-SCAN, OnionHop Tor, ports dynamiques)
-├── requirements.txt       # Dépendances Python (Flask, reportlab, python-docx, requests, PySocks)
-├── scanner_history.db     # Base de données SQLite générée automatiquement
-├── README.md              # Documentation officielle du projet
-├── templates/             # Templates HTML Jinja2 modularisés
-│   ├── base.html          # Layout principal (barre latérale, moniteur IP, horloge, canvas Matrix)
-│   ├── home.html          # Vue d'ensemble et accueil du tableau de bord
-│   ├── web.html           # Interface dédiée aux audits Web & WAF à distance
-│   ├── local.html         # Interface dédiée à la reconnaissance LAN / Réseau local
-│   ├── history.html       # Interface de consultation et d'exportation PDF/DOCX
-│   ├── settings.html      # État des dépendances et outils système
-│   └── partials/          # Composants réutilisables
-│       ├── results.html   # Rendu dynamique des résultats, boutons d'export PDF/Word & Chart.js
-│       ├── modal.html     # Modales interactives de détails CVE / Exploit-DB
-│       ├── manual_settings.html # Formulaire des options avancées Nmap
-│       └── banners.html   # Bandeaux d'alerte des dépendances
+├── app.py                   # Backend Flask : routes API REST, audit (Nikto/Gobuster/SQLMap/CMS), export PDF/DOCX, SQLite, CVE
+├── install.sh               # Script d'installation automatisé (venv, apt-get, pip, setcap, outils Git)
+├── run.sh                   # Lancement interactif (ASCII Art Matrix, OnionHop Tor, ports dynamiques)
+├── requirements.txt         # Dépendances Python (Flask, reportlab, python-docx, requests, PySocks)
+├── scanner_history.db       # Base SQLite générée automatiquement
+├── README.md                # Documentation officielle
+├── tools_git/               # Outils installés depuis GitHub (droopescan, moodlescan, nosqlmap)
+├── templates/
+│   ├── base.html            # Layout principal (barre latérale, moniteur IP, horloge, Canvas Matrix)
+│   ├── home.html            # Accueil & vérification des 24 outils par rubrique
+│   ├── web.html             # Interface pentest web — workflow 7 étapes
+│   ├── local.html           # Interface reconnaissance LAN
+│   ├── history.html         # Historique des scans & export PDF/DOCX
+│   ├── settings.html        # État des dépendances et outils système
+│   ├── reports.html         # Gestionnaire de rapports & éditeur d'audit
+│   └── partials/
+│       ├── results.html     # Cartes résultats : Nikto, Gobuster, SQLMap, CMS Audit, Nmap, CVE
+│       ├── modal.html       # Modales CVE / rapport d'audit
+│       ├── manual_settings.html  # Formulaire options avancées Nmap
+│       └── banners.html     # Bandeaux d'alerte dépendances
 └── static/
-    ├── style.css          # Thème sombre Matrix / Cyberpunk (Glassmorphism & animations)
-    ├── script.js          # Logique frontend (moniteur IP temps réel, requêtes API, Chart.js, modales)
-    └── matrix.js          # Animation Canvas effet pluie de code Matrix
+    ├── style.css            # Thème sombre Matrix / Cyberpunk (Glassmorphism & animations)
+    ├── script.js            # Logique frontend : workflow 7 étapes, audit Nikto/Gobuster/SQLMap/CMS, Smart Branching, Chart.js
+    └── matrix.js            # Animation Canvas pluie de code Matrix
 ```
+
+---
+
+## 🔑 Routes API principales
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `POST` | `/api/scan` | Lancement d'un scan Nmap (local ou web) |
+| `GET` | `/api/scan-status/<job_id>` | Polling statut scan Nmap |
+| `POST` | `/api/whatweb-scan` | Empreinte CMS & technologies (WhatWeb) |
+| `POST` | `/api/waf-scan` | Détection WAF (Wafw00f) |
+| `POST` | `/api/whois-scan` | Requête WHOIS |
+| `POST` | `/api/subdomains-scan` | Énumération sous-domaines (Subfinder + Sublist3r) |
+| `POST` | `/api/screenshot` | Capture d'écran (Gowitness) |
+| `POST` | `/api/wpscan` | Audit WordPress (WPScan) |
+| `GET` | `/api/wpscan-status/<job_id>` | Polling statut WPScan |
+| `POST` | **`/api/audit/nikto`** | **Scan de vulnérabilités web (Nikto)** |
+| `POST` | **`/api/audit/gobuster`** | **Fuzzing de répertoires (Gobuster)** |
+| `POST` | **`/api/audit/sqlmap`** | **Détection injections SQL (SQLMap)** |
+| `POST` | **`/api/audit/cms-scan`** | **Scanner CMS (WPScan/JoomScan/Droopescan/Moodlescan)** |
+| `GET` | **`/api/audit/status/<job_id>`** | **Polling statut de tous les jobs d'audit** |
+| `POST` | `/api/nuclei-scan` | Scan Nuclei templates |
+| `POST` | `/api/netdiscover-scan` | Découverte ARP LAN |
+| `GET` | `/api/check-deps` | Vérification des 24 outils (avec catégories) |
+| `POST` | `/api/install-deps` | Installation outils manquants (pkexec) |
+| `GET` | `/api/system-stats` | Télémétrie CPU/RAM/Réseau |
 
 ---
 
@@ -264,7 +317,12 @@ matrix-scanner/
 
 | Symptôme | Cause probable | Solution |
 |---|---|---|
-| **Erreur "Permission refusée" lors du scan -sS / -O** | Capacités `setcap` non attribuées au venv | Exécuter `sudo setcap cap_net_raw,cap_net_admin+eip venv/bin/python3` ou utiliser le mode `-sT`. |
-| **Le bouton "Installer les outils manquants" ne réagit pas** | `policykit-1` manquant sur le système | Installer Polkit via terminal : `sudo apt-get install policykit-1`. |
-| **Erreur de téléchargement d'OnionHop** | Absence d'accès réseau ou curl non disponible | Vérifier la connexion Internet et installer `curl` (`sudo apt-get install curl`). |
-| **Le port 5000 est déjà occupé** | Un autre service web tourne sur 5000 | `./run.sh` sélectionne automatiquement un port libre `>= 10001`. |
+| **Erreur "Permission refusée" (-sS / -O)** | `setcap` non attribué au venv | `sudo setcap cap_net_raw,cap_net_admin+eip venv/bin/python3` ou utiliser `-sT`. |
+| **Bouton "Installer les outils" inactif** | `policykit-1` absent | `sudo apt-get install policykit-1` |
+| **Erreur 500 sur `/api/install-deps`** | Clé `apt_package` manquante dans un outil | Vérifier la définition dans `REQUIRED_TOOLS` dans `app.py`. |
+| **Erreur réseau JSON invalide** | `urlparse` non importé / serveur planté | Vérifier les imports en haut de `app.py` ; relancer le serveur. |
+| **Nmap très lent (> 10 min)** | Cible derrière un pare-feu avec beaucoup de ports filtrés | Utiliser le mode `fast` ou réduire la plage de ports avec l'option manuelle. |
+| **Audit — Nikto/Gobuster ne se lancent pas** | Outil non installé | Aller dans **Vérification Système** et cliquer **Installer les outils manquants**. |
+| **Scanner CMS non déclenché** | CMS non reconnu par WhatWeb | Le Smart Branching n'active le scanner que pour WordPress, Joomla, Drupal et Moodle. |
+| **Port 5000 déjà utilisé** | Autre service sur 5000 | `./run.sh` sélectionne automatiquement un port libre ≥ 10 001. |
+| **Téléchargement OnionHop échoue** | Pas d'accès réseau ou `curl` absent | Vérifier connexion + `sudo apt-get install curl`. |
