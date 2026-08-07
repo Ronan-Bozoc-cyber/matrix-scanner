@@ -1741,23 +1741,55 @@ def _run_gobuster_thread(job_id, target_url):
 
 
 def _run_sqlmap_thread(job_id, target_url):
-    """Lance SQLMap en mode batch sur l'URL cible."""
+    """Lance SQLMap en mode batch sur l'URL cible, avec un pré-scan ParamSpider si possible."""
     AUDIT_JOBS[job_id]["status"] = "running"
     AUDIT_JOBS[job_id]["output"] = []
 
     if not target_url.startswith("http://") and not target_url.startswith("https://"):
         target_url = "http://" + target_url
 
-    cmd = ["sqlmap", "-u", target_url, "--batch", "--level=1", "--risk=1",
+    import urllib.parse
+    domain = urllib.parse.urlparse(target_url).netloc
+    if not domain:
+        domain = target_url.split('/')[2] if '//' in target_url else target_url.split('/')[0]
+
+    paramspider_output_file = f"/tmp/paramspider_{job_id}.txt"
+    sqlmap_input_file = None
+
+    # Etape 1: Tenter ParamSpider pour trouver des URLs avec paramètres
+    AUDIT_JOBS[job_id]["output"].append(f"[*] Lancement de ParamSpider pour trouver des paramètres sur {domain}...")
+    try:
+        ps_cmd = ["paramspider", "-d", domain]
+        subprocess.run(ps_cmd, capture_output=True, text=True, timeout=60, cwd="/tmp")
+        # ParamSpider sauvegarde dans result/domain.txt ou results/domain.txt
+        for results_dir in ["results", "result"]:
+            expected_file = f"/tmp/{results_dir}/{domain}.txt"
+            if os.path.exists(expected_file):
+                import shutil
+                shutil.copy(expected_file, paramspider_output_file)
+                sqlmap_input_file = paramspider_output_file
+                AUDIT_JOBS[job_id]["output"].append(f"[+] ParamSpider a trouvé des URLs. Transmission à SQLMap...")
+                break
+    except Exception as e:
+        AUDIT_JOBS[job_id]["output"].append(f"[-] Erreur ParamSpider : {str(e)}. Fallback sur cible unique.")
+
+    # Etape 2: Lancer SQLMap
+    cmd = ["sqlmap", "--batch", "--level=1", "--risk=1",
            "--timeout=10", "--retries=1", "--output-dir=/tmp/sqlmap_out",
            "--disable-coloring", "--no-cast"]
+    
+    if sqlmap_input_file:
+        cmd.extend(["-m", sqlmap_input_file])
+    else:
+        cmd.extend(["-u", target_url])
+
     cmd = _wrap_with_proxy(cmd)
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         lines = (proc.stdout + proc.stderr).splitlines()
         vulns = [l for l in lines if "injectable" in l.lower() or "Parameter:" in l or "[VULNERABLE]" in l or "[WARNING]" in l or "[INFO]" in l]
         AUDIT_JOBS[job_id]["status"] = "done"
-        AUDIT_JOBS[job_id]["output"] = lines
+        AUDIT_JOBS[job_id]["output"].extend(lines)
         AUDIT_JOBS[job_id]["vulnerabilities"] = [l for l in lines if "injectable" in l.lower() or "[VULNERABLE]" in l]
         AUDIT_JOBS[job_id]["summary_lines"] = vulns[:50]
         save_history("sqlmap", target_url, {"summary": vulns[:30]})
