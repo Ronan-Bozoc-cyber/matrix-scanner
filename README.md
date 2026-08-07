@@ -119,7 +119,7 @@ graph TD
     H --> I(CMS : WPScan / JoomScan...)
     H --> J(SQLMap : Injections SQL)
     H --> K(Gobuster : Fuzzing)
-    H --> L(SQLMap : Injections SQL)
+   
 ```
 
 | Étape | Outils | Rôle |
