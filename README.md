@@ -302,7 +302,6 @@ matrix-scanner/
 | `POST` | `/api/screenshot` | Capture d'écran (Gowitness) |
 | `POST` | `/api/wpscan` | Audit WordPress (WPScan) |
 | `GET` | `/api/wpscan-status/<job_id>` | Polling statut WPScan |
-
 | `POST` | **`/api/audit/gobuster`** | **Fuzzing de répertoires (Gobuster)** |
 | `POST` | **`/api/audit/sqlmap`** | **Détection injections SQL (SQLMap)** |
 | `POST` | **`/api/audit/cms-scan`** | **Scanner CMS (WPScan/JoomScan/Droopescan/Moodlescan)** |
