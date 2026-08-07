@@ -4,7 +4,7 @@
 
 **M-SCAN** est un tableau de bord web interactif, visuel et professionnel conçu par **Ronan BOZOC** pour les élèves ingénieurs, les professionnels de la cybersécurité et les experts en test d'intrusion.
 
-Il permet de réaliser des **pentests web externes automatisés en 7 étapes** (WHOIS, sous-domaines, WAF, capture, empreinte CMS, Nmap, puis audit complet Nikto / Gobuster / SQLMap / CMS-Scan), d'explorer des **réseaux locaux** (LAN, partages SMB, NetBIOS), de corréler des vulnérabilités réelles (CVE) via Exploit-DB, d'exporter des **rapports d'audit professionnels aux formats PDF et Word (.docx)**, et de **protéger son IP publique via le réseau Tor avec OnionHop 3.7.8**.
+Il permet de réaliser des **pentests web externes automatisés en 7 étapes** (WHOIS, sous-domaines, WAF, capture, empreinte CMS, Nmap, puis audit complet Gobuster / SQLMap / CMS-Scan), d'explorer des **réseaux locaux** (LAN, partages SMB, NetBIOS), de corréler des vulnérabilités réelles (CVE) via Exploit-DB, d'exporter des **rapports d'audit professionnels aux formats PDF et Word (.docx)**, et de **protéger son IP publique via le réseau Tor avec OnionHop 3.7.8**.
 
 ---
 
@@ -76,7 +76,7 @@ M-SCAN intègre **24 outils et modules** vérifiés automatiquement au démarrag
 | 15 | `gobuster` | Fuzzing de répertoires et fichiers cachés (wordlists Kali) |
 | 16 | `joomscan` | Scanner de vulnérabilités pour le CMS Joomla |
 | 17 | `moodlescan` | Audit de sécurité spécialisé des plateformes Moodle |
-| 18 | `nikto` | Scanner de vulnérabilités web, fichiers dangereux et erreurs de config |
+
 | 19 | `wpscan` | Scanner de failles spécifique WordPress (plugins, thèmes, utilisateurs) |
 
 ### 💉 Audit & Injections Bases de Données
@@ -117,7 +117,7 @@ graph TD
     F --> G[7. Recherche CVE]
     G --> H{8. Audits Spécifiques}
     H --> I(CMS : WPScan / JoomScan...)
-    H --> J(Nikto : Vulnérabilités web)
+    H --> J(SQLMap : Injections SQL)
     H --> K(Gobuster : Fuzzing)
     H --> L(SQLMap : Injections SQL)
 ```
@@ -131,7 +131,7 @@ graph TD
 | **5 — Empreinte CMS** | `WhatWeb` | Détection de la pile logicielle (WordPress, Joomla, Drupal, Moodle, Nginx, Apache, PHP, en-têtes HTTP). Retourne le **type de CMS** pour le Smart Branching de l'étape 8. |
 | **6 — Nmap** | `Nmap` + `Nuclei` | Cartographie ports/services, exécution de templates vulnérabilités. Fallback automatique `-sT` si `-sS` refusé (sans root). |
 | **7 — Recherche CVE** | `Searchsploit` (Exploit-DB) | Recherche hors-ligne ou via API de vulnérabilités et d'exploits connus pour chaque service et version détectés à l'étape 6. |
-| **8 — Audit complet** | `Nikto` + `Gobuster` + `SQLMap` + CMS Scanner | **Smart Branching** : WPScan si WordPress, JoomScan si Joomla, Droopescan si Drupal, Moodlescan si Moodle. En parallèle : Nikto (vulnérabilités & fichiers cachés) + Gobuster (fuzzing de répertoires). Puis SQLMap (injections SQL). Résultats affichés dans des cartes dédiées avec ajout au rapport en 1 clic. |
+| **8 — Audit complet** | `Gobuster` + `SQLMap` + CMS Scanner | **Smart Branching** : WPScan si WordPress, JoomScan si Joomla, Droopescan si Drupal, Moodlescan si Moodle. En parallèle : Gobuster (fuzzing de répertoires). Puis SQLMap (injections SQL). Résultats affichés dans des cartes dédiées avec ajout au rapport en 1 clic. |
 | **Livrables** | `ReportLab` + `python-docx` | Rapport PDF & Word avec score de risque global, export 1 clic. |
 
 ---
@@ -240,7 +240,7 @@ pip install -r requirements.txt
 
 # 3. Outils système Kali/Debian/Ubuntu
 sudo apt-get update
-sudo apt-get install -y nmap exploitdb whatweb wafw00f nikto nuclei wpscan \
+sudo apt-get install -y nmap exploitdb whatweb wafw00f nuclei wpscan \
   gowitness netdiscover nbtscan enum4linux smbmap gobuster sqlmap \
   policykit-1 libcap2-bin curl
 
@@ -261,7 +261,7 @@ python3 app.py
 
 ```
 matrix-scanner/
-├── app.py                   # Backend Flask : routes API REST, audit (Nikto/Gobuster/SQLMap/CMS), export PDF/DOCX, SQLite, CVE
+├── app.py                   # Backend Flask : routes API REST, audit (Gobuster/SQLMap/CMS), export PDF/DOCX, SQLite, CVE
 ├── install.sh               # Script d'installation automatisé (venv, apt-get, pip, setcap, outils Git)
 ├── run.sh                   # Lancement interactif (ASCII Art Matrix, OnionHop Tor, ports dynamiques)
 ├── requirements.txt         # Dépendances Python (Flask, reportlab, python-docx, requests, PySocks)
@@ -277,13 +277,13 @@ matrix-scanner/
 │   ├── settings.html        # État des dépendances et outils système
 │   ├── reports.html         # Gestionnaire de rapports & éditeur d'audit
 │   └── partials/
-│       ├── results.html     # Cartes résultats : Nikto, Gobuster, SQLMap, CMS Audit, Nmap, CVE
+│       ├── results.html     # Cartes résultats : Gobuster, SQLMap, CMS Audit, Nmap, CVE
 │       ├── modal.html       # Modales CVE / rapport d'audit
 │       ├── manual_settings.html  # Formulaire options avancées Nmap
 │       └── banners.html     # Bandeaux d'alerte dépendances
 └── static/
     ├── style.css            # Thème sombre Matrix / Cyberpunk (Glassmorphism & animations)
-    ├── script.js            # Logique frontend : workflow 7 étapes, audit Nikto/Gobuster/SQLMap/CMS, Smart Branching, Chart.js
+    ├── script.js            # Logique frontend : workflow 7 étapes, audit Gobuster/SQLMap/CMS, Smart Branching, Chart.js
     └── matrix.js            # Animation Canvas pluie de code Matrix
 ```
 
@@ -302,7 +302,7 @@ matrix-scanner/
 | `POST` | `/api/screenshot` | Capture d'écran (Gowitness) |
 | `POST` | `/api/wpscan` | Audit WordPress (WPScan) |
 | `GET` | `/api/wpscan-status/<job_id>` | Polling statut WPScan |
-| `POST` | **`/api/audit/nikto`** | **Scan de vulnérabilités web (Nikto)** |
+
 | `POST` | **`/api/audit/gobuster`** | **Fuzzing de répertoires (Gobuster)** |
 | `POST` | **`/api/audit/sqlmap`** | **Détection injections SQL (SQLMap)** |
 | `POST` | **`/api/audit/cms-scan`** | **Scanner CMS (WPScan/JoomScan/Droopescan/Moodlescan)** |
@@ -324,7 +324,7 @@ matrix-scanner/
 | **Erreur 500 sur `/api/install-deps`** | Clé `apt_package` manquante dans un outil | Vérifier la définition dans `REQUIRED_TOOLS` dans `app.py`. |
 | **Erreur réseau JSON invalide** | `urlparse` non importé / serveur planté | Vérifier les imports en haut de `app.py` ; relancer le serveur. |
 | **Nmap très lent (> 10 min)** | Cible derrière un pare-feu avec beaucoup de ports filtrés | Utiliser le mode `fast` ou réduire la plage de ports avec l'option manuelle. |
-| **Audit — Nikto/Gobuster ne se lancent pas** | Outil non installé | Aller dans **Vérification Système** et cliquer **Installer les outils manquants**. |
+| **Audit — Gobuster ne se lance pas** | Outil non installé | Aller dans **Vérification Système** et cliquer **Installer les outils manquants**. |
 | **Scanner CMS non déclenché** | CMS non reconnu par WhatWeb | Le Smart Branching n'active le scanner que pour WordPress, Joomla, Drupal et Moodle. |
 | **Port 5000 déjà utilisé** | Autre service sur 5000 | `./run.sh` sélectionne automatiquement un port libre ≥ 10 001. |
 | **Téléchargement OnionHop échoue** | Pas d'accès réseau ou `curl` absent | Vérifier connexion + `sudo apt-get install curl`. |

@@ -7,39 +7,61 @@ window.isScanning = false;
 let scanStartTime = 0;
 let stopwatchInterval = null;
 
-function setScanningState(state, toolName = "") {
+function setScanningState(state, toolName = "", currentStep = "", totalSteps = "") {
   window.isScanning = state;
   const overlay = document.getElementById('navigation-lock-overlay');
-  const statusBox = document.getElementById('global-scan-status');
-  const toolText = document.getElementById('global-scan-tool');
-  const progressBar = document.getElementById('global-scan-progress-bar');
-  const stopwatch = document.getElementById('scan-stopwatch');
+  const stickyBar = document.getElementById('sticky-progress-bar');
+  const stickyText = document.getElementById('sticky-progress-text');
+  const stickySteps = document.getElementById('sticky-progress-steps');
+  const stopwatchContainer = document.getElementById('sticky-progress-stopwatch');
+  const stopwatchText = stopwatchContainer ? stopwatchContainer.querySelector('span') : null;
+  const loader = document.getElementById('sticky-loader');
+  const closeBtn = document.getElementById('sticky-close-btn');
 
   if (state) {
     if (overlay) overlay.classList.remove('hidden');
-    if (statusBox) statusBox.classList.remove('hidden');
-    if (toolText) toolText.textContent = toolName + " en cours...";
-    if (progressBar) progressBar.style.width = "50%";
+    if (stickyBar) {
+      stickyBar.classList.remove('hidden');
+      stickyBar.style.borderTopColor = 'var(--matrix-green)';
+    }
+    if (stickyText) {
+      stickyText.textContent = toolName + " en cours...";
+      stickyText.style.color = 'var(--matrix-green)';
+    }
+    if (stickySteps && currentStep && totalSteps) stickySteps.textContent = `Étape ${currentStep}/${totalSteps}`;
+    if (loader) loader.style.display = 'block';
+    if (closeBtn) closeBtn.classList.add('hidden');
+    if (stopwatchContainer) stopwatchContainer.style.color = '#fff';
 
-    if (!stopwatchInterval && stopwatch) {
+    if (!stopwatchInterval && stopwatchText) {
       scanStartTime = Date.now();
-      stopwatch.style.color = "#fff";
+      stopwatchText.textContent = "00:00:00";
       stopwatchInterval = setInterval(() => {
         const elapsed = Math.floor((Date.now() - scanStartTime) / 1000);
         const h = String(Math.floor(elapsed / 3600)).padStart(2, '0');
         const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
         const s = String(elapsed % 60).padStart(2, '0');
-        stopwatch.textContent = `${h}:${m}:${s}`;
+        stopwatchText.textContent = `${h}:${m}:${s}`;
       }, 1000);
     }
   } else {
     if (overlay) overlay.classList.add('hidden');
-    if (toolText) toolText.textContent = "Terminé.";
-    if (progressBar) progressBar.style.width = "100%";
     if (stopwatchInterval) {
       clearInterval(stopwatchInterval);
       stopwatchInterval = null;
-      if (stopwatch) stopwatch.style.color = "var(--matrix-green)";
+    }
+    if (stickyText) {
+      stickyText.textContent = "✅ Scan terminé.";
+      stickyText.style.color = '#00ff41';
+    }
+    if (stickyBar) stickyBar.style.borderTopColor = '#00ff41';
+    if (loader) loader.style.display = 'none';
+    if (stopwatchContainer) stopwatchContainer.style.color = '#00ff41';
+    if (closeBtn) {
+      closeBtn.classList.remove('hidden');
+      closeBtn.onclick = () => {
+        if (stickyBar) stickyBar.classList.add('hidden');
+      };
     }
   }
 }
@@ -548,6 +570,11 @@ async function runWebPentestPipeline(target, modeToggle) {
   const subdomainsProgress = document.getElementById("subdomains-progress");
   const subdomainsContent = document.getElementById("subdomains-results-content");
 
+  const harvesterCard = document.getElementById("harvester-card");
+  const harvesterProgress = document.getElementById("harvester-progress");
+  const harvesterContent = document.getElementById("harvester-results-content");
+  const harvesterTerminal = document.getElementById("harvester-terminal-content");
+
   const wafCard = document.getElementById("waf-card");
   const wafProgress = document.getElementById("waf-progress");
   const wafContent = document.getElementById("waf-results-content");
@@ -573,7 +600,8 @@ async function runWebPentestPipeline(target, modeToggle) {
   if (progressBox) progressBox.classList.remove("hidden");
 
   // --- ÉTAPE 1 : ENREGISTREMENT DU DOMAINE (WHOIS) ---
-  if (progressText) progressText.textContent = "Étape 1/5 : Consultation du Registre de Domaine (WHOIS)...";
+  setScanningState(true, "Consultation du Registre de Domaine (WHOIS)", "1", "7");
+  if (progressText) progressText.textContent = "Consultation du Registre de Domaine (WHOIS)...";
   if (whoisCard) whoisCard.classList.remove("hidden");
   if (whoisProgress) whoisProgress.classList.remove("hidden");
   if (whoisContent) whoisContent.innerHTML = "";
@@ -644,15 +672,16 @@ async function runWebPentestPipeline(target, modeToggle) {
     if (whoisContent) whoisContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Données WHOIS indisponibles (${err.message}).</div>`;
   }
 
-  // --- ÉTAPE 2 : ÉNUMÉRATION SOUS-DOMAINES (Sublist3r) ---
-  if (progressText) progressText.textContent = "Étape 2/5 : Énumération OSINT des Sous-domaines (Sublist3r)...";
+  // --- ÉTAPE 2 : ÉNUMÉRATION SOUS-DOMAINES (Subfinder/Sublist3r/theHarvester) ---
+  setScanningState(true, "Énumération OSINT des Sous-domaines (Subfinder/theHarvester)", "2", "7");
+  if (progressText) progressText.textContent = "Énumération OSINT des Sous-domaines (Subfinder/theHarvester)...";
   if (subdomainsCard) subdomainsCard.classList.remove("hidden");
   if (subdomainsProgress) subdomainsProgress.classList.remove("hidden");
   if (subdomainsContent) subdomainsContent.innerHTML = "";
 
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000);
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
 
     const subRes = await fetch("/api/subdomains-scan", {
       method: "POST",
@@ -692,18 +721,63 @@ async function runWebPentestPipeline(target, modeToggle) {
     }
   } catch (err) {
     if (subdomainsProgress) subdomainsProgress.classList.add("hidden");
-    const errMsg = err.name === "AbortError" ? "Délai d'attente dépassé (45s)" : err.message;
+    const errMsg = err.name === "AbortError" ? "Délai d'attente dépassé (120s)" : err.message;
     if (subdomainsContent) subdomainsContent.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;">Recherche de sous-domaines non disponible (${errMsg}).</div>`;
     
     // Déclenchement de la modale de pause si timeout ou coupure réseau
     if (err.name === "AbortError" || err.message.includes("NetworkError") || err.message.includes("fetch")) {
-      triggerPauseModal("Énumération sous-domaines", target, "La cible n'a pas répondu dans les délais (45s).", () => runWebPentestPipeline(target, modeToggle));
+      triggerPauseModal("Énumération sous-domaines", target, "La cible n'a pas répondu dans les délais (120s).", () => runWebPentestPipeline(target, modeToggle));
       return;
     }
   }
 
+  // --- ÉTAPE 2.5 : THEHARVESTER (Live Stream) ---
+  if (harvesterCard) harvesterCard.classList.remove("hidden");
+  if (harvesterProgress) harvesterProgress.classList.remove("hidden");
+  if (harvesterContent) harvesterContent.innerHTML = "";
+  if (harvesterTerminal) harvesterTerminal.textContent = "Lancement de theHarvester...";
+
+  try {
+    const harvRes = await fetch("/api/harvester-scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const harvData = await harvRes.json();
+    
+    if (harvRes.status === 200 && harvData.job_id) {
+        // Poll for harvester status using the existing scan status endpoint since it writes to SCAN_JOBS
+        const result = await pollScanStatus(harvData.job_id, true, "harvester-terminal-content");
+        if (harvesterProgress) harvesterProgress.classList.add("hidden");
+        
+        if (result && result.subdomains && result.subdomains.length > 0) {
+            let harvHtml = `
+              <div style="font-size: 0.85rem; color: #f39c12; margin-bottom: 8px; font-weight: bold;">
+                <i class="fa-solid fa-tractor"></i> ${result.subdomains.length} sous-domaine(s) trouvé(s) par theHarvester :
+              </div>
+              <div style="max-height: 160px; overflow-y: auto; background: rgba(0,0,0,0.5); border: 1px solid rgba(243, 156, 18, 0.3); padding: 8px; border-radius: 6px;">
+                <ul style="margin: 0; padding-left: 20px; font-family: monospace; font-size: 0.85rem; color: #fff;">
+            `;
+            result.subdomains.forEach(sd => {
+              harvHtml += `<li style="margin-bottom: 3px;"><a href="http://${sd}" target="_blank" style="color: #f8c471; text-decoration: none;">${sd}</a></li>`;
+            });
+            harvHtml += `</ul></div>`;
+            harvesterContent.innerHTML = harvHtml;
+        } else {
+             harvesterContent.innerHTML = `<div style="font-size: 0.85rem; color: #aaa;">Aucun sous-domaine supplémentaire trouvé par theHarvester.</div>`;
+        }
+    } else {
+        if (harvesterProgress) harvesterProgress.classList.add("hidden");
+        if (harvesterContent) harvesterContent.innerHTML = `<div style="color: #ffaa00; font-size: 0.85rem;">⚠️ theHarvester non disponible (${harvData.error || "Erreur serveur"}).</div>`;
+    }
+  } catch (err) {
+      if (harvesterProgress) harvesterProgress.classList.add("hidden");
+      if (harvesterContent) harvesterContent.innerHTML = `<div style="color: #ffaa00; font-size: 0.85rem;">⚠️ Erreur réseau theHarvester (${err.message}).</div>`;
+  }
+
   // --- ÉTAPE 3 : DÉTECTION WAF (Wafw00f) ---
-  if (progressText) progressText.textContent = "Étape 3/5 : Analyse du Pare-Feu Applicatif (Wafw00f)...";
+  setScanningState(true, "Analyse du Pare-Feu Applicatif (Wafw00f)", "3", "7");
+  if (progressText) progressText.textContent = "Analyse du Pare-Feu Applicatif (Wafw00f)...";
   if (wafCard) wafCard.classList.remove("hidden");
   if (wafProgress) wafProgress.classList.remove("hidden");
   if (wafContent) wafContent.innerHTML = "";
@@ -737,11 +811,13 @@ async function runWebPentestPipeline(target, modeToggle) {
   }
 
   // --- ÉTAPE 4 : CAPTURE D'ÉCRAN SITE WEB (Gowitness) ---
-  if (progressText) progressText.textContent = "Étape 4/6 : Prise de vue du site Web (Gowitness)...";
+  setScanningState(true, "Prise de vue du site Web (Gowitness)", "4", "7");
+  if (progressText) progressText.textContent = "Prise de vue du site Web (Gowitness)...";
   await executeGowitnessScreenshot(target);
 
   // --- ÉTAPE 5 : EMPREINTE CMS & TECHNOLOGIES WEB (WhatWeb) ---
-  if (progressText) progressText.textContent = "Étape 5/6 : Détection des technologies web & CMS (WhatWeb)...";
+  setScanningState(true, "Détection des technologies web & CMS (WhatWeb)", "5", "7");
+  if (progressText) progressText.textContent = "Détection des technologies web & CMS (WhatWeb)...";
   if (cmsCard) cmsCard.classList.remove("hidden");
   if (cmsProgress) cmsProgress.classList.remove("hidden");
   if (cmsContent) cmsContent.innerHTML = "";
@@ -769,24 +845,29 @@ async function runWebPentestPipeline(target, modeToggle) {
   }
 
   // --- ÉTAPE 6 : PENTEST DE VULNÉRABILITÉS (Nmap) ---
-  if (progressText) progressText.textContent = "Étape 6/7 : Détection des services, ports & vulnérabilités (Nmap)...";
+  setScanningState(true, "Détection des services, ports & vulnérabilités (Nmap)", "6", "7");
+  if (progressText) progressText.textContent = "Détection des services, ports & vulnérabilités (Nmap)...";
   await runNmapScan(target, "web", modeToggle);
 
-  // --- ÉTAPE 7 : AUDIT COMPLET (Nikto + Gobuster + SQLMap + CMS Scanner) ---
-  if (progressText) progressText.textContent = "Étape 7/7 : Audit de sécurité approfondi (Nikto, Gobuster, SQLMap, CMS)...";
+  // --- ÉTAPE 7 : AUDIT COMPLET (Gobuster + SQLMap + CMS Scanner) ---
+  setScanningState(true, "Audit de sécurité approfondi (Gobuster, SQLMap, CMS)", "7", "7");
+  if (progressText) progressText.textContent = "Audit de sécurité approfondi (Gobuster, SQLMap, CMS)...";
 
-  // Lancer Nikto et Gobuster en parallèle (ils partagent la même carte)
+  // Lancer le scan CMS en parallèle
   const cmsAuditPromise = runAuditCMSScan(target, window._lastDetectedCms || null);
-  const niktoPromise = runAuditNikto(target);
-  await Promise.all([cmsAuditPromise, niktoPromise]);
+  await Promise.all([cmsAuditPromise]);
 
-  // Gobuster séquentiel après Nikto (pour ne pas surcharger)
+  // Gobuster séquentiel
   await runAuditGobuster(target);
 
   // SQLMap sur l'URL cible
   await runAuditSQLMap(target);
 
   if (progressText) progressText.textContent = "✅ Pentest Web complet — Toutes les étapes sont terminées.";
+  const stickyText = document.getElementById('sticky-progress-text');
+  if (stickyText) stickyText.textContent = "✅ Pentest Web complet — Toutes les étapes sont terminées.";
+  const stickySteps = document.getElementById('sticky-progress-steps');
+  if (stickySteps) stickySteps.textContent = "Terminé";
   setScanningState(false);
 }
 
@@ -1005,75 +1086,6 @@ function pollAuditJob(jobId, onDone) {
   });
 }
 
-async function runAuditNikto(target) {
-  const card = document.getElementById("gobuster-card"); // On réutilise gobuster pour afficher Nikto+Gobuster ensemble
-  const niktoProgress = document.getElementById("gobuster-progress");
-  const niktoContent = document.getElementById("gobuster-results-content");
-  const niktoProgressText = document.getElementById("gobuster-progress-text");
-
-  if (card) card.classList.remove("hidden");
-  if (niktoProgress) niktoProgress.classList.remove("hidden");
-  if (niktoProgressText) niktoProgressText.textContent = "🔍 Nikto — Analyse de vulnérabilités web en cours (5-10 min)...";
-  if (niktoContent) niktoContent.innerHTML = "";
-
-  try {
-    const res = await fetch("/api/audit/nikto", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target_url: target })
-    });
-    const data = await res.json();
-
-    if (res.status === 412) {
-      if (niktoProgress) niktoProgress.classList.add("hidden");
-      if (niktoContent) niktoContent.innerHTML = `<div style="color: #f39c12; font-size: 0.85rem;">⚠️ Nikto non installé — installez-le via la page Vérification Système.</div>`;
-      return;
-    }
-
-    if (data.job_id) {
-      const result = await pollAuditJob(data.job_id, null);
-      if (niktoProgress) niktoProgress.classList.add("hidden");
-      renderNiktoResults(result, niktoContent);
-    }
-  } catch (err) {
-    if (niktoProgress) niktoProgress.classList.add("hidden");
-    if (niktoContent) niktoContent.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Nikto indisponible (${err.message}).</div>`;
-  }
-}
-
-function renderNiktoResults(data, container) {
-  if (!container) return;
-  if (data.status === "error") {
-    container.innerHTML = `<div style="color: #e74c3c; font-size: 0.85rem;">❌ Erreur Nikto : ${data.error}</div>`;
-    return;
-  }
-  const findings = data.findings || [];
-  const allLines = data.output || [];
-
-  let html = `<div style="margin-bottom: 10px; padding: 10px 14px; background: rgba(155, 89, 182, 0.1); border-left: 3px solid #9b59b6; border-radius: 4px;">`;
-  html += `<div style="font-size: 0.85rem; color: #d6a2e8; font-weight: bold; margin-bottom: 8px;"><i class="fa-solid fa-bug"></i> Nikto — ${findings.length} Vulnérabilité(s) Web potentielle(s)</div>`;
-
-  if (findings.length > 0) {
-    html += `<div style="font-family: monospace; font-size: 0.78rem; color: #ff9999; background: rgba(231,76,60,0.1); padding: 8px; border-radius: 4px; margin-bottom: 10px;">`;
-    findings.forEach(line => {
-      html += `<div style="margin-bottom: 3px;">${escapeHtml(line)}</div>`;
-    });
-    html += `</div>`;
-  } else {
-    html += `<div style="color: #888; font-size: 0.83rem; margin-bottom: 10px;"><i class="fa-solid fa-check"></i> Aucune vulnérabilité critique évidente détectée par Nikto.</div>`;
-  }
-  
-  if (allLines.length > 0) {
-    html += `
-      <details style="margin-top: 5px;">
-        <summary style="cursor: pointer; font-size: 0.78rem; color: #9b59b6; user-select: none;"><i class="fa-solid fa-terminal"></i> Voir les retours complets de la console</summary>
-        <div style="font-family: monospace; font-size: 0.7rem; color: #aaa; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 4px; margin-top: 8px; white-space: pre-wrap;">${escapeHtml(allLines.join("\n"))}</div>
-      </details>
-    `;
-  }
-  html += `</div>`;
-  container.innerHTML = html;
-}
 
 async function runAuditGobuster(target) {
   const card = document.getElementById("gobuster-card");
@@ -1084,8 +1096,7 @@ async function runAuditGobuster(target) {
   if (card) card.classList.remove("hidden");
   if (progress) progress.classList.remove("hidden");
   if (progressText) progressText.textContent = "📁 Gobuster — Exploration de répertoires et fichiers cachés (5 min)...";
-  // Nikto has already populated or will populate the card, so we append
-
+  if (content) content.innerHTML = "";
   try {
     const res = await fetch("/api/audit/gobuster", {
       method: "POST",
@@ -1336,12 +1347,11 @@ function escapeHtml(str) {
 async function runNmapScan(target, mode, modeToggle) {
   const errorBox = document.getElementById("scan-error");
   const progressBox = document.getElementById("scan-progress");
-  const previewBox = document.getElementById("command-preview");
   const terminalBox = document.getElementById("scan-terminal");
   const terminalContent = document.getElementById("scan-terminal-content");
 
   if (progressBox) progressBox.classList.remove("hidden");
-  setScanningState(true, `Scanner Nmap (${mode === "web" ? "Web" : "Local"})`);
+  setScanningState(true, `Scanner Nmap (${mode === "web" ? "Web" : "Local"})`, "1", "7");
 
   if (terminalBox) terminalBox.classList.remove("hidden");
   if (terminalContent) terminalContent.textContent = "";
@@ -1384,12 +1394,6 @@ async function runNmapScan(target, mode, modeToggle) {
       setScanningState(false);
       if (progressBox) progressBox.classList.add("hidden");
       return;
-    }
-
-    if (previewBox) {
-      previewBox.classList.remove("hidden");
-      const previewText = document.getElementById("command-preview-text");
-      if (previewText) previewText.textContent = data.command_preview;
     }
 
     return pollScanStatus(data.job_id, mode === "web" && modeToggle !== "manual");
@@ -1576,12 +1580,12 @@ function attachNetdiscoverEvents() {
   }
 }
 
-function pollScanStatus(jobId, keepScanningState = false) {
+function pollScanStatus(jobId, keepScanningState = false, customTerminalId = null) {
   return new Promise((resolve) => {
     const progressBox = document.getElementById("scan-progress");
     const progressText = document.getElementById("scan-progress-text");
     const errorBox = document.getElementById("scan-error");
-    const terminalContent = document.getElementById("scan-terminal-content");
+    const terminalContent = document.getElementById(customTerminalId || "scan-terminal-content");
 
     const poll = setInterval(async () => {
       try {
@@ -1589,8 +1593,8 @@ function pollScanStatus(jobId, keepScanningState = false) {
         if (res.status !== 200) {
           clearInterval(poll);
           if (!keepScanningState) setScanningState(false);
-          if (progressBox) progressBox.classList.add("hidden");
-          if (errorBox) {
+          if (progressBox && !customTerminalId) progressBox.classList.add("hidden");
+          if (errorBox && !customTerminalId) {
             errorBox.textContent = "Erreur : Tâche de scan introuvable ou serveur réinitialisé.";
             errorBox.classList.remove("hidden");
           }
@@ -1607,20 +1611,20 @@ function pollScanStatus(jobId, keepScanningState = false) {
           throw new Error(`Statut non JSON (${res.status}) : ${text.substring(0, 150)}`);
         }
 
-        if (progressText) progressText.textContent = `Scan en cours (statut: ${job.status})...`;
+        if (progressText && !customTerminalId) progressText.textContent = `Scan en cours (statut: ${job.status})...`;
         if (terminalContent) updateTerminal(terminalContent, job.log || []);
 
         if (job.status === "done") {
           if (!keepScanningState) setScanningState(false);
           clearInterval(poll);
-          if (progressBox) progressBox.classList.add("hidden");
-          renderResults(job.result);
+          if (progressBox && !customTerminalId) progressBox.classList.add("hidden");
+          if (!customTerminalId) renderResults(job.result);
           resolve(job.result);
         } else if (job.status === "error") {
           if (!keepScanningState) setScanningState(false);
           clearInterval(poll);
-          if (progressBox) progressBox.classList.add("hidden");
-          if (errorBox) {
+          if (progressBox && !customTerminalId) progressBox.classList.add("hidden");
+          if (errorBox && !customTerminalId) {
             errorBox.textContent = "Erreur pendant le scan : " + job.error;
             errorBox.classList.remove("hidden");
           }
@@ -1668,7 +1672,7 @@ function renderResults(hosts) {
   window.autoCveSearched = false;
 
   // Afficher la topologie réseau dynamique pour les scans locaux
-  const isLocalScan = (window.currentViewId === "view-local") || (hosts && hosts.length > 0 && hosts.some(h => h.mac || h.netbios_name || h.ip.startsWith("192.168.") || h.ip.startsWith("10.") || h.ip.startsWith("172.")));
+  const isLocalScan = (window.currentViewId === "view-local") || (hosts && hosts.length > 0 && hosts.some(h => h.mac || h.netbios_name || h.ip.match(/^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/)));
   if (isLocalScan) {
     renderLocalTopology(hosts);
   } else {
@@ -1768,7 +1772,7 @@ function renderResults(hosts) {
 
           if (portNum === 80 || portNum === 443 || portNum === 8080 || sName.includes("http")) {
             tools.push({ name: "WhatWeb", icon: "fa-code", desc: "Identification des technologies Web, CMS, serveurs et frameworks.", cmd: `whatweb http://${host.ip}:${portNum}` });
-            tools.push({ name: "Nikto", icon: "fa-bug", desc: "Scanner de vulnérabilités Web (fichiers dangereux, CGI, pannes de config).", cmd: `nikto -h http://${host.ip}:${portNum}` });
+
             tools.push({ name: "Nuclei", icon: "fa-bolt", desc: "Détection de failles récentes basée sur des modèles communautaires.", cmd: `nuclei -u http://${host.ip}:${portNum}` });
           }
           if (sName.includes("wordpress") || sName.includes("wp")) {
@@ -1850,7 +1854,7 @@ function renderResults(hosts) {
           const sName = (p.service || "").toLowerCase();
 
           if (portNum === 80 || portNum === 443 || portNum === 8080 || sName.includes("http")) {
-            recommendations.push(`<li><b>WhatWeb / Nikto</b> : <code>whatweb http://${host.ip}:${portNum}</code> ou <code>nikto -h http://${host.ip}:${portNum}</code> pour l'analyse des vulnérabilités Web.</li>`);
+            recommendations.push(`<li><b>WhatWeb</b> : <code>whatweb http://${host.ip}:${portNum}</code> pour l'analyse des technologies Web.</li>`);
             recommendations.push(`<li><b>Nuclei</b> : <code>nuclei -u http://${host.ip}:${portNum}</code> pour scanner avec des modèles d'exploits d'actualité.</li>`);
           }
           if (sName.includes("wordpress") || sName.includes("wp")) {
@@ -2287,6 +2291,100 @@ function initSettingsHandlers() {
       }
     });
   }
+
+  initCustomCommands();
+}
+
+function initCustomCommands() {
+    const listEl = document.getElementById('custom-commands-list');
+    const addBtn = document.getElementById('btn-add-command');
+    const inputEl = document.getElementById('new-command-input');
+    if (!listEl) return;
+
+    const DEFAULT_COMMAND = "theHarvester -d url_test -b all -f results.txt";
+    
+    function getCommands() {
+        let cmds = [];
+        try {
+            cmds = JSON.parse(localStorage.getItem('mscan_custom_commands')) || [];
+        } catch(e) {}
+        return cmds;
+    }
+
+    function saveCommands(cmds) {
+        localStorage.setItem('mscan_custom_commands', JSON.stringify(cmds));
+    }
+
+    function renderCommands() {
+        const cmds = getCommands();
+        listEl.innerHTML = '';
+        
+        const trDef = document.createElement('tr');
+        trDef.innerHTML = `
+            <td style="padding: 8px; border-bottom: 1px solid rgba(0,255,65,0.2); color: #00ff41; font-weight: bold; text-align: center;">#1</td>
+            <td style="padding: 8px; border-bottom: 1px solid rgba(0,255,65,0.2);"><code style="color:#bbb; font-family:monospace;">${DEFAULT_COMMAND}</code></td>
+            <td style="padding: 8px; border-bottom: 1px solid rgba(0,255,65,0.2); text-align: center;">
+                <span style="color: #666; font-size: 0.8em;"><i class="fa-solid fa-lock"></i></span>
+            </td>
+        `;
+        listEl.appendChild(trDef);
+
+        cmds.forEach((cmd, idx) => {
+            const cmdId = idx + 2;
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="padding: 8px; border-bottom: 1px solid rgba(0,255,65,0.2); color: #00ff41; font-weight: bold; text-align: center;">#${cmdId}</td>
+                <td style="padding: 8px; border-bottom: 1px solid rgba(0,255,65,0.2);">
+                    <input type="text" class="edit-cmd-input" data-idx="${idx}" value="${cmd.replace(/"/g, '&quot;')}" style="width:100%; background:transparent; border:none; color:#00ff41; font-family:monospace; outline:none;" onblur="this.style.borderBottom='none'" onfocus="this.style.borderBottom='1px solid #00ff41'">
+                </td>
+                <td style="padding: 8px; border-bottom: 1px solid rgba(0,255,65,0.2); text-align: center;">
+                    <button class="btn btn-sm btn-delete-cmd" data-idx="${idx}" style="background: rgba(255, 68, 68, 0.2); border-color: #ff4444; color: #ff8888; padding: 4px 8px;" title="Supprimer"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            `;
+            listEl.appendChild(tr);
+        });
+
+        document.querySelectorAll('.edit-cmd-input').forEach(input => {
+            input.addEventListener('change', (e) => {
+                const idx = parseInt(e.target.getAttribute('data-idx'));
+                const cmds = getCommands();
+                cmds[idx] = e.target.value;
+                saveCommands(cmds);
+            });
+        });
+
+        document.querySelectorAll('.btn-delete-cmd').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(e.currentTarget.getAttribute('data-idx'));
+                const cmds = getCommands();
+                cmds.splice(idx, 1);
+                saveCommands(cmds);
+                renderCommands();
+            });
+        });
+    }
+
+    if (addBtn && inputEl) {
+        addBtn.addEventListener('click', () => {
+            const val = inputEl.value.trim();
+            if (val) {
+                const cmds = getCommands();
+                cmds.push(val);
+                saveCommands(cmds);
+                inputEl.value = '';
+                renderCommands();
+            }
+        });
+        
+        inputEl.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addBtn.click();
+            }
+        });
+    }
+
+    renderCommands();
 }
 
 /* -------------------------------------------------------------------------------

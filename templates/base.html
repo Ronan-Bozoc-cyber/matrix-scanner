@@ -13,7 +13,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <!-- On inclura script.js ici, mais defer permet le chargement async -->
-  <script src="{{ url_for('static', filename='script.js') }}?v=25" defer></script>
+  <script src="{{ url_for('static', filename='script.js') }}?v=30" defer></script>
 </head>
 <body>
   <canvas id="matrix-bg"></canvas>
@@ -153,6 +153,19 @@
 
   <!-- MODALES GLOBALES (Détails Historique + Ajouter au Rapport) -->
   {% include 'partials/modal.html' %}
+
+  <!-- STICKY PROGRESS BAR -->
+  <div id="sticky-progress-bar" class="hidden" style="position: fixed; bottom: 0; left: 260px; right: 0; background: rgba(2, 8, 4, 0.95); border-top: 1px solid var(--matrix-green); padding: 12px 20px; z-index: 9999; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 -4px 15px rgba(0, 255, 65, 0.1); transition: all 0.3s ease;">
+    <div style="display: flex; align-items: center; gap: 15px;">
+      <div id="sticky-loader" class="loader" style="width: 16px; height: 16px;"></div>
+      <span id="sticky-progress-text" style="color: var(--matrix-green); font-weight: bold; font-family: 'Share Tech Mono', monospace; font-size: 0.95rem;">Analyse en cours...</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 20px;">
+      <div id="sticky-progress-stopwatch" style="color: #fff; font-size: 0.95rem; font-family: 'Share Tech Mono', monospace; background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(0, 255, 65, 0.3);"><i class="fa-solid fa-clock"></i> <span>00:00:00</span></div>
+      <div id="sticky-progress-steps" style="color: #a0a0a0; font-size: 0.85rem; font-family: 'Share Tech Mono', monospace;">Étape 1/7</div>
+      <button id="sticky-close-btn" class="hidden" style="background: transparent; border: none; color: #ff4444; font-size: 1.2rem; cursor: pointer; padding: 0 5px;" title="Fermer la barre">&times;</button>
+    </div>
+  </div>
 
   <script src="{{ url_for('static', filename='matrix.js') }}"></script>
   <!-- La variable globale active_page permettra au script.js de savoir où l'on est -->

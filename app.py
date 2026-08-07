@@ -178,12 +178,6 @@ REQUIRED_TOOLS = {
         "category": "Scans Réseau & Exploration LAN",
         "description": "Résolution de nom d'hôte et groupes de travail NetBIOS",
     },
-    "nikto": {
-        "check_cmd": ["nikto", "-Version"],
-        "apt_package": "nikto",
-        "category": "Audit Web & CMS Spécifiques",
-        "description": "Scanner de vulnérabilités et fichiers dangereux pour serveurs Web",
-    },
     "enum4linux": {
         "check_cmd": ["enum4linux", "-h"],
         "apt_package": "enum4linux",
@@ -225,6 +219,12 @@ REQUIRED_TOOLS = {
         "apt_package": "subfinder",
         "category": "Reconnaissance & OSINT",
         "description": "Découverte rapide multi-sources de sous-domaines web",
+    },
+    "theharvester": {
+        "check_cmd": ["theHarvester", "-h"],
+        "apt_package": "theharvester",
+        "category": "Reconnaissance & OSINT",
+        "description": "Collecte d'emails, sous-domaines et adresses IP (OSINT)",
     },
     "reportlab": {
         "py_module": "reportlab",
@@ -1695,35 +1695,10 @@ def wpscan_status(job_id):
     return jsonify(job)
 
 # =====================================================================================
-# SECTION 7.45 : AUDIT WEB — NIKTO, GOBUSTER, SQLMAP, JOOMSCAN, DROOPESCAN, MOODLESCAN
+# SECTION 7.45 : AUDIT WEB — GOBUSTER, SQLMAP, JOOMSCAN, DROOPESCAN, MOODLESCAN
 # =====================================================================================
 
 AUDIT_JOBS = {}
-
-def _run_nikto_thread(job_id, target_url):
-    """Lance Nikto en arrière-plan et stocke les résultats."""
-    AUDIT_JOBS[job_id]["status"] = "running"
-    AUDIT_JOBS[job_id]["output"] = []
-
-    if not target_url.startswith("http://") and not target_url.startswith("https://"):
-        target_url = "http://" + target_url
-
-    cmd = ["nikto", "-h", target_url, "-nointeractive", "-Format", "txt"]
-    cmd = _wrap_with_proxy(cmd)
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        lines = (proc.stdout + proc.stderr).splitlines()
-        findings = [l for l in lines if l.strip() and not l.startswith("- ") or l.startswith("+ ") or "OSVDB" in l or "CVE" in l or "Server:" in l or "X-" in l]
-        AUDIT_JOBS[job_id]["status"] = "done"
-        AUDIT_JOBS[job_id]["output"] = lines
-        AUDIT_JOBS[job_id]["findings"] = [l for l in lines if l.startswith("+ ") or "OSVDB" in l or "CVE" in l]
-        save_history("nikto", target_url, {"lines": lines[:200]})
-    except subprocess.TimeoutExpired:
-        AUDIT_JOBS[job_id]["status"] = "error"
-        AUDIT_JOBS[job_id]["error"] = "Délai dépassé pour Nikto (5 min)."
-    except Exception as e:
-        AUDIT_JOBS[job_id]["status"] = "error"
-        AUDIT_JOBS[job_id]["error"] = str(e)
 
 
 def _run_gobuster_thread(job_id, target_url):
@@ -1831,18 +1806,6 @@ def _run_cms_scanner_thread(job_id, cms_type, target_url):
         AUDIT_JOBS[job_id]["error"] = str(e)
 
 
-@app.route("/api/audit/nikto", methods=["POST"])
-def start_nikto():
-    data = request.get_json(silent=True) or {}
-    target_url = data.get("target_url", "").strip()
-    if not target_url:
-        return jsonify({"error": "URL cible manquante."}), 400
-    if not _tool_is_installed(["nikto"]):
-        return jsonify({"error": "nikto n'est pas installé.", "not_installed": True}), 412
-    job_id = str(uuid.uuid4())
-    AUDIT_JOBS[job_id] = {"status": "queued", "output": [], "findings": [], "error": None, "target_url": target_url, "tool": "nikto", "started_at": datetime.now().isoformat()}
-    threading.Thread(target=_run_nikto_thread, args=(job_id, target_url), daemon=True).start()
-    return jsonify({"job_id": job_id})
 
 
 @app.route("/api/audit/gobuster", methods=["POST"])
@@ -2106,7 +2069,10 @@ def subdomains_scan():
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    # MOTEUR 3 : Sondage DNS direct multithreadé (avec filtrage anti-Wildcard)
+    # MOTEUR 3 : theHarvester (OSINT étendu)
+    # Déplacé dans une étape distincte (API /api/harvester-scan)
+
+    # MOTEUR 4 : Sondage DNS direct multithreadé (avec filtrage anti-Wildcard)
     common_prefixes = [
         "www", "wiki", "mail", "webmail", "remote", "admin", "api", "dev", "test", "vpn",
         "cloud", "portal", "shop", "store", "git", "gitlab", "ns1", "ns2", "cpanel",
@@ -2152,6 +2118,97 @@ def subdomains_scan():
         "wildcard_detected": wildcard_detected,
         "wildcard_ips": list(wildcard_ips)
     })
+
+
+# =====================================================================================
+# SECTION 7.7.5 : THEHARVESTER STANDALONE (LIVE STREAM)
+# =====================================================================================
+
+def _run_harvester_thread(job_id, target_url):
+    SCAN_JOBS[job_id]["status"] = "running"
+    SCAN_JOBS[job_id]["log"] = []
+    
+    root_domain = extract_root_domain(target_url)
+    cmd = ["theHarvester", "-d", root_domain, "-b", "all", "-l", "100"]
+
+    def append_log(line):
+        log = SCAN_JOBS[job_id]["log"]
+        log.append(line)
+        if len(log) > MAX_LOG_LINES:
+            del log[0:len(log) - MAX_LOG_LINES]
+
+    try:
+        run_cmd = cmd
+        if shutil.which("stdbuf"):
+            run_cmd = ["stdbuf", "-oL", "-eL"] + cmd
+
+        process = subprocess.Popen(
+            run_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+        ACTIVE_PROCESSES[job_id] = process
+    except Exception as e:
+        SCAN_JOBS[job_id]["status"] = "error"
+        SCAN_JOBS[job_id]["error"] = f"Erreur de lancement theHarvester: {e}"
+        return
+
+    def read_output():
+        for line in process.stdout:
+            clean_line = line.rstrip("\n")
+            if clean_line:
+                append_log(clean_line)
+
+    t_out = threading.Thread(target=read_output, daemon=True)
+    t_out.start()
+
+    try:
+        process.wait(timeout=900)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait()
+        SCAN_JOBS[job_id]["status"] = "error"
+        SCAN_JOBS[job_id]["error"] = "Délai d'attente dépassé pour theHarvester (15m)."
+        append_log("[✘ Scan interrompu : délai dépassé]")
+        return
+
+    t_out.join(timeout=5)
+
+    if process.returncode != 0:
+        SCAN_JOBS[job_id]["status"] = "error"
+        SCAN_JOBS[job_id]["error"] = "theHarvester a retourné une erreur."
+        return
+
+    subdomains = set()
+    domain_pattern = re.compile(r'([a-zA-Z0-9.-]+\.' + re.escape(root_domain) + r')')
+    for line in SCAN_JOBS[job_id]["log"]:
+        for match in domain_pattern.finditer(line):
+            sd = match.group(1).lower()
+            if sd != root_domain:
+                subdomains.add(sd)
+
+    SCAN_JOBS[job_id]["status"] = "done"
+    SCAN_JOBS[job_id]["result"] = {"subdomains": sorted(list(subdomains))}
+    append_log(f"[✔ Scan theHarvester terminé, {len(subdomains)} sous-domaines trouvés]")
+
+
+@app.route("/api/harvester-scan", methods=["POST"])
+def harvester_scan():
+    data = request.get_json(silent=True) or {}
+    target_url = data.get("target_url", "").strip()
+
+    if not target_url:
+        return jsonify({"error": "Cible manquante."}), 400
+
+    job_id = str(uuid.uuid4())
+    SCAN_JOBS[job_id] = {"status": "pending", "log": [], "result": None}
+
+    t = threading.Thread(target=_run_harvester_thread, args=(job_id, target_url), daemon=True)
+    t.start()
+
+    return jsonify({"job_id": job_id})
 
 
 # =====================================================================================

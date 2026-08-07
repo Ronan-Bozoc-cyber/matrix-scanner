@@ -29,5 +29,31 @@
           <p style="color: #bbb; font-size: 0.9em;">Pour éviter de stocker ou saisir votre mot de passe dans l'application web, vous pouvez accorder les capacités réseau à Netdiscover une fois pour toutes dans votre terminal :</p>
           <pre style="background: #111; padding: 12px; border-left: 3px solid #00ff41; color: #00ff41; font-family: monospace; font-size: 0.9em; overflow-x: auto;">sudo setcap cap_net_raw,cap_net_admin=eip /usr/sbin/netdiscover</pre>
         </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h3><i class="fa-solid fa-terminal"></i> Gestion des commandes personnalisées</h3>
+          <p style="color: #bbb; font-size: 0.9em;">Enregistrez vos lignes de commandes fréquentes pour y accéder rapidement.</p>
+          
+          <div style="margin-top: 15px;">
+             <table style="border-collapse: collapse; margin-bottom: 15px; table-layout: fixed;" id="custom-commands-table">
+               <thead>
+                 <tr>
+                   <th style="border-bottom: 1px solid #00ff41; text-align: center; padding: 8px; width: 60px;">N°</th>
+                   <th style="border-bottom: 1px solid #00ff41; text-align: left; padding: 8px; width: 500px;">Commande</th>
+                   <th style="border-bottom: 1px solid #00ff41; text-align: center; padding: 8px; width: 60px;">Actions</th>
+                 </tr>
+               </thead>
+               <tbody id="custom-commands-list">
+               </tbody>
+             </table>
+          </div>
+
+          <div class="form-row" style="margin-top: 15px;">
+            <div class="form-control" style="flex:1;">
+              <input type="text" id="new-command-input" placeholder="Saisissez une nouvelle ligne de commande..." autocomplete="off">
+            </div>
+            <button id="btn-add-command" class="btn btn-primary" style="margin-left: 10px;"><i class="fa-solid fa-plus"></i> Ajouter</button>
+          </div>
+        </div>
       </section>
 {% endblock %}

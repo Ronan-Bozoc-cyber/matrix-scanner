@@ -69,6 +69,27 @@
           <div id="subdomains-results-content" style="margin-top: 10px;"></div>
         </div>
 
+        <!-- CARTE THEHARVESTER -->
+        <div id="harvester-card" class="card hidden" style="margin-bottom: 20px; border-color: #f39c12;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h3 class="card-title" style="color: #f39c12; margin: 0;"><i class="fa-solid fa-tractor"></i> OSINT theHarvester (Recherche Étendue)</h3>
+            <button id="btn-add-harvester-to-report" class="btn btn-small" style="background: rgba(243, 156, 18, 0.15); border-color: #f39c12; color: #f8c471; font-weight: bold; font-size: 0.75rem;">
+              <i class="fa-solid fa-plus"></i> Ajouter au rapport
+            </button>
+          </div>
+          <div id="harvester-progress" class="scan-progress hidden">
+            <div class="loader"></div>
+            <span id="harvester-progress-text">Scan theHarvester en cours (-b all)...</span>
+          </div>
+          <div id="harvester-results-content" style="margin-top: 10px;"></div>
+          <div class="terminal-container" style="margin-top: 10px;">
+            <div class="terminal-header">
+              <i class="fa-solid fa-terminal"></i> Terminal en direct
+            </div>
+            <pre id="harvester-terminal-content" class="terminal-content" style="max-height: 300px; overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-wrap: break-word; word-break: break-all;">En attente de démarrage...</pre>
+          </div>
+        </div>
+
         <!-- CARTE DÉTECTION WAF (Pare-feu applicatif web) -->
         <div id="waf-card" class="card hidden" style="margin-bottom: 20px; border-color: #e74c3c;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
@@ -182,10 +203,10 @@
     <div id="cms-audit-results-content" style="margin-top: 10px;"></div>
   </div>
 
-  <!-- CARTE FUZZING ARBORESCENCE & REPERTOIRES (Gobuster / Nikto) -->
+  <!-- CARTE FUZZING ARBORESCENCE & REPERTOIRES (Gobuster) -->
   <div id="gobuster-card" class="card hidden" style="margin-bottom: 20px; border-color: #9b59b6;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-      <h3 class="card-title" style="color: #9b59b6; margin: 0;"><i class="fa-solid fa-folder-tree"></i> Exploration & Fuzzing d'Arborescence Web (Gobuster & Nikto)</h3>
+      <h3 class="card-title" style="color: #9b59b6; margin: 0;"><i class="fa-solid fa-folder-tree"></i> Exploration & Fuzzing d'Arborescence Web (Gobuster)</h3>
       <button id="btn-add-gobuster-to-report" class="btn btn-small" style="background: rgba(155, 89, 182, 0.15); border-color: #9b59b6; color: #d6a2e8; font-weight: bold; font-size: 0.75rem;">
         <i class="fa-solid fa-plus"></i> Ajouter l'arborescence au rapport
       </button>

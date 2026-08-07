@@ -12,7 +12,7 @@
             <div class="diagram-path" style="flex-wrap: wrap; gap: 8px;">
               <div class="node"><i class="fa-solid fa-crosshairs"></i> Cible Web</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #9b59b6;"><i class="fa-solid fa-address-card"></i> Domaine (WHOIS, Subfinder, Sublist3r & DNS Probe)</div>
+              <div class="node" style="border-color: #9b59b6;"><i class="fa-solid fa-address-card"></i> Domaine (WHOIS, Subfinder, Sublist3r, theHarvester & DNS Probe)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #e74c3c;"><i class="fa-solid fa-shield-halved"></i> Détection WAF (Wafw00f)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
@@ -24,9 +24,9 @@
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #ff4444;"><i class="fa-solid fa-bug"></i> CVE</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #1abc9c; background: rgba(22, 160, 133, 0.2);"><i class="fa-solid fa-sitemap"></i> Audits (CMS, Nikto, Gobuster, SQLMap)</div>
+              <div class="node" style="border-color: #1abc9c; background: rgba(22, 160, 133, 0.2);"><i class="fa-solid fa-sitemap"></i> Audits (CMS, Gobuster, SQLMap)</div>
             </div>
-            <p class="desc">Workflow externe automatisé avec <strong>Aiguillage Intelligent (24 Outils Kali)</strong> : Interroge le WHOIS et énumère les sous-domaines (Subfinder/Sublist3r/DNS Probe), détecte le WAF (Wafw00f), capture le site (Gowitness), analyse l'empreinte (WhatWeb), cartographie les ports (Nmap), recherche les vulnérabilités (CVE) puis déclenche dynamiquement les scanners dédiés : <strong>CMS</strong> (WPScan, Joomscan, Droopescan, Moodlescan), <strong>Fuzzing d'arborescence</strong> (Gobuster), <strong>Serveur Web</strong> (Nikto) et <strong>Bases de données</strong> (SQLMap/NoSQLMap).</p>
+            <p class="desc">Workflow externe automatisé avec <strong>Aiguillage Intelligent (Outils Kali)</strong> : Interroge le WHOIS et énumère les sous-domaines (Subfinder/Sublist3r/theHarvester/DNS Probe), détecte le WAF (Wafw00f), capture le site (Gowitness), analyse l'empreinte (WhatWeb), cartographie les ports (Nmap), recherche les vulnérabilités (CVE) puis déclenche dynamiquement les scanners dédiés : <strong>CMS</strong> (WPScan, Joomscan, Droopescan, Moodlescan), <strong>Fuzzing d'arborescence</strong> (Gobuster), et <strong>Bases de données</strong> (SQLMap/NoSQLMap).</p>
           </div>
 
           <div class="workflow-box local-workflow">
@@ -50,7 +50,7 @@
 
 <!-- BANDEAU DE VÉRIFICATION DES DÉPENDANCES -->
       <div class="card" id="deps-card" style="margin-bottom: 20px;">
-        <h2>01_ // Vérification système</h2>
+        <h2><i class="fa-solid fa-list-check"></i> Vérification système</h2>
         <div id="deps-list" class="deps-list">Vérification en cours...</div>
         <div id="deps-missing-alert" class="alert-box hidden">
           <p>Des outils requis sont manquants sur ce système.</p>
