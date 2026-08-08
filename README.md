@@ -53,9 +53,9 @@ graph TD
 
 ---
 
-## 🛠️ 26 outils de sécurité — par catégorie
+## 🛠️ 27 outils de sécurité — par catégorie
 
-M-SCAN intègre **26 outils et modules** vérifiés automatiquement au démarrage, classés par rubrique thématique :
+M-SCAN intègre **27 outils et modules** vérifiés automatiquement au démarrage, classés par rubrique thématique :
 
 ### 🔍 Reconnaissance & OSINT
 | # | Outil | Rôle |
@@ -70,50 +70,51 @@ M-SCAN intègre **26 outils et modules** vérifiés automatiquement au démarrag
 |---|-------|------|
 | 5 | `enum4linux` | Énumération complète des utilisateurs, groupes et partages Windows/Samba |
 | 6 | `nbtscan` | Résolution NetBIOS et identification des groupes de travail |
-| 7 | `netdiscover` | Découverte d'hôtes actifs par ARP (couche 2, passe les firewalls ICMP) |
-| 8 | `nmap` | Scanner de ports, services, OS et vulnérabilités réseau |
-| 9 | `smbmap` | Audit des autorisations d'accès aux partages SMB (READ/WRITE/NO ACCESS) |
-| 10 | `smbclient` | Client SMB pour accéder et lister les partages réseaux (Auto-enum) |
-| 11 | `curl` | Client de transfert réseau, utilisé pour vérifier les accès FTP anonymes |
+| 7 | `masscan` | Scanner hybride ultra-rapide pour détection instantanée de ports |
+| 8 | `netdiscover` | Découverte d'hôtes actifs par ARP (couche 2, passe les firewalls ICMP) |
+| 9 | `nmap` | Scanner de ports, services, OS et vulnérabilités réseau |
+| 10 | `smbmap` | Audit des autorisations d'accès aux partages SMB (READ/WRITE/NO ACCESS) |
+| 11 | `smbclient` | Client SMB pour accéder et lister les partages réseaux (Auto-enum) |
+| 12 | `curl` | Client de transfert réseau, utilisé pour vérifier les accès FTP anonymes |
 
 ### 🕵️ Empreinte & Analyse Web
 | # | Outil | Rôle |
 |---|-------|------|
-| 12 | `gowitness` | Capture d'écran automatisée d'applications web (headless) |
-| 13 | `nuclei` | Scanner de vulnérabilités basé sur des templates réseau et web |
-| 14 | `wafw00f` | Détection de pare-feux applicatifs web (WAF) |
-| 15 | `whatweb` | Empreinte technologique web (CMS, serveurs, frameworks, PHP) |
+| 13 | `gowitness` | Capture d'écran automatisée d'applications web (headless) |
+| 14 | `nuclei` | Scanner de vulnérabilités basé sur des templates réseau et web |
+| 15 | `wafw00f` | Détection de pare-feux applicatifs web (WAF) |
+| 16 | `whatweb` | Empreinte technologique web (CMS, serveurs, frameworks, PHP) |
 
 ### 🔐 Audit Web & CMS Spécifiques
 | # | Outil | Rôle |
 |---|-------|------|
-| 16 | `droopescan` | Scanner de vulnérabilités pour les CMS Drupal et SilverStripe |
-| 17 | `gobuster` | Fuzzing de répertoires et fichiers cachés (wordlists Kali) |
-| 18 | `joomscan` | Scanner de vulnérabilités pour le CMS Joomla |
-| 19 | `moodlescan` | Audit de sécurité spécialisé des plateformes Moodle |
-| 20 | `wpscan` | Scanner de failles spécifique WordPress (plugins, thèmes, utilisateurs) |
+| 17 | `droopescan` | Scanner de vulnérabilités pour les CMS Drupal et SilverStripe |
+| 18 | `gobuster` | Fuzzing de répertoires et fichiers cachés (wordlists Kali) |
+| 19 | `joomscan` | Scanner de vulnérabilités pour le CMS Joomla |
+| 20 | `moodlescan` | Audit de sécurité spécialisé des plateformes Moodle |
+| 21 | `wpscan` | Scanner de failles spécifique WordPress (plugins, thèmes, utilisateurs) |
 
 ### 💉 Reconnaissance & OSINT Avancé
 | # | Outil | Rôle |
 |---|-------|------|
-| 21 | `paramspider` | Extraction d'URLs avec paramètres via archives web (Wayback Machine) pour alimenter SQLMap |
+| 22 | `paramspider` | Extraction d'URLs avec paramètres via archives web (Wayback Machine) pour alimenter SQLMap |
 
 ### 💉 Audit & Injections Bases de Données
 | # | Outil | Rôle |
 |---|-------|------|
-| 22 | `nosqlmap` | Audit d'injection et de sécurité pour bases de données NoSQL |
-| 23 | `sqlmap` | Détection et exploitation automatique des injections SQL |
+| 23 | `nosqlmap` | Audit d'injection et de sécurité pour bases de données NoSQL |
+| 24 | `sqlmap` | Détection et exploitation automatique des injections SQL |
 
 ### 📊 Rendus Visuels, Rapports & Télémétrie
 | # | Outil | Rôle |
 |---|-------|------|
-| 24 | `psutil` | Télémétrie CPU, RAM et réseau en temps réel |
-| 25 | `python-docx` | Génération et exportation de rapports Word (.docx) |
-| 26 | `reportlab` | Génération et exportation de rapports PDF professionnels |
+| 25 | `psutil` | Télémétrie CPU, RAM et réseau en temps réel |
+| 26 | `python-docx` | Génération et exportation de rapports Word (.docx) |
+| 27 | `reportlab` | Génération et exportation de rapports PDF professionnels |
 
 ### 🔎 Vérification automatique et installation en un clic
 
-Au chargement, le backend vérifie la présence des **26 outils** sur le système hôte, classe les résultats par rubrique dans le tableau de bord, et propose :
+Au chargement, le backend vérifie la présence des **27 outils** sur le système hôte, classe les résultats par rubrique dans le tableau de bord, et propose :
 - Un **bandeau d'alerte** listant les paquets manquants.
 - Un bouton **"Installer les outils manquants"** qui appelle `pkexec` (Polkit) pour installer via `apt-get` / `pip` sans avoir besoin de lancer Flask en root.
 - Pour les outils non disponibles en dépôt (`droopescan`, `moodlescan`, `nosqlmap`), une **installation automatique depuis leur dépôt GitHub officiel**.
@@ -164,9 +165,10 @@ graph TD
 graph TD
     A[1. Plage LAN] --> B[2. Balayage ARP]
     B --> C[3. Résolution NetBIOS & MAC OUI]
-    C --> D[4. Cartographie Nmap Parallélisée]
-    D --> E[5. Énumération Auto SMB/FTP]
-    E --> F[6. Corrélation CVE & Rapports]
+    C --> D[4. Scan Hybride : Masscan Ultra-Rapide]
+    D --> E[5. Nmap Ciblé sur Ports Ouverts]
+    E --> F[6. Énumération Auto SMB/FTP]
+    F --> G[7. Corrélation CVE & Rapports]
 ```
 
 | Étape | Outils | Rôle |
@@ -174,9 +176,10 @@ graph TD
 | **1 — Interface LAN** | Détection auto | Identifie l'interface réseau active et calcule la plage du sous-réseau (ex. `192.168.1.0/24`). |
 | **2 — ARP** | `Netdiscover` | Découverte d'hôtes par paquets ARP (couche 2 — détecte même si ICMP bloqué par Windows Defender). |
 | **3 — NetBIOS & MAC** | `nbtscan` + `ieee-data/oui.txt` | Identifie le nom de machine, le groupe de travail, et croise l'adresse MAC avec la base OUI hors-ligne pour identifier le constructeur avec haute précision. |
-| **4 — Nmap (Multithread)** | `Nmap` | Exécution asynchrone et parallélisée (jusqu'à 5 hôtes simultanés) pour cartographier les ports, sans blocage si une IP ne répond pas. |
-| **5 — Énumération Auto** | `smbclient` + `curl` (FTP) | Lancement automatique en arrière-plan d'accès anonymes (FTP port 21) et listage des partages (SMB port 139/445) dès leur détection. |
-| **6 — CVE & Rapports** | `Searchsploit` + `ReportLab` + `python-docx` | Croise les versions avec Exploit-DB, calcule le score de risque, génère PDF & Word. |
+| **4 — Détection Rapide** | `Masscan` | **Scan Hybride** : Contrairement à Nmap, Masscan utilise un TCP stack asynchrone bypassant le kernel pour identifier les ports ouverts sur le LAN en quelques secondes à peine (Scan Hybride Ultra-Rapide). |
+| **5 — Audit Ciblé Nmap** | `Nmap` | Exécution asynchrone et parallélisée : Nmap ne prend le relais **que** sur les ports spécifiques découverts à l'étape 4 pour y faire de la détection de services (`-sV`) et l'exécution de scripts (`-sC`). |
+| **6 — Énumération Auto** | `smbclient` + `curl` (FTP) | Lancement automatique en arrière-plan d'accès anonymes (FTP port 21) et listage des partages (SMB port 139/445) dès leur détection. |
+| **7 — CVE & Rapports** | `Searchsploit` + `ReportLab` + `python-docx` | Croise les versions avec Exploit-DB, calcule le score de risque, génère PDF & Word. |
 
 ---
 
