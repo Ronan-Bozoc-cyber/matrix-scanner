@@ -162,9 +162,9 @@ graph TD
 ```mermaid
 graph TD
     A[1. Plage LAN] --> B[2. Balayage ARP]
-    B --> C[3. Résolution NetBIOS]
-    C --> D[4. Cartographie Nmap]
-    D --> E[5. Énumération SMB]
+    B --> C[3. Résolution NetBIOS & MAC OUI]
+    C --> D[4. Cartographie Nmap Parallélisée]
+    D --> E[5. Énumération Auto SMB/FTP]
     E --> F[6. Corrélation CVE & Rapports]
 ```
 
@@ -172,9 +172,9 @@ graph TD
 | :--- | :--- | :--- |
 | **1 — Interface LAN** | Détection auto | Identifie l'interface réseau active et calcule la plage du sous-réseau (ex. `192.168.1.0/24`). |
 | **2 — ARP** | `Netdiscover` | Découverte d'hôtes par paquets ARP (couche 2 — détecte même si ICMP bloqué par Windows Defender). |
-| **3 — NetBIOS** | `nbtscan` + mDNS | Identifie le nom de machine, groupe de travail et OUI MAC. |
-| **4 — Nmap** | `Nmap` (`-sS`/`-sT`/`-sV`/`-O`) | Ports ouverts, bannières de services, détection OS. |
-| **5 — SMB** | `enum4linux` + `smbmap` | Utilisateurs, groupes, politiques mots de passe, droits READ/WRITE sur partages Samba. |
+| **3 — NetBIOS & MAC** | `nbtscan` + `ieee-data/oui.txt` | Identifie le nom de machine, le groupe de travail, et croise l'adresse MAC avec la base OUI hors-ligne pour identifier le constructeur avec haute précision. |
+| **4 — Nmap (Multithread)** | `Nmap` | Exécution asynchrone et parallélisée (jusqu'à 5 hôtes simultanés) pour cartographier les ports, sans blocage si une IP ne répond pas. |
+| **5 — Énumération Auto** | `smbclient` + `curl` (FTP) | Lancement automatique en arrière-plan d'accès anonymes (FTP port 21) et listage des partages (SMB port 139/445) dès leur détection. |
 | **6 — CVE & Rapports** | `Searchsploit` + `ReportLab` + `python-docx` | Croise les versions avec Exploit-DB, calcule le score de risque, génère PDF & Word. |
 
 ---

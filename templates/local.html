@@ -3,7 +3,7 @@
 <section id="view-local" class="view-section active">
         <div class="pedagogical-banner" style="background: rgba(0, 200, 81, 0.1); border-color: #00C851;">
           <h3 style="color: #00C851;"><i class="fa-solid fa-network-wired"></i> Scanner Réseau Local (Intranet)</h3>
-          <p>Ce mode cartographie votre réseau interne. Il utilise des <strong>requêtes ARP</strong> pour identifier les <strong>fabricants de matériel</strong> (NAS, Imprimantes) et croise les versions détectées avec <strong>Vulners</strong> pour trouver des CVE de manière ciblée.</p>
+          <p>Ce mode cartographie votre réseau interne. Il utilise des requêtes <strong>ARP</strong> et une résolution <strong>MAC OUI hors-ligne</strong> pour identifier les fabricants avec haute précision, sonde les hôtes en <strong>parallèle (Nmap Multithread)</strong>, réalise une <strong>énumération automatique des partages (SMB/FTP)</strong>, et croise les services découverts avec <strong>Exploit-DB</strong> pour trouver des failles CVE ciblées.</p>
         </div>
 
         <details class="workflow-accordion" style="margin-bottom: 20px;">
@@ -12,14 +12,16 @@
           </summary>
           <div class="workflow-box local-workflow" style="margin-top: 10px;">
             <h4><i class="fa-solid fa-network-wired"></i> Rappel du Workflow Local</h4>
-            <div class="diagram-path">
+            <div class="diagram-path" style="flex-wrap: wrap; gap: 8px;">
               <div class="node"><i class="fa-solid fa-server"></i> Cible LAN</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #2ecc71;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #f1c40f;"><i class="fa-solid fa-id-card"></i> Identité & NetBIOS (nbtscan & mDNS)</div>
+              <div class="node" style="border-color: #f1c40f;"><i class="fa-solid fa-id-card"></i> Identité (NetBIOS & Base OUI MAC)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #00ff41;"><i class="fa-solid fa-tags"></i> Ports & OS (Nmap)</div>
+              <div class="node" style="border-color: #00ff41;"><i class="fa-solid fa-tags"></i> Cartographie Nmap Parallélisée (Multithread)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node" style="border-color: #e67e22;"><i class="fa-solid fa-folder-open"></i> Énumération Auto (SMB & FTP)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #ff4444;"><i class="fa-solid fa-biohazard"></i> CVE & Exploits (Exploit-DB)</div>
             </div>

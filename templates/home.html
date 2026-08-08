@@ -31,20 +31,20 @@
 
           <div class="workflow-box local-workflow">
             <h4><i class="fa-solid fa-network-wired"></i> Workflow : Scanner Local (Intranet & LAN)</h4>
-            <div class="diagram-path">
+            <div class="diagram-path" style="flex-wrap: wrap; gap: 8px;">
               <div class="node"><i class="fa-solid fa-server"></i> Cible LAN</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #2ecc71;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #f1c40f;"><i class="fa-solid fa-id-card"></i> Identité & NetBIOS (mDNS & nbtscan)</div>
+              <div class="node" style="border-color: #f1c40f;"><i class="fa-solid fa-id-card"></i> Identité (NetBIOS & Base OUI MAC complète)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #00ff41;"><i class="fa-solid fa-tags"></i> Ports & OS (Nmap)</div>
+              <div class="node" style="border-color: #00ff41;"><i class="fa-solid fa-tags"></i> Cartographie Nmap Parallélisée (Multithread)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #e67e22;"><i class="fa-solid fa-folder-open"></i> Énumération SMB (Enum4linux, SMBMap)</div>
+              <div class="node" style="border-color: #e67e22;"><i class="fa-solid fa-folder-open"></i> Énumération Auto (SMB & FTP Anonymous)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #ff4444;"><i class="fa-solid fa-biohazard"></i> CVE & Exploits (Exploit-DB)</div>
             </div>
-            <p class="desc">Workflow interne automatisé : Cartographie les équipements (IP/MAC) via ARP (Netdiscover), identifie la marque/catégorie via NetBIOS/mDNS, sonde les ports et OS (Nmap), énumère les partages Windows/Samba (Enum4linux, SMBMap) et croise les bannières avec la base d'exploits (Searchsploit/CVE).</p>
+            <p class="desc">Workflow interne automatisé : Cartographie les équipements via requêtes ARP (Netdiscover), identifie la marque avec précision grâce à une <strong>résolution MAC OUI hors-ligne</strong> couplée à NetBIOS. Lance ensuite des requêtes <strong>Nmap en parallèle (multithread)</strong> sur les cibles pour accélérer le balayage des ports. Enfin, effectue une <strong>énumération automatique "auto-pwn"</strong> en arrière-plan dès l'ouverture des ports 139/445 (SMB) ou 21 (FTP), et croise les bannières avec la base de données d'exploits (CVE).</p>
           </div>
           <div class="workflow-box network-resilience">
             <h4><i class="fa-solid fa-shield-halved"></i> Résilience Réseau & Rotation d'IP (Proxychains & Tor)</h4>
