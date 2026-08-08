@@ -1533,11 +1533,17 @@ async function runNmapScan(target, mode, modeToggle) {
   };
   options.is_local = (mode === "local");
 
+  let use_masscan = false;
+  if (mode === "local") {
+    const cb = document.getElementById("use-masscan-local");
+    if (cb) use_masscan = cb.checked;
+  }
+
   try {
     const res = await fetch("/api/scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target, mode, options }),
+      body: JSON.stringify({ target, mode, options, use_masscan }),
     });
 
     let data;

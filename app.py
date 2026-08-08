@@ -130,6 +130,12 @@ REQUIRED_TOOLS = {
         "category": "Scans Réseau & Exploration LAN",
         "description": "Scanner de ports et de services réseau",
     },
+    "masscan": {
+        "check_cmd": ["masscan", "--version"],
+        "apt_package": "masscan",
+        "category": "Scans Réseau & Exploration LAN",
+        "description": "Scanner de ports ultra-rapide (Mode Hybride)",
+    },
     "searchsploit": {
         "check_cmd": ["searchsploit", "-h"],
         "apt_package": "exploitdb",
@@ -1117,7 +1123,7 @@ def _run_single_nmap(job_id, cmd, target_ip, mode):
         append_log(f"Erreur d'analyse XML pour {target_ip}: {e}")
         return None
 
-def _run_scan_thread(job_id, cmd, target_str, mode="distant"):
+def _run_scan_thread(job_id, cmd, target_str, mode="distant", use_masscan=False):
     SCAN_JOBS[job_id]["status"] = "running"
     SCAN_JOBS[job_id]["log"] = []
     SCAN_JOBS[job_id]["result"] = []
@@ -1128,21 +1134,84 @@ def _run_scan_thread(job_id, cmd, target_str, mode="distant"):
         SCAN_JOBS[job_id]["error"] = "Aucune cible valide."
         return
 
-    # Si c'est un seul réseau complet (ex: 192.168.1.0/24), Nmap va le gérer en natif.
-    # Si ce sont des IP spécifiques, on parallélise 5 par 5.
-    max_workers = 5 if len(targets) > 1 else 1
+    masscan_results = {}
+    if use_masscan and mode == "local":
+        if not _tool_is_installed(REQUIRED_TOOLS["masscan"]["check_cmd"]):
+            SCAN_JOBS[job_id]["log"].append("[!] Masscan n'est pas installé. Fallback vers Nmap classique.")
+        else:
+            SCAN_JOBS[job_id]["log"].append("[*] Lancement du scan Hybride Ultra-Rapide (Masscan)...")
+            # masscan scanne la target_str (qui peut être un sous-réseau ou une liste d'IPs)
+            m_cmd = ["masscan", target_str, "-p1-65535", "--rate=2000", "-oJ", "-"]
+            if CONFIGURED_SUDO_PASSWORD:
+                m_cmd = ["sudo", "-S"] + m_cmd
+            
+            try:
+                m_proc = subprocess.run(
+                    m_cmd, 
+                    input=f"{CONFIGURED_SUDO_PASSWORD}\n" if CONFIGURED_SUDO_PASSWORD else None, 
+                    capture_output=True, 
+                    text=True, 
+                    timeout=300
+                )
+                if m_proc.returncode == 0 and m_proc.stdout.strip():
+                    try:
+                        import json
+                        m_data = json.loads(m_proc.stdout.strip())
+                        for item in m_data:
+                            ip = item.get("ip")
+                            ports = [str(p.get("port")) for p in item.get("ports", [])]
+                            if ip and ports:
+                                if ip not in masscan_results:
+                                    masscan_results[ip] = []
+                                masscan_results[ip].extend(ports)
+                        SCAN_JOBS[job_id]["log"].append(f"[✔] Masscan terminé : {len(masscan_results)} hôtes avec ports ouverts.")
+                    except Exception as e:
+                        SCAN_JOBS[job_id]["log"].append(f"[!] Erreur de parsing Masscan : {e}. Fallback Nmap.")
+                else:
+                    SCAN_JOBS[job_id]["log"].append(f"[!] Erreur Masscan ou aucun port trouvé (code {m_proc.returncode}). Fallback Nmap.")
+            except Exception as e:
+                SCAN_JOBS[job_id]["log"].append(f"[!] Timeout ou exception Masscan : {e}. Fallback Nmap.")
+
+    # Déterminer les tâches Nmap
+    nmap_tasks = [] # list of (ip, cmd_for_ip)
+    
+    if masscan_results:
+        # On ne scanne avec Nmap que les IPs où Masscan a trouvé des ports
+        for ip, ports in masscan_results.items():
+            # Retirer tout argument -p existant dans la commande Nmap initiale
+            clean_cmd = []
+            skip_next = False
+            for i, arg in enumerate(cmd):
+                if skip_next:
+                    skip_next = False
+                    continue
+                if arg == "-p":
+                    skip_next = True
+                    continue
+                if arg.startswith("-p") and len(arg) > 2:
+                    continue
+                clean_cmd.append(arg)
+            
+            # Ajouter nos ports trouvés
+            port_str = ",".join(list(set(ports)))
+            clean_cmd.extend(["-p", port_str])
+            nmap_tasks.append((ip, clean_cmd))
+    else:
+        # Fallback normal: Nmap sur toutes les targets (les IPs sont ajoutées par _run_single_nmap)
+        nmap_tasks = [(t, cmd) for t in targets]
+
+    max_workers = 5 if len(nmap_tasks) > 1 else 1
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(_run_single_nmap, job_id, cmd, t, mode): t for t in targets}
+        futures = {executor.submit(_run_single_nmap, job_id, t_cmd, t_ip, mode): t_ip for t_ip, t_cmd in nmap_tasks}
         for future in concurrent.futures.as_completed(futures):
-            t = futures[future]
+            t_ip = futures[future]
             try:
                 res = future.result()
                 if res:
-                    # Fusion asynchrone pour que le frontend puisse lire `result` dynamiquement
                     SCAN_JOBS[job_id]["result"].extend(res)
             except Exception as exc:
-                SCAN_JOBS[job_id]["log"].append(f"Erreur d'exécution pour {t} : {exc}")
+                SCAN_JOBS[job_id]["log"].append(f"Erreur d'exécution pour {t_ip} : {exc}")
 
     SCAN_JOBS[job_id]["status"] = "done"
     SCAN_JOBS[job_id]["log"].append("[✔ Scan global terminé]")
@@ -1181,8 +1250,9 @@ def start_scan():
         "started_at": datetime.now().isoformat(),
     }
 
+    use_masscan = data.get("use_masscan", False)
     target_str = ", ".join(msg)
-    thread = threading.Thread(target=_run_scan_thread, args=(job_id, cmd, target_str, mode), daemon=True)
+    thread = threading.Thread(target=_run_scan_thread, args=(job_id, cmd, target_str, mode, use_masscan), daemon=True)
     thread.start()
 
     return jsonify({
