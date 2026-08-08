@@ -2052,6 +2052,35 @@ function renderResults(hosts) {
         }
       }
 
+      // --- AFFICHAGE POST-SCAN AUTO (SMB & FTP) ---
+      if (host.smb_enum) {
+        const smbBox = document.createElement("div");
+        smbBox.style.marginTop = "12px";
+        smbBox.style.padding = "10px";
+        smbBox.style.background = "rgba(46, 204, 113, 0.05)";
+        smbBox.style.border = "1px solid #2ecc71";
+        smbBox.style.borderRadius = "4px";
+        smbBox.innerHTML = `<h5 style="color:#2ecc71; margin:0 0 8px 0; font-size: 0.95rem;"><i class="fa-solid fa-folder-tree"></i> Énumération SMB Automatique (smbclient)</h5>
+        <pre style="margin:0; font-size:0.8rem; color:#ccc; white-space:pre-wrap;">${host.smb_enum}</pre>`;
+        hostBlock.appendChild(smbBox);
+      }
+
+      if (host.ftp_anon !== undefined) {
+        const ftpBox = document.createElement("div");
+        ftpBox.style.marginTop = "12px";
+        ftpBox.style.padding = "10px";
+        ftpBox.style.background = host.ftp_anon ? "rgba(231,76,60,0.1)" : "rgba(255,255,255,0.05)";
+        ftpBox.style.border = host.ftp_anon ? "1px solid #e74c3c" : "1px solid #555";
+        ftpBox.style.borderRadius = "4px";
+        
+        let content = host.ftp_anon ? 
+          `<strong style="color:#ff4444; font-size: 0.9rem;"><i class="fa-solid fa-triangle-exclamation"></i> ALERTE : Connexion FTP Anonyme Autorisée !</strong><br/><pre style="margin-top:8px; font-size:0.8rem; color:#ccc; max-height:200px; overflow:auto;">${host.ftp_files}</pre>` : 
+          `<span style="color:#aaa; font-size: 0.9rem;"><i class="fa-solid fa-shield"></i> Connexion FTP Anonyme refusée.</span>`;
+          
+        ftpBox.innerHTML = `<h5 style="color:#f1c40f; margin:0 0 8px 0; font-size: 0.95rem;"><i class="fa-solid fa-file-ftp"></i> Vérification FTP Anonymous</h5>${content}`;
+        hostBlock.appendChild(ftpBox);
+      }
+
       // Auto-déclenchement de la recherche CVE pour le premier port ouvert globale
       if (!window.autoCveSearched) {
         const firstOpenPort = host.ports.find(p => p.state === "open" && (p.product || p.service));

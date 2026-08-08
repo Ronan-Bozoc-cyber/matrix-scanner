@@ -787,6 +787,32 @@ def build_nmap_command(options):
     cmd.extend(["-oX", "-"])
 
     return cmd, explanation
+OUI_DATABASE = None
+
+def get_oui_vendor(mac):
+    global OUI_DATABASE
+    if not mac:
+        return None
+        
+    if OUI_DATABASE is None:
+        OUI_DATABASE = {}
+        try:
+            oui_path = "/usr/share/ieee-data/oui.txt"
+            if os.path.exists(oui_path):
+                with open(oui_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    for line in f:
+                        if "(hex)" in line:
+                            parts = line.split("(hex)")
+                            if len(parts) == 2:
+                                prefix = parts[0].strip().replace("-", ":").upper()
+                                vendor = parts[1].strip()
+                                OUI_DATABASE[prefix] = vendor
+        except Exception as e:
+            print(f"[!] Erreur de lecture de {oui_path} : {e}")
+            OUI_DATABASE = {} # Eviter de retenter si ça a planté
+
+    mac_prefix = mac.strip().upper()[:8] # ex: 28:6F:B9
+    return OUI_DATABASE.get(mac_prefix)
 
 
 def resolve_host_identity(ip, mac=None, vendor=None):
@@ -794,6 +820,10 @@ def resolve_host_identity(ip, mac=None, vendor=None):
     Enrichit les informations d'un équipement local en interrogeant NetBIOS (nbtscan),
     le DNS inversé et en analysant le préfixe MAC / Constructeur.
     """
+    if mac and (not vendor or vendor == "Inconnu"):
+        oui_vendor = get_oui_vendor(mac)
+        if oui_vendor:
+            vendor = oui_vendor
     identity = {
         "hostname": "",
         "netbios_name": "",
@@ -950,40 +980,20 @@ def parse_nmap_xml(xml_output):
 MAX_LOG_LINES = 5000  # borne de sécurité pour éviter une consommation mémoire illimitée
 
 
-def _run_scan_thread(job_id, cmd, target, mode="distant"):
-    """
-    Lance nmap avec subprocess.Popen (au lieu de subprocess.run) afin de pouvoir
-    lire sa sortie AU FUR ET À MESURE, plutôt que d'attendre la fin complète du
-    processus. Deux threads lecteurs dédiés évitent les blocages classiques liés
-    aux tubes (pipes) : un pipe non lu qui se remplit peut bloquer le processus
-    enfant indéfiniment (deadlock) si stdout et stderr ne sont pas consommés en
-    parallèle.
-
-        - stdout -> accumulé silencieusement, c'est le flux XML final (-oX -),
-                    parsé uniquement une fois le scan terminé.
-        - stderr -> chaque ligne (messages -v / --stats-every) est ajoutée en
-                    direct à job["log"], relu par le frontend via polling sur
-                    /api/scan-status/<job_id> pour afficher le "terminal live".
-    """
-    SCAN_JOBS[job_id]["status"] = "running"
-    SCAN_JOBS[job_id]["log"] = []
-
-    # stdbuf force un buffering ligne par ligne côté nmap (au lieu du buffering
-    # par bloc utilisé automatiquement quand la sortie n'est pas un vrai
-    # terminal), pour que les lignes de progression arrivent sans latence.
-    run_cmd = cmd
+def _run_single_nmap(job_id, cmd, target_ip, mode):
+    run_cmd = cmd + [target_ip]
     input_data = None
     if CONFIGURED_SUDO_PASSWORD:
-        run_cmd = ["sudo", "-S"] + cmd
+        run_cmd = ["sudo", "-S"] + run_cmd
         input_data = f"{CONFIGURED_SUDO_PASSWORD}\n"
     elif shutil.which("stdbuf"):
-        run_cmd = ["stdbuf", "-oL", "-eL"] + cmd
+        run_cmd = ["stdbuf", "-oL", "-eL"] + run_cmd
 
     run_cmd = _wrap_with_proxy(run_cmd, use_sudo=bool(CONFIGURED_SUDO_PASSWORD))
 
     def append_log(line):
         log = SCAN_JOBS[job_id]["log"]
-        log.append(line)
+        log.append(f"[{target_ip}] {line}")
         if len(log) > MAX_LOG_LINES:
             del log[0:len(log) - MAX_LOG_LINES]
 
@@ -1002,19 +1012,10 @@ def _run_scan_thread(job_id, cmd, target, mode="distant"):
                 process.stdin.flush()
             except Exception:
                 pass
-        ACTIVE_PROCESSES[job_id] = process
-    except FileNotFoundError:
-        SCAN_JOBS[job_id]["status"] = "error"
-        SCAN_JOBS[job_id]["error"] = "La commande nmap est introuvable."
-        return
-    except PermissionError:
-        SCAN_JOBS[job_id]["status"] = "error"
-        SCAN_JOBS[job_id]["error"] = (
-            "Permission refusée : certains types de scans (-sS, -O) nécessitent "
-            "les privilèges root. Lancez le serveur Flask avec les capacités "
-            "réseau adéquates (voir README, section setcap)."
-        )
-        return
+        ACTIVE_PROCESSES[f"{job_id}_{target_ip}"] = process
+    except Exception as e:
+        append_log(f"Erreur de lancement nmap : {e}")
+        return None
 
     stdout_chunks = []
 
@@ -1034,14 +1035,12 @@ def _run_scan_thread(job_id, cmd, target, mode="distant"):
     t_err.start()
 
     try:
-        process.wait(timeout=900)  # 15 minutes max, un scan -p- peut être long
+        process.wait(timeout=900)
     except subprocess.TimeoutExpired:
         process.kill()
         process.wait()
-        SCAN_JOBS[job_id]["status"] = "error"
-        SCAN_JOBS[job_id]["error"] = "Délai d'attente dépassé (15 minutes). Réduisez la portée du scan."
         append_log("[✘ Scan interrompu : délai dépassé]")
-        return
+        return None
 
     t_out.join(timeout=5)
     t_err.join(timeout=5)
@@ -1051,42 +1050,91 @@ def _run_scan_thread(job_id, cmd, target, mode="distant"):
     if process.returncode != 0 and not full_stdout.strip():
         err_log = "\n".join(SCAN_JOBS[job_id]["log"])
         if "-sS" in cmd and ("root" in err_log.lower() or "privilèg" in err_log.lower()):
-            append_log("[!] Note : Le scan SYN (-sS) nécessite les privilèges root. Basculement automatique en mode TCP Connect (-sT)...")
-            fallback_cmd = [c if c != "-sS" else "-sT" for c in cmd]
+            append_log("[!] Scan SYN échoué (privilèges root manquants). Fallback en TCP Connect (-sT)...")
+            fallback_cmd = [c if c != "-sS" else "-sT" for c in cmd] + [target_ip]
             try:
                 fb_proc = subprocess.run(fallback_cmd, capture_output=True, text=True, timeout=600)
                 if fb_proc.returncode == 0 and fb_proc.stdout.strip():
                     full_stdout = fb_proc.stdout
-                else:
-                    SCAN_JOBS[job_id]["status"] = "error"
-                    SCAN_JOBS[job_id]["error"] = fb_proc.stderr or "Échec du scan nmap fallback."
-                    return
             except Exception as e:
-                SCAN_JOBS[job_id]["status"] = "error"
-                SCAN_JOBS[job_id]["error"] = f"Erreur lors du fallback nmap : {e}"
-                return
-        else:
-            SCAN_JOBS[job_id]["status"] = "error"
-            SCAN_JOBS[job_id]["error"] = (
-                "\n".join(SCAN_JOBS[job_id]["log"][-15:]) or "nmap a échoué sans sortie."
-            )
-            return
+                append_log(f"Erreur fallback nmap : {e}")
+                return None
 
     try:
         parsed = parse_nmap_xml(full_stdout)
-    except ET.ParseError:
+        
+        # --- POST-SCAN AUTOMATIQUE (ENUMÉRATION SMB/FTP) ---
+        for host in parsed:
+            for port in host.get("ports", []):
+                p_id = str(port.get("port", ""))
+                p_state = port.get("state", "").lower()
+                
+                # SMB (139 / 445)
+                if (p_id == "139" or p_id == "445") and p_state == "open":
+                    if "smb_enum" not in host: 
+                        append_log(f"[*] Port SMB détecté sur {host['ip']}. Énumération (smbclient)...")
+                        try:
+                            smb_cmd = ["smbclient", "-L", f"\\\\{host['ip']}", "-N", "-m", "SMB3"]
+                            smb_proc = subprocess.run(smb_cmd, capture_output=True, text=True, timeout=12)
+                            if smb_proc.returncode == 0:
+                                host["smb_enum"] = smb_proc.stdout.strip()
+                                append_log(f"[✔] Énumération SMB réussie sur {host['ip']}.")
+                            else:
+                                host["smb_enum"] = "Accès refusé ou échec (Nécessite authentification)."
+                                append_log(f"[i] Énumération SMB limitée pour {host['ip']}.")
+                        except Exception as e:
+                            append_log(f"[✘] Erreur énumération SMB : {e}")
+                            
+                # FTP (21)
+                elif p_id == "21" and p_state == "open":
+                    append_log(f"[*] Port FTP (21) détecté sur {host['ip']}. Test Anonymous...")
+                    try:
+                        ftp_cmd = ["curl", "-s", "--connect-timeout", "4", "-m", "8", "--list-only", f"ftp://anonymous:anonymous@{host['ip']}/"]
+                        ftp_proc = subprocess.run(ftp_cmd, capture_output=True, text=True, timeout=10)
+                        if ftp_proc.returncode == 0:
+                            host["ftp_anon"] = True
+                            host["ftp_files"] = ftp_proc.stdout.strip()
+                            append_log(f"[!] Accès FTP Anonyme AUTORISÉ sur {host['ip']} !")
+                        else:
+                            host["ftp_anon"] = False
+                            append_log(f"[i] Accès FTP Anonyme refusé sur {host['ip']}.")
+                    except Exception:
+                        pass
+        return parsed
+    except Exception as e:
+        append_log(f"Erreur d'analyse XML pour {target_ip}: {e}")
+        return None
+
+def _run_scan_thread(job_id, cmd, target_str, mode="distant"):
+    SCAN_JOBS[job_id]["status"] = "running"
+    SCAN_JOBS[job_id]["log"] = []
+    SCAN_JOBS[job_id]["result"] = []
+
+    targets = [t.strip() for t in target_str.split(",") if t.strip()]
+    if not targets:
         SCAN_JOBS[job_id]["status"] = "error"
-        SCAN_JOBS[job_id]["error"] = "Impossible d'analyser la sortie XML de nmap."
-        return
-    except Exception as exc:  # sécurité : ne jamais laisser planter le thread silencieusement
-        SCAN_JOBS[job_id]["status"] = "error"
-        SCAN_JOBS[job_id]["error"] = f"Erreur inattendue lors du parsing : {exc}"
+        SCAN_JOBS[job_id]["error"] = "Aucune cible valide."
         return
 
+    # Si c'est un seul réseau complet (ex: 192.168.1.0/24), Nmap va le gérer en natif.
+    # Si ce sont des IP spécifiques, on parallélise 5 par 5.
+    max_workers = 5 if len(targets) > 1 else 1
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(_run_single_nmap, job_id, cmd, t, mode): t for t in targets}
+        for future in concurrent.futures.as_completed(futures):
+            t = futures[future]
+            try:
+                res = future.result()
+                if res:
+                    # Fusion asynchrone pour que le frontend puisse lire `result` dynamiquement
+                    SCAN_JOBS[job_id]["result"].extend(res)
+            except Exception as exc:
+                SCAN_JOBS[job_id]["log"].append(f"Erreur d'exécution pour {t} : {exc}")
+
     SCAN_JOBS[job_id]["status"] = "done"
-    save_history("nmap", target, parsed, mode=mode)
-    SCAN_JOBS[job_id]["result"] = parsed
-    append_log("[✔ Scan terminé]")
+    SCAN_JOBS[job_id]["log"].append("[✔ Scan global terminé]")
+    save_history("nmap", target_str, SCAN_JOBS[job_id]["result"], mode=mode)
 
 
 @app.route("/api/scan", methods=["POST"])
