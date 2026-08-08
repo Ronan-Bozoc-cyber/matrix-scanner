@@ -1584,7 +1584,11 @@ async function runAutoLocalPipeline(target) {
   const netdiscoverList = document.getElementById("netdiscover-results-list");
   const errorBox = document.getElementById("scan-error");
 
-  setScanningState(true, "Découverte ARP (Netdiscover)");
+  const discoveryToolSelector = document.querySelector('input[name="discovery-tool"]:checked');
+  const discoveryTool = discoveryToolSelector ? discoveryToolSelector.value : "arp-scan";
+  const discoveryName = discoveryTool === "arp-scan" ? "ARP-Scan" : "Netdiscover";
+
+  setScanningState(true, `Découverte ARP (${discoveryName})`);
 
   if (netdiscoverCard) netdiscoverCard.classList.remove("hidden");
   if (netdiscoverProgress) netdiscoverProgress.classList.remove("hidden");
@@ -1594,13 +1598,13 @@ async function runAutoLocalPipeline(target) {
     const res = await fetch("/api/netdiscover-scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ target }),
+      body: JSON.stringify({ target, discovery_tool: discoveryTool }),
     });
     const data = await res.json();
 
     if (res.status !== 200) {
       if (errorBox) {
-        errorBox.textContent = "Erreur Netdiscover : " + (data.error || "Inconnue");
+        errorBox.textContent = `Erreur ${discoveryName} : ` + (data.error || "Inconnue");
         errorBox.classList.remove("hidden");
       }
       setScanningState(false);
@@ -1678,7 +1682,7 @@ async function runAutoLocalPipeline(target) {
           clearInterval(pollNd);
           if (netdiscoverProgress) netdiscoverProgress.classList.add("hidden");
           if (errorBox) {
-            errorBox.textContent = "Erreur Netdiscover : " + job.error;
+            errorBox.textContent = `Erreur ${discoveryName} : ` + job.error;
             errorBox.classList.remove("hidden");
           }
           setScanningState(false);
@@ -1692,7 +1696,7 @@ async function runAutoLocalPipeline(target) {
 
   } catch (err) {
     if (errorBox) {
-      errorBox.textContent = "Erreur réseau Netdiscover : " + err.message;
+      errorBox.textContent = `Erreur réseau ${discoveryName} : ` + err.message;
       errorBox.classList.remove("hidden");
     }
     setScanningState(false);

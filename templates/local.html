@@ -3,7 +3,7 @@
 <section id="view-local" class="view-section active">
         <div class="pedagogical-banner" style="background: rgba(0, 200, 81, 0.1); border-color: #00C851;">
           <h3 style="color: #00C851;"><i class="fa-solid fa-network-wired"></i> Scanner Réseau Local (Intranet)</h3>
-          <p>Ce mode cartographie votre réseau interne. Il utilise des requêtes <strong>ARP</strong> et une résolution <strong>MAC OUI hors-ligne</strong> pour identifier les fabricants avec haute précision. Il effectue un <strong>Scan Hybride Ultra-Rapide (Masscan + Nmap)</strong> pour repérer quasi instantanément les ports ouverts, sonde ces cibles en <strong>parallèle (Multithread)</strong>, réalise une <strong>énumération automatique des partages (SMB/FTP)</strong>, et croise les services découverts avec <strong>Exploit-DB</strong> pour trouver des failles CVE ciblées.</p>
+          <p>Ce mode cartographie votre réseau interne. Il utilise des requêtes <strong>ARP</strong> (ARP-Scan ou Netdiscover) et une résolution <strong>MAC OUI hors-ligne</strong> pour identifier les fabricants avec haute précision. Il effectue un <strong>Scan Hybride Ultra-Rapide (Masscan + Nmap)</strong> pour repérer quasi instantanément les ports ouverts, sonde ces cibles en <strong>parallèle (Multithread)</strong>, réalise une <strong>énumération automatique des partages (SMB/FTP)</strong>, et croise les services découverts avec <strong>Exploit-DB</strong> pour trouver des failles CVE ciblées.</p>
         </div>
 
         <details class="workflow-accordion" style="margin-bottom: 20px;">
@@ -15,7 +15,7 @@
             <div class="diagram-path" style="flex-wrap: wrap; gap: 8px;">
               <div class="node"><i class="fa-solid fa-server"></i> Cible LAN</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #2ecc71;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</div>
+              <div class="node" style="border-color: #2ecc71;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (ARP-Scan / Netdiscover)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #f1c40f;"><i class="fa-solid fa-id-card"></i> Identité (NetBIOS & Base OUI MAC)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
@@ -27,7 +27,7 @@
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #ff4444;"><i class="fa-solid fa-biohazard"></i> CVE (Exploit-DB)</div>
             </div>
-            <p class="desc">Workflow interne automatisé : Cartographie via requêtes ARP (Netdiscover), identifie la marque grâce à une <strong>résolution MAC OUI hors-ligne</strong>. Effectue ensuite un <strong>Scan Hybride Ultra-Rapide</strong> (utilise Masscan avec son stack TCP asynchrone pour l'identification instantanée des ports, puis Nmap en multithread prend le relais uniquement sur ces ports spécifiques). Enfin, lance une <strong>énumération automatique "auto-pwn"</strong> (SMB/FTP) et croise les résultats avec la base Exploit-DB.</p>
+            <p class="desc">Workflow interne automatisé : Cartographie via requêtes ARP (ARP-Scan ou Netdiscover), identifie la marque grâce à une <strong>résolution MAC OUI hors-ligne</strong>. Effectue ensuite un <strong>Scan Hybride Ultra-Rapide</strong> (utilise Masscan avec son stack TCP asynchrone pour l'identification instantanée des ports, puis Nmap en multithread prend le relais uniquement sur ces ports spécifiques). Enfin, lance une <strong>énumération automatique "auto-pwn"</strong> (SMB/FTP) et croise les résultats avec la base Exploit-DB.</p>
           </div>
         </details>
 
@@ -44,6 +44,17 @@
             <button class="btn btn-mode mode-btn-manual" data-mode="manual"><i class="fa-solid fa-sliders"></i> MANUEL</button>
           </div>
           <input type="hidden" id="mode-toggle-local" value="auto" class="mode-toggle">
+
+          <div class="discovery-tool-selector" style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 20px; color: var(--text-color);">
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+              <input type="radio" name="discovery-tool" value="arp-scan" checked style="cursor: pointer;">
+              <strong>ARP-Scan</strong> (Rapide & Discret) - <span style="color:#00ff41;">Recommandé</span>
+            </label>
+            <label style="cursor: pointer; display: flex; align-items: center; gap: 5px;">
+              <input type="radio" name="discovery-tool" value="netdiscover" style="cursor: pointer;">
+              <strong>Netdiscover</strong> (Classique)
+            </label>
+          </div>
 
           <div class="checkbox-container" style="margin-top: 15px; margin-bottom: 5px; display: flex; align-items: center; justify-content: center; color: var(--text-color);">
             <input type="checkbox" id="use-masscan-local" checked style="margin-right: 8px; width: 16px; height: 16px; cursor: pointer;">

@@ -1,0 +1,4 @@
+- Nikto v2.6.0/
++ Target Host: techlab.conques-sur-orbiel.fr
++ Target Port: 443
++ GET Unable to connect to techlab.conques-sur-orbiel.fr:443.

@@ -34,7 +34,7 @@
             <div class="diagram-path" style="flex-wrap: wrap; gap: 8px;">
               <div class="node"><i class="fa-solid fa-server"></i> Cible LAN</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #2ecc71;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (Netdiscover)</div>
+              <div class="node" style="border-color: #2ecc71;"><i class="fa-solid fa-satellite-dish"></i> Découverte ARP (ARP-Scan / Netdiscover)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #f1c40f;"><i class="fa-solid fa-id-card"></i> Identité (NetBIOS & Base OUI MAC)</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
@@ -46,7 +46,7 @@
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #ff4444;"><i class="fa-solid fa-biohazard"></i> CVE (Exploit-DB)</div>
             </div>
-            <p class="desc">Workflow interne automatisé : Cartographie les équipements via requêtes ARP (Netdiscover), identifie la marque avec précision grâce à une <strong>résolution MAC OUI hors-ligne</strong>. Effectue ensuite un <strong>Scan Hybride Ultra-Rapide</strong> : utilise <strong>Masscan</strong> en amont (grâce à son stack TCP bypassant le kernel) pour détecter quasi-instantanément tous les ports ouverts du sous-réseau. <strong>Nmap (en multithread)</strong> prend le relais de manière ciblée uniquement sur les ports découverts pour l'analyse des services et l'exécution de scripts. Enfin, une <strong>énumération automatique "auto-pwn"</strong> s'exécute sur le SMB/FTP et croise les résultats avec la base Exploit-DB.</p>
+            <p class="desc">Workflow interne automatisé : Cartographie les équipements via requêtes ARP (ARP-Scan ou Netdiscover), identifie la marque avec précision grâce à une <strong>résolution MAC OUI hors-ligne</strong>. Effectue ensuite un <strong>Scan Hybride Ultra-Rapide</strong> : utilise <strong>Masscan</strong> en amont (grâce à son stack TCP bypassant le kernel) pour détecter quasi-instantanément tous les ports ouverts du sous-réseau. <strong>Nmap (en multithread)</strong> prend le relais de manière ciblée uniquement sur les ports découverts pour l'analyse des services et l'exécution de scripts. Enfin, une <strong>énumération automatique "auto-pwn"</strong> s'exécute sur le SMB/FTP et croise les résultats avec la base Exploit-DB.</p>
           </div>
           <div class="workflow-box network-resilience">
             <h4><i class="fa-solid fa-shield-halved"></i> Résilience Réseau & Rotation d'IP (Proxychains & Tor)</h4>

@@ -1,0 +1,4 @@
+- Nikto v2.6.0/
++ Target Host: dojoconquois.fr
++ Target Port: 80
++ GET Unable to connect to dojoconquois.fr:80.

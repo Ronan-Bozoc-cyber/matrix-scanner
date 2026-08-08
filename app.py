@@ -2459,22 +2459,30 @@ def clear_sudo_password():
     return jsonify({"success": True, "message": "Mot de passe effacé."})
 
 
-def _run_netdiscover_thread(job_id, target):
+def _run_netdiscover_thread(job_id, target, discovery_tool="arp-scan"):
     NETDISCOVER_JOBS[job_id]["status"] = "running"
     NETDISCOVER_JOBS[job_id]["log"] = []
 
-    # Clean target for Netdiscover
+    # Clean target for Netdiscover/Arp-scan
     is_valid, msg = validate_target(target)
     if is_valid and msg:
         target = msg[0]
 
 
-    if CONFIGURED_SUDO_PASSWORD:
-        cmd = ["sudo", "-S", "netdiscover", "-r", target, "-P", "-N", "-f"]
-        input_data = f"{CONFIGURED_SUDO_PASSWORD}\n"
+    if discovery_tool == "arp-scan":
+        if CONFIGURED_SUDO_PASSWORD:
+            cmd = ["sudo", "-S", "arp-scan", target]
+            input_data = f"{CONFIGURED_SUDO_PASSWORD}\n"
+        else:
+            cmd = ["arp-scan", target]
+            input_data = None
     else:
-        cmd = ["netdiscover", "-r", target, "-P", "-N", "-f"]
-        input_data = None
+        if CONFIGURED_SUDO_PASSWORD:
+            cmd = ["sudo", "-S", "netdiscover", "-r", target, "-P", "-N", "-f"]
+            input_data = f"{CONFIGURED_SUDO_PASSWORD}\n"
+        else:
+            cmd = ["netdiscover", "-r", target, "-P", "-N", "-f"]
+            input_data = None
 
     try:
         process = subprocess.run(cmd, input=input_data, capture_output=True, text=True, timeout=40)
@@ -2509,29 +2517,55 @@ def _run_netdiscover_thread(job_id, target):
             return
 
         devices = []
-        # Netdiscover format: IP MAC Count Len Vendor
-        pattern = re.compile(r"^\s*([\d\.]+)\s+([0-9a-fA-F:]{17})\s+(\d+)\s+(\d+)\s+(.*)$")
-        for line in output.splitlines():
-            line_str = line.strip()
-            match = pattern.match(line_str)
-            if match:
-                ip_val = match.group(1)
-                mac_val = match.group(2)
-                v_val = match.group(5).strip() or "Inconnu"
-                identity = resolve_host_identity(ip_val, mac_val, v_val)
-
-                devices.append({
-                    "ip": ip_val,
-                    "mac": mac_val,
-                    "count": int(match.group(3)),
-                    "len": int(match.group(4)),
-                    "vendor": identity["vendor"],
-                    "hostname": identity["hostname"] or identity["netbios_name"],
-                    "netbios_name": identity["netbios_name"],
-                    "workgroup": identity["workgroup"],
-                    "category": identity["category"],
-                    "icon": identity["icon"]
-                })
+        if discovery_tool == "arp-scan":
+            # arp-scan format: IP   MAC   Vendor (separated by tabs)
+            pattern = re.compile(r"^\s*([\d\.]+)\s+([0-9a-fA-F:]{17})\s+(.*)$")
+            for line in output.splitlines():
+                line_str = line.strip()
+                match = pattern.match(line_str)
+                if match:
+                    ip_val = match.group(1)
+                    mac_val = match.group(2)
+                    v_val = match.group(3).strip() or "Inconnu"
+                    # Ignore les lignes de statut ou interface de arp-scan
+                    if ip_val.startswith("Interface") or ip_val.startswith("Starting") or "packet" in v_val:
+                        continue
+                    identity = resolve_host_identity(ip_val, mac_val, v_val)
+                    devices.append({
+                        "ip": ip_val,
+                        "mac": mac_val,
+                        "count": 1,
+                        "len": 60,
+                        "vendor": identity["vendor"],
+                        "hostname": identity["hostname"] or identity["netbios_name"],
+                        "netbios_name": identity["netbios_name"],
+                        "workgroup": identity["workgroup"],
+                        "category": identity["category"],
+                        "icon": identity["icon"]
+                    })
+        else:
+            # Netdiscover format: IP MAC Count Len Vendor
+            pattern = re.compile(r"^\s*([\d\.]+)\s+([0-9a-fA-F:]{17})\s+(\d+)\s+(\d+)\s+(.*)$")
+            for line in output.splitlines():
+                line_str = line.strip()
+                match = pattern.match(line_str)
+                if match:
+                    ip_val = match.group(1)
+                    mac_val = match.group(2)
+                    v_val = match.group(5).strip() or "Inconnu"
+                    identity = resolve_host_identity(ip_val, mac_val, v_val)
+                    devices.append({
+                        "ip": ip_val,
+                        "mac": mac_val,
+                        "count": int(match.group(3)),
+                        "len": int(match.group(4)),
+                        "vendor": identity["vendor"],
+                        "hostname": identity["hostname"] or identity["netbios_name"],
+                        "netbios_name": identity["netbios_name"],
+                        "workgroup": identity["workgroup"],
+                        "category": identity["category"],
+                        "icon": identity["icon"]
+                    })
 
         NETDISCOVER_JOBS[job_id]["status"] = "done"
         NETDISCOVER_JOBS[job_id]["result"] = devices
@@ -2549,11 +2583,14 @@ def _run_netdiscover_thread(job_id, target):
 def start_netdiscover_scan():
     data = request.get_json(silent=True) or {}
     target = data.get("target", "").strip()
+    discovery_tool = data.get("discovery_tool", "arp-scan")
 
     if not target:
         return jsonify({"error": "Cible manquante."}), 400
 
-    if not _tool_is_installed(REQUIRED_TOOLS["netdiscover"]["check_cmd"]):
+    if discovery_tool == "arp-scan" and not _tool_is_installed(REQUIRED_TOOLS["arp-scan"]["check_cmd"]):
+        return jsonify({"error": "arp-scan n'est pas installé."}), 412
+    if discovery_tool == "netdiscover" and not _tool_is_installed(REQUIRED_TOOLS["netdiscover"]["check_cmd"]):
         return jsonify({"error": "netdiscover n'est pas installé."}), 412
 
     job_id = str(uuid.uuid4())
@@ -2562,10 +2599,11 @@ def start_netdiscover_scan():
         "result": None,
         "error": None,
         "target": target,
+        "tool": discovery_tool,
         "started_at": datetime.now().isoformat(),
     }
 
-    thread = threading.Thread(target=_run_netdiscover_thread, args=(job_id, target), daemon=True)
+    thread = threading.Thread(target=_run_netdiscover_thread, args=(job_id, target, discovery_tool), daemon=True)
     thread.start()
 
     return jsonify({"job_id": job_id})
