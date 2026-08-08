@@ -2760,11 +2760,7 @@ function initSystemMonitor() {
       if (rxVal) rxVal.textContent = formatSpeed(data.rx_bytes_sec);
       if (txVal) txVal.textContent = formatSpeed(data.tx_bytes_sec);
 
-      // IP Publique
-      const publicIpEl = document.getElementById("sys-public-ip");
-      if (publicIpEl && data.public_ip) {
-        publicIpEl.textContent = data.public_ip;
-      }
+      // IP Publique a été déplacée dans le top-navbar et a son propre poller.
 
       // Mise à jour Sparkline
       cpuData.shift();
@@ -2785,7 +2781,7 @@ function initSystemMonitor() {
   if (copyIpBtn && !copyIpBtn.dataset.listenerAdded) {
     copyIpBtn.dataset.listenerAdded = "true";
     copyIpBtn.addEventListener("click", () => {
-      const publicIpEl = document.getElementById("sys-public-ip");
+      const publicIpEl = document.getElementById("top-public-ip");
       if (!publicIpEl) return;
       const ipText = publicIpEl.textContent.trim();
       if (ipText && ipText !== "--.--.--.--" && ipText !== "Détection..." && ipText !== "Indisponible") {
@@ -3471,4 +3467,65 @@ async function startOnionHop() {
     alert("Impossible de joindre le serveur. Vérifiez que M-SCAN est bien lancé.");
   }
 }
+
+// =====================================================================================
+// RÉSEAU ET ROTATION IP
+// =====================================================================================
+
+async function fetchIPStatus() {
+  const publicIpEl = document.getElementById("top-public-ip");
+  const proxyBadge = document.getElementById("top-proxy-badge");
+  
+  if (!publicIpEl || !proxyBadge) return;
+  
+  try {
+    const res = await fetch("/api/ip-status");
+    const data = await res.json();
+    
+    publicIpEl.textContent = data.ip || "Inconnue";
+    
+    if (data.protected) {
+      proxyBadge.textContent = "🟢 Protégé";
+      proxyBadge.style.color = "#00ff41";
+      proxyBadge.style.borderColor = "#00ff41";
+      proxyBadge.style.background = "rgba(0, 255, 65, 0.2)";
+    } else {
+      proxyBadge.textContent = "🔴 Direct";
+      proxyBadge.style.color = "#ff4444";
+      proxyBadge.style.borderColor = "#ff4444";
+      proxyBadge.style.background = "rgba(255, 0, 0, 0.2)";
+    }
+  } catch (err) {
+    console.warn("Erreur fetch IP status:", err);
+  }
+}
+
+async function rotateIP() {
+  const btn = document.getElementById("btn-rotate-ip");
+  const icon = btn ? btn.querySelector("i") : null;
+  
+  if (icon) icon.classList.add("fa-spin");
+  if (btn) btn.disabled = true;
+  
+  try {
+    const res = await fetch("/api/rotate-ip", { method: "POST" });
+    const data = await res.json();
+    
+    if (data.status === "success") {
+      // Attendre 2 secondes que le circuit se forme puis rafraîchir l'IP
+      setTimeout(fetchIPStatus, 2000);
+    } else {
+      alert("Erreur lors de la rotation IP : " + data.message);
+    }
+  } catch (err) {
+    alert("Impossible de joindre l'API de rotation Tor.");
+  } finally {
+    if (icon) icon.classList.remove("fa-spin");
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Initial polling for IP
+setInterval(fetchIPStatus, 10000);
+fetchIPStatus();
 

@@ -27,14 +27,7 @@
           Concepteur : Ronan BOZOC
         </div>
         <div id="realtime-clock" style="font-family: 'Share Tech Mono', monospace; font-size: 0.95rem; color: #00ff41; text-shadow: 0 0 8px rgba(0, 255, 65, 0.6); margin-top: 6px; letter-spacing: 2px; font-weight: bold;">00:00:00</div>
-        <div id="public-ip-badge" style="margin-top: 10px; font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; background: rgba(0, 25, 12, 0.7); border: 1px solid rgba(0, 255, 65, 0.3); border-radius: 6px; padding: 5px 10px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 0 10px rgba(0, 255, 65, 0.15);">
-          <i class="fa-solid fa-globe" style="color: #7ec8ff; font-size: 0.85rem;" title="Adresse IP Publique"></i>
-          <span style="color: #a0a0a0; font-size: 0.75rem; text-transform: uppercase;">IP Publique :</span>
-          <span id="sys-public-ip" style="color: #00ff41; font-weight: bold; letter-spacing: 1px;">Détection...</span>
-          <button id="btn-copy-public-ip" title="Copier l'IP publique" style="background: transparent; border: none; color: #7ec8ff; cursor: pointer; padding: 2px 4px; font-size: 0.85rem; line-height: 1; transition: all 0.2s ease;">
-            <i class="fa-regular fa-copy"></i>
-          </button>
-        </div>
+        <!-- L'indicateur d'IP a été déplacé dans la barre de navigation supérieure (Top Navbar) -->
       </div>
 
       <ul class="sidebar-menu">
@@ -126,6 +119,24 @@
 
     <!-- CONTENU PRINCIPAL -->
     <main class="content-area">
+      <!-- BARRE SUPÉRIEURE (Top Navbar) -->
+      <header class="top-navbar" style="display: flex; justify-content: flex-end; align-items: center; padding: 10px 20px; background: rgba(0, 20, 10, 0.8); border-bottom: 1px solid rgba(0, 255, 65, 0.2); margin-bottom: 20px; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(5px);">
+        <div id="top-network-status" style="display: flex; align-items: center; gap: 15px; font-family: 'Share Tech Mono', monospace; font-size: 0.9rem;">
+          <i class="fa-solid fa-globe" style="color: #7ec8ff;"></i>
+          <span style="color: #a0a0a0; text-transform: uppercase; font-size: 0.8rem;">IP Publique :</span>
+          <span id="top-public-ip" style="color: #00ff41; font-weight: bold; letter-spacing: 1px;">Détection...</span>
+          <button id="btn-copy-public-ip" title="Copier l'IP publique" style="background: transparent; border: none; color: #7ec8ff; cursor: pointer; padding: 2px; font-size: 0.85rem; transition: all 0.2s ease;">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+          
+          <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.2); margin: 0 5px;"></div>
+          
+          <span id="top-proxy-badge" style="padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; background: rgba(255, 0, 0, 0.2); color: #ff4444; border: 1px solid #ff4444; text-transform: uppercase; letter-spacing: 1px;">🔴 Direct</span>
+          <button id="btn-rotate-ip" onclick="rotateIP()" class="btn btn-small" style="background: rgba(52, 152, 219, 0.15); border: 1px solid #3498db; color: #7ec8ff; font-weight: bold; cursor: pointer; padding: 4px 10px; border-radius: 4px; transition: all 0.2s ease; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-arrows-rotate"></i> Changer d'IP
+          </button>
+        </div>
+      </header>
     <!-- BANDEAU FIXE DE VERROUILLAGE DE NAVIGATION (SANS VOILE GRIS) -->
     <div id="navigation-lock-overlay" class="hidden" style="position: fixed; top: 15px; left: 50%; transform: translateX(-50%); z-index: 9999; pointer-events: none;">
        <div style="background: rgba(20, 0, 0, 0.92); border: 1px solid #ff4444; color: #ff8888; padding: 10px 24px; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 20px rgba(255, 0, 0, 0.5); pointer-events: auto; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; transition: transform 0.2s ease, background-color 0.2s ease;">

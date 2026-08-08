@@ -46,6 +46,19 @@
             </div>
             <p class="desc">Workflow interne automatisé : Cartographie les équipements (IP/MAC) via ARP (Netdiscover), identifie la marque/catégorie via NetBIOS/mDNS, sonde les ports et OS (Nmap), énumère les partages Windows/Samba (Enum4linux, SMBMap) et croise les bannières avec la base d'exploits (Searchsploit/CVE).</p>
           </div>
+          <div class="workflow-box network-resilience">
+            <h4><i class="fa-solid fa-shield-halved"></i> Résilience Réseau & Rotation d'IP (Proxychains & Tor)</h4>
+            <div class="diagram-path">
+              <div class="node"><i class="fa-solid fa-laptop-code"></i> Backend Flask</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node" style="border-color: #3498db;"><i class="fa-solid fa-network-wired"></i> Détection Automatique du Port SOCKS Tor (9050)</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node" style="border-color: #f1c40f;"><i class="fa-solid fa-user-secret"></i> Injection de Proxychains</div>
+              <i class="fa-solid fa-arrow-right arrow"></i>
+              <div class="node" style="border-color: #e74c3c;"><i class="fa-solid fa-arrows-rotate"></i> Commande Tor NEWNYM (Port 9051)</div>
+            </div>
+            <p class="desc">Le système intègre une **résilience réseau** robuste : Dès que le daemon Tor (OnionHop) est allumé, le backend détecte l'ouverture du port `9050` et injecte dynamiquement `proxychains4` devant toutes les requêtes (Nmap, SQLMap, Nuclei...). Si votre IP publique est bannie (403, WAF), un simple clic sur le bouton **Changer d'IP** envoie la commande `SIGNAL NEWNYM` au port de contrôle `9051` de Tor pour forcer la création d'un nouveau circuit et vous attribuer instantanément une nouvelle identité IP sur le web.</p>
+          </div>
         </div>
 
 <!-- BANDEAU DE VÉRIFICATION DES DÉPENDANCES -->

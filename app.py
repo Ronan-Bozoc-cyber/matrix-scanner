@@ -2883,12 +2883,12 @@ _ONIONHOP_PROCESS = None  # Référence globale au processus OnionHop en cours
 
 def _wrap_with_proxy(cmd, use_sudo=False):
     """
-    Si OnionHop (Tor) est actif, encapsule la commande avec proxychains4.
+    Si OnionHop (Tor) est actif (port 9050 occupé), encapsule la commande avec proxychains4.
     Prend en compte sudo car 'proxychains sudo' échoue à cause du nettoyage LD_PRELOAD.
     Il faut faire 'sudo proxychains'.
     """
-    global _ONIONHOP_PROCESS
-    if _ONIONHOP_PROCESS and _ONIONHOP_PROCESS.poll() is None:
+    # Vérifie si le port SOCKS de Tor (9050) est occupé (donc Tor est actif)
+    if not is_port_free(9050, "127.0.0.1"):
         import shutil
         pc = "proxychains4" if shutil.which("proxychains4") else ("proxychains" if shutil.which("proxychains") else None)
         if pc:

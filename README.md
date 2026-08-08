@@ -27,9 +27,9 @@ Il permet de réaliser des **pentests web externes automatisés en 7 étapes** (
 - **Accès 1-clic** : téléchargeable depuis les résultats ou l'historique.
 
 ### 🧅 2. Protection de l'IP publique & Intégration OnionHop (Réseau Tor)
-- **Masquage d'IP** : au lancement via `./run.sh`, OnionHop 3.7.8 fait transiter les requêtes via Tor.
+- **Masquage d'IP Global** : Le backend vérifie activement si le port Tor (`9050`) est ouvert. Si c'est le cas, tous les scans intrusifs (Nmap, SQLMap, Nuclei) sont automatiquement encapsulés via `proxychains4`, peu importe comment OnionHop a été lancé.
+- **Rotation d'IP dynamique** : Depuis la barre de navigation supérieure, un indicateur affiche votre IP en temps réel. Si votre IP est bloquée par un pare-feu ou un WAF, un clic sur le bouton **Changer d'IP** envoie un signal `NEWNYM` au port de contrôle Tor (`9051`) pour forcer un changement immédiat de circuit et d'adresse IP publique, assurant une parfaite résilience réseau.
 - **Installation automatique** : si absent, `./run.sh` télécharge l'AppImage depuis GitHub (`center2055/OnionHop`).
-- **Moniteur d'IP en temps réel** : affiche l'IP du nœud de sortie Tor dans la barre latérale avec copie en 1 clic.
 
 ### 💻 3. Interface de lancement ASCII Art & Cyberpunk
 - **Terminal Matrix vert** : menu interactif avec minuteur de démarrage automatique (15 s).
