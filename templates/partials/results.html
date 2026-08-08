@@ -7,6 +7,10 @@
               <i class="fa-solid fa-plus"></i> Ajouter le tableau ARP au rapport
             </button>
           </div>
+          <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+            <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>netdiscover -P -r &lt;cible/masque&gt;</code></div>
+            <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Envoie des requêtes ARP sur le réseau local pour découvrir les hôtes actifs, même s'ils bloquent le ping (ICMP).</div>
+          </div>
           <div id="netdiscover-progress" class="scan-progress hidden">
             <div class="loader"></div>
             <span id="netdiscover-progress-text">Exploration ARP du sous-réseau en cours...</span>
@@ -47,6 +51,10 @@
               <i class="fa-solid fa-plus"></i> Ajouter le WHOIS au rapport
             </button>
           </div>
+          <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+            <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>whois &lt;domaine&gt;</code></div>
+            <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Interroge les bases de données publiques des bureaux d'enregistrement (registrars) pour obtenir des informations sur le propriétaire, la création du domaine et les serveurs DNS.</div>
+          </div>
           <div id="whois-progress" class="scan-progress hidden">
             <div class="loader"></div>
             <span id="whois-progress-text">Interrogation des registres WHOIS en cours...</span>
@@ -62,6 +70,10 @@
               <i class="fa-solid fa-plus"></i> Ajouter les sous-domaines au rapport
             </button>
           </div>
+          <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+            <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>sublist3r -d &lt;domaine&gt;</code></div>
+            <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Utilise l'OSINT (moteurs de recherche, archives) pour énumérer passivement les sous-domaines existants sans attaquer directement la cible.</div>
+          </div>
           <div id="subdomains-progress" class="scan-progress hidden">
             <div class="loader"></div>
             <span id="subdomains-progress-text">Énumération OSINT des sous-domaines avec Sublist3r en cours...</span>
@@ -76,6 +88,10 @@
             <button id="btn-add-harvester-to-report" class="btn btn-small" style="background: rgba(243, 156, 18, 0.15); border-color: #f39c12; color: #f8c471; font-weight: bold; font-size: 0.75rem;">
               <i class="fa-solid fa-plus"></i> Ajouter au rapport
             </button>
+          </div>
+          <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+            <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>theHarvester -d &lt;domaine&gt; -b all -l 500</code></div>
+            <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Recherche de manière approfondie des adresses e-mail, sous-domaines, IPs et URLs à travers de multiples sources OSINT et moteurs de recherche.</div>
           </div>
           <div id="harvester-progress" class="scan-progress hidden">
             <div class="loader"></div>
@@ -98,6 +114,10 @@
               <i class="fa-solid fa-plus"></i> Ajouter la détection WAF au rapport
             </button>
           </div>
+          <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+            <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>wafw00f https://&lt;cible&gt; -a</code></div>
+            <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Envoie des requêtes HTTP malveillantes (patterns connus) pour détecter la présence et la marque d'un pare-feu applicatif web (WAF) tel que Cloudflare ou ModSecurity.</div>
+          </div>
           <div id="waf-progress" class="scan-progress hidden">
             <div class="loader"></div>
             <span id="waf-progress-text">Analyse WAF avec Wafw00f en cours...</span>
@@ -118,6 +138,10 @@
               </button>
             </div>
           </div>
+          <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+            <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>gowitness single https://&lt;cible&gt; --disable-logging</code></div>
+            <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Lance un navigateur "Headless" (sans interface) pour capturer l'apparence visuelle du site web et générer une preuve visuelle de son état initial.</div>
+          </div>
           <div id="screenshot-progress" class="scan-progress hidden">
             <div class="loader"></div>
             <span id="screenshot-progress-text">Prise de vue du site web avec Gowitness en cours...</span>
@@ -133,6 +157,10 @@
               <i class="fa-solid fa-plus"></i> Ajouter l'empreinte CMS au rapport
             </button>
           </div>
+          <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+            <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>whatweb -a 3 https://&lt;cible&gt;</code></div>
+            <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Analyse les en-têtes HTTP, cookies et code source HTML avec une agressivité de niveau 3 pour identifier précisément le CMS (ex: WordPress), les bibliothèques JS et les serveurs web.</div>
+          </div>
           <div id="cms-progress" class="scan-progress hidden">
             <div class="loader"></div>
             <span id="cms-progress-text">Analyse des technologies et du CMS avec WhatWeb en cours...</span>
@@ -147,6 +175,11 @@
       <button id="btn-add-results-to-report" class="btn btn-small" style="background: rgba(0, 255, 65, 0.15); border-color: #00ff41; color: #00ff41; font-weight: bold;">
         <i class="fa-solid fa-plus"></i> Ajouter les résultats complets au rapport
       </button>
+    </div>
+
+    <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 15px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+      <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>nmap -sS -sV -O -p- -T4 &lt;cible&gt;</code></div>
+      <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Balaye tous les ports (<code>-p-</code>), détecte les versions des services (<code>-sV</code>) et le système d'exploitation (<code>-O</code>) en utilisant un scan furtif SYN (<code>-sS</code>).</div>
     </div>
 
     <div class="results-summary" id="results-summary"></div>
@@ -180,6 +213,12 @@
         <i class="fa-solid fa-plus"></i> Ajouter les CVE au rapport
       </button>
     </div>
+    
+    <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+      <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>searchsploit &lt;nom_du_service&gt; &lt;version&gt;</code></div>
+      <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Interroge la base de données locale d'Exploit-DB pour trouver des vulnérabilités publiques (CVE) ou des scripts d'exploitation associés aux versions détectées.</div>
+    </div>
+
     <p class="hint">Cliquez sur un service détecté ci-dessus (badge "🔍 Chercher CVE") pour lancer une recherche.</p>
     <div id="cve-results"></div>
   </div>
@@ -196,6 +235,10 @@
         <i class="fa-solid fa-plus"></i> Ajouter l'audit CMS au rapport
       </button>
     </div>
+    <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+      <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>wpscan --url &lt;cible&gt; --enumerate u,vp,vt</code> <span style="color: #666;">(Aiguillage dynamique)</span></div>
+      <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Le Smart Branching choisit l'outil adéquat selon le CMS détecté à l'étape précédente (ici, WPScan énumère les utilisateurs, plugins et thèmes vulnérables).</div>
+    </div>
     <div id="cms-audit-progress" class="scan-progress hidden">
       <div class="loader"></div>
       <span id="cms-audit-progress-text">Scan approfondi du CMS en cours...</span>
@@ -210,6 +253,10 @@
       <button id="btn-add-nuclei-audit-to-report" class="btn btn-small" style="background: rgba(52, 152, 219, 0.15); border-color: #2980b9; color: #3498db; font-weight: bold; font-size: 0.75rem;">
         <i class="fa-solid fa-plus"></i> Ajouter l'audit Nuclei au rapport
       </button>
+    </div>
+    <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+      <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>nuclei -u https://&lt;cible&gt; -t cves/ -t vulnerabilities/ -severity critical,high</code></div>
+      <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Si aucun CMS n'est détecté, Nuclei utilise des modèles YAML (templates) pour tester rapidement des milliers de vulnérabilités connues (CVEs, 0-days) sur l'application cible.</div>
     </div>
     <div id="nuclei-audit-progress" class="scan-progress hidden">
       <div class="loader"></div>
@@ -226,6 +273,10 @@
         <i class="fa-solid fa-plus"></i> Ajouter l'arborescence au rapport
       </button>
     </div>
+    <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+      <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>gobuster dir -u https://&lt;cible&gt; -w /usr/share/wordlists/dirb/common.txt -q</code></div>
+      <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> Fuzzing par dictionnaire de l'arborescence web pour découvrir des répertoires d'administration, des sauvegardes, ou des fichiers cachés inattendus (Force Brute).</div>
+    </div>
     <div id="gobuster-progress" class="scan-progress hidden">
       <div class="loader"></div>
       <span id="gobuster-progress-text">Recherche de répertoires et fichiers cachés...</span>
@@ -240,6 +291,10 @@
       <button id="btn-add-db-audit-to-report" class="btn btn-small" style="background: rgba(230, 126, 34, 0.15); border-color: #e67e22; color: #f39c12; font-weight: bold; font-size: 0.75rem;">
         <i class="fa-solid fa-plus"></i> Ajouter l'audit BDD au rapport
       </button>
+    </div>
+    <div class="tool-cmd-info" style="background: rgba(0, 0, 0, 0.4); border: 1px dashed rgba(255,255,255,0.2); padding: 8px; border-radius: 4px; margin-bottom: 10px; font-size: 0.8rem; font-family: 'Share Tech Mono', monospace; color: #a0a0a0;">
+      <div style="color: #fff; margin-bottom: 4px;"><i class="fa-solid fa-terminal" style="color: #7ec8ff;"></i> <span style="color: #7ec8ff; font-weight: bold;">Commande :</span> <code>paramspider -d &lt;cible&gt; && sqlmap -m urls.txt --batch --level 2 --risk 2</code></div>
+      <div><i class="fa-solid fa-circle-info" style="color: #f1c40f;"></i> <span style="color: #f1c40f; font-weight: bold;">Explication :</span> ParamSpider extrait toutes les URLs paramétrées des archives web, puis SQLMap les attaque massivement pour automatiser la détection et l'exploitation de failles d'injections SQL.</div>
     </div>
     <div id="db-audit-progress" class="scan-progress hidden">
       <div class="loader"></div>
