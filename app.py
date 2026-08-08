@@ -190,6 +190,18 @@ REQUIRED_TOOLS = {
         "category": "Scans Réseau & Exploration LAN",
         "description": "Énumération des droits d'accès et partages réseau SMB",
     },
+    "smbclient": {
+        "check_cmd": ["smbclient", "-V"],
+        "apt_package": "smbclient",
+        "category": "Scans Réseau & Exploration LAN",
+        "description": "Client SMB pour accéder et lister les partages réseaux (Auto-enum)",
+    },
+    "curl": {
+        "check_cmd": ["curl", "--version"],
+        "apt_package": "curl",
+        "category": "Scans Réseau & Exploration LAN",
+        "description": "Client de transfert réseau, utilisé pour vérifier les accès FTP anonymes",
+    },
     "psutil": {
         "py_module": "psutil",
         "pip_package": "psutil",

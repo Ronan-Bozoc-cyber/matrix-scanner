@@ -53,9 +53,9 @@ graph TD
 
 ---
 
-## 🛠️ 24 outils de sécurité — par catégorie
+## 🛠️ 26 outils de sécurité — par catégorie
 
-M-SCAN intègre **24 outils et modules** vérifiés automatiquement au démarrage, classés par rubrique thématique :
+M-SCAN intègre **26 outils et modules** vérifiés automatiquement au démarrage, classés par rubrique thématique :
 
 ### 🔍 Reconnaissance & OSINT
 | # | Outil | Rôle |
@@ -73,46 +73,47 @@ M-SCAN intègre **24 outils et modules** vérifiés automatiquement au démarrag
 | 7 | `netdiscover` | Découverte d'hôtes actifs par ARP (couche 2, passe les firewalls ICMP) |
 | 8 | `nmap` | Scanner de ports, services, OS et vulnérabilités réseau |
 | 9 | `smbmap` | Audit des autorisations d'accès aux partages SMB (READ/WRITE/NO ACCESS) |
+| 10 | `smbclient` | Client SMB pour accéder et lister les partages réseaux (Auto-enum) |
+| 11 | `curl` | Client de transfert réseau, utilisé pour vérifier les accès FTP anonymes |
 
 ### 🕵️ Empreinte & Analyse Web
 | # | Outil | Rôle |
 |---|-------|------|
-| 10 | `gowitness` | Capture d'écran automatisée d'applications web (headless) |
-| 11 | `nuclei` | Scanner de vulnérabilités basé sur des templates réseau et web |
-| 12 | `wafw00f` | Détection de pare-feux applicatifs web (WAF) |
-| 13 | `whatweb` | Empreinte technologique web (CMS, serveurs, frameworks, PHP) |
+| 12 | `gowitness` | Capture d'écran automatisée d'applications web (headless) |
+| 13 | `nuclei` | Scanner de vulnérabilités basé sur des templates réseau et web |
+| 14 | `wafw00f` | Détection de pare-feux applicatifs web (WAF) |
+| 15 | `whatweb` | Empreinte technologique web (CMS, serveurs, frameworks, PHP) |
 
 ### 🔐 Audit Web & CMS Spécifiques
 | # | Outil | Rôle |
 |---|-------|------|
-| 14 | `droopescan` | Scanner de vulnérabilités pour les CMS Drupal et SilverStripe |
-| 15 | `gobuster` | Fuzzing de répertoires et fichiers cachés (wordlists Kali) |
-| 16 | `joomscan` | Scanner de vulnérabilités pour le CMS Joomla |
-| 17 | `moodlescan` | Audit de sécurité spécialisé des plateformes Moodle |
-
-| 19 | `wpscan` | Scanner de failles spécifique WordPress (plugins, thèmes, utilisateurs) |
+| 16 | `droopescan` | Scanner de vulnérabilités pour les CMS Drupal et SilverStripe |
+| 17 | `gobuster` | Fuzzing de répertoires et fichiers cachés (wordlists Kali) |
+| 18 | `joomscan` | Scanner de vulnérabilités pour le CMS Joomla |
+| 19 | `moodlescan` | Audit de sécurité spécialisé des plateformes Moodle |
+| 20 | `wpscan` | Scanner de failles spécifique WordPress (plugins, thèmes, utilisateurs) |
 
 ### 💉 Reconnaissance & OSINT Avancé
 | # | Outil | Rôle |
 |---|-------|------|
-| 20 | `paramspider` | Extraction d'URLs avec paramètres via archives web (Wayback Machine) pour alimenter SQLMap |
+| 21 | `paramspider` | Extraction d'URLs avec paramètres via archives web (Wayback Machine) pour alimenter SQLMap |
 
 ### 💉 Audit & Injections Bases de Données
 | # | Outil | Rôle |
 |---|-------|------|
-| 21 | `nosqlmap` | Audit d'injection et de sécurité pour bases de données NoSQL |
-| 22 | `sqlmap` | Détection et exploitation automatique des injections SQL |
+| 22 | `nosqlmap` | Audit d'injection et de sécurité pour bases de données NoSQL |
+| 23 | `sqlmap` | Détection et exploitation automatique des injections SQL |
 
 ### 📊 Rendus Visuels, Rapports & Télémétrie
 | # | Outil | Rôle |
 |---|-------|------|
-| 23 | `psutil` | Télémétrie CPU, RAM et réseau en temps réel |
-| 24 | `python-docx` | Génération et exportation de rapports Word (.docx) |
-| 25 | `reportlab` | Génération et exportation de rapports PDF professionnels |
+| 24 | `psutil` | Télémétrie CPU, RAM et réseau en temps réel |
+| 25 | `python-docx` | Génération et exportation de rapports Word (.docx) |
+| 26 | `reportlab` | Génération et exportation de rapports PDF professionnels |
 
 ### 🔎 Vérification automatique et installation en un clic
 
-Au chargement, le backend vérifie la présence des **25 outils** sur le système hôte, classe les résultats par rubrique dans le tableau de bord, et propose :
+Au chargement, le backend vérifie la présence des **26 outils** sur le système hôte, classe les résultats par rubrique dans le tableau de bord, et propose :
 - Un **bandeau d'alerte** listant les paquets manquants.
 - Un bouton **"Installer les outils manquants"** qui appelle `pkexec` (Polkit) pour installer via `apt-get` / `pip` sans avoir besoin de lancer Flask en root.
 - Pour les outils non disponibles en dépôt (`droopescan`, `moodlescan`, `nosqlmap`), une **installation automatique depuis leur dépôt GitHub officiel**.
