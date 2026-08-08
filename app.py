@@ -2955,6 +2955,41 @@ def onionhop_stop():
     return jsonify({"status": "stopped", "message": "OnionHop arrêté."})
 
 
+@app.route("/api/ip-status", methods=["GET"])
+def ip_status():
+    proxy_active = is_port_free(9050) == False
+    if proxy_active:
+        cmd = ["proxychains4", "-q", "curl", "-s", "https://api.ipify.org?format=json"]
+    else:
+        cmd = ["curl", "-s", "https://api.ipify.org?format=json"]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode == 0:
+            data = json.loads(result.stdout.strip())
+            return jsonify({"ip": data.get("ip", "Inconnue"), "protected": proxy_active})
+    except Exception as e:
+        print(f"[!] Erreur IP: {e}")
+    return jsonify({"ip": "Erreur", "protected": proxy_active})
+
+@app.route("/api/rotate-ip", methods=["POST"])
+def rotate_ip():
+    try:
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(("127.0.0.1", 9051))
+        s.sendall(b'AUTHENTICATE ""\r\n')
+        resp = s.recv(1024).decode()
+        if "250 OK" in resp:
+            s.sendall(b'SIGNAL NEWNYM\r\n')
+            resp2 = s.recv(1024).decode()
+            if "250 OK" in resp2:
+                return jsonify({"status": "success"})
+        return jsonify({"status": "error", "message": "Échec de l'authentification Tor Control."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+
+
 @app.route("/api/onionhop/status", methods=["GET"])
 def onionhop_status():
     global _ONIONHOP_PROCESS
