@@ -413,6 +413,10 @@ async function startScan(mode, customTarget = null) {
 
   if (!customTarget && mode === "local" && modeToggle === "auto" && isSubnet) {
     // Mode Auto Local sur un réseau complet : Netdiscover puis sélection Nmap
+    if (!window.isSudoConfigured) {
+      showSudoPrompt(target);
+      return;
+    }
     runAutoLocalPipeline(target);
     return;
   }
@@ -425,6 +429,78 @@ async function startScan(mode, customTarget = null) {
 
   // Normal / Manual / Selected Scan via /api/scan
   runNmapScan(target, mode, modeToggle);
+}
+
+// =====================================================================================
+// GESTIONNAIRE DE MOT DE PASSE SUDO POUR NETDISCOVER
+// =====================================================================================
+
+function showSudoPrompt(target) {
+  const modal = document.getElementById("modal-sudo-prompt");
+  if (!modal) return runAutoLocalPipeline(target); // Fallback
+
+  modal.classList.remove("hidden");
+  const input = document.getElementById("prompt-sudo-password");
+  if (input) {
+    input.value = "";
+    setTimeout(() => input.focus(), 100);
+  }
+
+  const btnConfirm = document.getElementById("btn-confirm-sudo-prompt");
+  const btnCancel = document.getElementById("btn-cancel-sudo-prompt");
+  const errBox = document.getElementById("sudo-prompt-error");
+  if (errBox) errBox.classList.add("hidden");
+
+  // Clonage pour retirer les anciens écouteurs d'événements
+  const newConfirm = btnConfirm.cloneNode(true);
+  btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
+  const newCancel = btnCancel.cloneNode(true);
+  btnCancel.parentNode.replaceChild(newCancel, btnCancel);
+
+  newCancel.addEventListener("click", () => {
+    modal.classList.add("hidden");
+  });
+
+  // Valider si touche Entrée
+  if (input) {
+    input.onkeydown = (e) => {
+      if (e.key === "Enter") newConfirm.click();
+    };
+  }
+
+  newConfirm.addEventListener("click", async () => {
+    const pwd = input ? input.value : "";
+    newConfirm.disabled = true;
+    newConfirm.textContent = "Vérification...";
+    
+    try {
+      const res = await fetch("/api/settings/sudo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwd })
+      });
+      const data = await res.json();
+      
+      if (res.status === 200 && data.success) {
+        window.isSudoConfigured = true;
+        modal.classList.add("hidden");
+        runAutoLocalPipeline(target);
+      } else {
+        if (errBox) {
+          errBox.textContent = data.error || "Mot de passe root invalide.";
+          errBox.classList.remove("hidden");
+        }
+      }
+    } catch (e) {
+      if (errBox) {
+        errBox.textContent = "Erreur de communication avec le serveur.";
+        errBox.classList.remove("hidden");
+      }
+    } finally {
+      newConfirm.disabled = false;
+      newConfirm.innerHTML = `<i class="fa-solid fa-bolt"></i> Lancer l'exploration`;
+    }
+  });
 }
 
 // =====================================================================================

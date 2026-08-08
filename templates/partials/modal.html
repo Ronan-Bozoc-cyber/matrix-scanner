@@ -71,3 +71,24 @@
     </div>
   </div>
 </div>
+
+<!-- MODALE DE MOT DE PASSE SUDO POUR SCAN LOCAL -->
+<div id="modal-sudo-prompt" class="modal hidden">
+  <div class="modal-content card" style="max-width: 450px; background: #0c100c; border: 1px solid #ff4444; box-shadow: 0 0 20px rgba(255,68,68,0.2);">
+    <h3 style="color: #ff4444; margin-top: 0;"><i class="fa-solid fa-lock"></i> Droits Administrateur Requis</h3>
+    <p style="font-size: 0.9rem; color: #ccc;">Le pentest local utilise l'outil <b>Netdiscover</b>, qui requiert les privilèges <i>root</i> pour émettre des requêtes ARP brutes sur le réseau local et contourner les pare-feux.</p>
+    
+    <div style="margin-bottom: 15px; margin-top: 15px;">
+      <input type="password" id="prompt-sudo-password" placeholder="Mot de passe sudo / root..." style="width: 100%; padding: 10px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,68,68,0.4); color: #fff; border-radius: 4px; font-family: monospace;">
+    </div>
+    
+    <div id="sudo-prompt-error" class="alert-box error hidden" style="margin-bottom: 15px; font-size: 0.85rem;"></div>
+    
+    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+      <button id="btn-cancel-sudo-prompt" class="btn btn-small">Annuler</button>
+      <button id="btn-confirm-sudo-prompt" class="btn btn-small" style="background: rgba(255, 68, 68, 0.2); border-color: #ff4444; color: #ff8888; font-weight: bold;">
+        <i class="fa-solid fa-bolt"></i> Lancer l'exploration
+      </button>
+    </div>
+  </div>
+</div>
