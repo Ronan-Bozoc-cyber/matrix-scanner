@@ -31,6 +31,19 @@ Il permet de réaliser des **pentests web externes automatisés en 7 étapes** (
 - **Rotation d'IP dynamique** : Depuis la barre de navigation supérieure, un indicateur affiche votre IP en temps réel. Si votre IP est bloquée par un pare-feu ou un WAF, un clic sur le bouton **Changer d'IP** envoie un signal `NEWNYM` au port de contrôle Tor (`9051`) pour forcer un changement immédiat de circuit et d'adresse IP publique, assurant une parfaite résilience réseau.
 - **Installation automatique** : si absent, `./run.sh` télécharge l'AppImage depuis GitHub (`center2055/OnionHop`).
 
+### 🛡️ Workflow de Résilience Réseau (Rotation d'IP & Proxychains)
+
+```mermaid
+graph TD
+    A[Backend Flask] -->|Détecte Port 9050| B(Proxychains4)
+    B -->|Encapsule les requêtes| C{Outils Kali}
+    C -->|Scan Nmap, SQLMap, Nuclei...| D(Cible Web)
+    
+    E[Bouton Changer IP] -->|Envoie SIGNAL NEWNYM| F(Port de Contrôle Tor 9051)
+    F -->|Nouveau Circuit| G(Nouvelle IP Publique)
+```
+
+
 ### 💻 3. Interface de lancement ASCII Art & Cyberpunk
 - **Terminal Matrix vert** : menu interactif avec minuteur de démarrage automatique (15 s).
 - **Ports dynamiques** : sélection automatique d'un port libre ≥ 10 001 si le port 5000 est occupé.
