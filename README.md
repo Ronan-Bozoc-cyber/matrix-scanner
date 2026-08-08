@@ -79,22 +79,27 @@ M-SCAN intègre **24 outils et modules** vérifiés automatiquement au démarrag
 
 | 19 | `wpscan` | Scanner de failles spécifique WordPress (plugins, thèmes, utilisateurs) |
 
+### 💉 Reconnaissance & OSINT Avancé
+| # | Outil | Rôle |
+|---|-------|------|
+| 20 | `paramspider` | Extraction d'URLs avec paramètres via archives web (Wayback Machine) pour alimenter SQLMap |
+
 ### 💉 Audit & Injections Bases de Données
 | # | Outil | Rôle |
 |---|-------|------|
-| 20 | `nosqlmap` | Audit d'injection et de sécurité pour bases de données NoSQL |
-| 21 | `sqlmap` | Détection et exploitation automatique des injections SQL |
+| 21 | `nosqlmap` | Audit d'injection et de sécurité pour bases de données NoSQL |
+| 22 | `sqlmap` | Détection et exploitation automatique des injections SQL |
 
 ### 📊 Rendus Visuels, Rapports & Télémétrie
 | # | Outil | Rôle |
 |---|-------|------|
-| 22 | `psutil` | Télémétrie CPU, RAM et réseau en temps réel |
-| 23 | `python-docx` | Génération et exportation de rapports Word (.docx) |
-| 24 | `reportlab` | Génération et exportation de rapports PDF professionnels |
+| 23 | `psutil` | Télémétrie CPU, RAM et réseau en temps réel |
+| 24 | `python-docx` | Génération et exportation de rapports Word (.docx) |
+| 25 | `reportlab` | Génération et exportation de rapports PDF professionnels |
 
 ### 🔎 Vérification automatique et installation en un clic
 
-Au chargement, le backend vérifie la présence des **24 outils** sur le système hôte, classe les résultats par rubrique dans le tableau de bord, et propose :
+Au chargement, le backend vérifie la présence des **25 outils** sur le système hôte, classe les résultats par rubrique dans le tableau de bord, et propose :
 - Un **bandeau d'alerte** listant les paquets manquants.
 - Un bouton **"Installer les outils manquants"** qui appelle `pkexec` (Polkit) pour installer via `apt-get` / `pip` sans avoir besoin de lancer Flask en root.
 - Pour les outils non disponibles en dépôt (`droopescan`, `moodlescan`, `nosqlmap`), une **installation automatique depuis leur dépôt GitHub officiel**.
@@ -117,8 +122,9 @@ graph TD
     F --> G[7. Recherche CVE]
     G --> H{8. Audits Spécifiques}
     H --> I(CMS : WPScan / JoomScan...)
-    H --> J(SQLMap : Injections SQL)
     H --> K(Gobuster : Fuzzing)
+    H --> L[ParamSpider : Extraction URLs]
+    L --> J(SQLMap : Injections SQL)
    
 ```
 
@@ -131,7 +137,7 @@ graph TD
 | **5 — Empreinte CMS** | `WhatWeb` | Détection de la pile logicielle (WordPress, Joomla, Drupal, Moodle, Nginx, Apache, PHP, en-têtes HTTP). Retourne le **type de CMS** pour le Smart Branching de l'étape 8. |
 | **6 — Nmap** | `Nmap` + `Nuclei` | Cartographie ports/services, exécution de templates vulnérabilités. Fallback automatique `-sT` si `-sS` refusé (sans root). |
 | **7 — Recherche CVE** | `Searchsploit` (Exploit-DB) | Recherche hors-ligne ou via API de vulnérabilités et d'exploits connus pour chaque service et version détectés à l'étape 6. |
-| **8 — Audit complet** | `Gobuster` + `SQLMap` + CMS Scanner | **Smart Branching** : WPScan si WordPress, JoomScan si Joomla, Droopescan si Drupal, Moodlescan si Moodle. En parallèle : Gobuster (fuzzing de répertoires). Puis SQLMap (injections SQL). Résultats affichés dans des cartes dédiées avec ajout au rapport en 1 clic. |
+| **8 — Audit complet** | `Gobuster` + `ParamSpider` + `SQLMap` + CMS Scanner | **Smart Branching** : WPScan si WordPress, JoomScan si Joomla, Droopescan si Drupal, Moodlescan si Moodle. En parallèle : Gobuster (fuzzing de répertoires). ParamSpider récupère d'abord toutes les URLs avec paramètres vulnérables dans les archives web, puis les envoie en masse à SQLMap pour maximiser la surface d'attaque d'injections SQL. |
 | **Livrables** | `ReportLab` + `python-docx` | Rapport PDF & Word avec score de risque global, export 1 clic. |
 
 ---

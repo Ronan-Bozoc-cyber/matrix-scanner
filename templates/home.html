@@ -24,9 +24,9 @@
               <i class="fa-solid fa-arrow-right arrow"></i>
               <div class="node" style="border-color: #ff4444;"><i class="fa-solid fa-bug"></i> CVE</div>
               <i class="fa-solid fa-arrow-right arrow"></i>
-              <div class="node" style="border-color: #1abc9c; background: rgba(22, 160, 133, 0.2);"><i class="fa-solid fa-sitemap"></i> Audits (CMS, Gobuster, SQLMap)</div>
+              <div class="node" style="border-color: #1abc9c; background: rgba(22, 160, 133, 0.2);"><i class="fa-solid fa-sitemap"></i> Audits (CMS, Gobuster, ParamSpider ➡️ SQLMap)</div>
             </div>
-            <p class="desc">Workflow externe automatisé avec <strong>Aiguillage Intelligent (Outils Kali)</strong> : Interroge le WHOIS et énumère les sous-domaines (Subfinder/Sublist3r/theHarvester/DNS Probe), détecte le WAF (Wafw00f), capture le site (Gowitness), analyse l'empreinte (WhatWeb), cartographie les ports (Nmap), recherche les vulnérabilités (CVE) puis déclenche dynamiquement les scanners dédiés : <strong>CMS</strong> (WPScan, Joomscan, Droopescan, Moodlescan), <strong>Fuzzing d'arborescence</strong> (Gobuster), et <strong>Bases de données</strong> (SQLMap/NoSQLMap).</p>
+            <p class="desc">Workflow externe automatisé avec <strong>Aiguillage Intelligent (Outils Kali)</strong> : Interroge le WHOIS et énumère les sous-domaines (Subfinder/Sublist3r/theHarvester/DNS Probe), détecte le WAF (Wafw00f), capture le site (Gowitness), analyse l'empreinte (WhatWeb), cartographie les ports (Nmap), recherche les vulnérabilités (CVE) puis déclenche dynamiquement les scanners dédiés : <strong>CMS</strong> (WPScan, Joomscan, Droopescan, Moodlescan), <strong>Fuzzing d'arborescence</strong> (Gobuster), et <strong>Bases de données</strong> (ParamSpider extrait d'abord toutes les anciennes URLs vulnérables depuis les Web Archives, puis les transmet en masse à SQLMap/NoSQLMap pour maximiser les chances d'injection).</p>
           </div>
 
           <div class="workflow-box local-workflow">

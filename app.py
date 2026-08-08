@@ -252,6 +252,12 @@ REQUIRED_TOOLS = {
         "category": "Audit Web & CMS Spécifiques",
         "description": "Scanner spécialisé dans l'audit de sécurité des plateformes Moodle",
     },
+    "paramspider": {
+        "check_cmd": ["paramspider", "--help"],
+        "apt_package": "paramspider",
+        "category": "Reconnaissance & OSINT",
+        "description": "Exploration des archives web pour extraire les URLs avec paramètres",
+    },
     "sqlmap": {
         "check_cmd": ["sqlmap", "--version"],
         "apt_package": "sqlmap",
