@@ -2975,15 +2975,37 @@ def ip_status():
 def rotate_ip():
     try:
         import socket
+        import os
+        import binascii
+        
+        tor_data_dir = os.path.expanduser("~/.local/share/OnionHop/tor-data")
+        port_file = os.path.join(tor_data_dir, "control_port.txt")
+        cookie_file = os.path.join(tor_data_dir, "control_auth_cookie")
+        
+        if not os.path.exists(port_file) or not os.path.exists(cookie_file):
+            return jsonify({"status": "error", "message": "OnionHop n'est pas lancé ou les fichiers de contrôle sont introuvables."})
+            
+        with open(port_file, "r") as f:
+            # Format attendu : PORT=127.0.0.1:34939
+            port_line = f.read().strip()
+            port = int(port_line.split(":")[-1])
+            
+        with open(cookie_file, "rb") as f:
+            cookie_hex = binascii.hexlify(f.read()).decode("utf-8")
+            
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(("127.0.0.1", 9051))
-        s.sendall(b'AUTHENTICATE ""\r\n')
+        s.settimeout(3)
+        s.connect(("127.0.0.1", port))
+        
+        s.sendall(f'AUTHENTICATE {cookie_hex}\r\n'.encode())
         resp = s.recv(1024).decode()
         if "250 OK" in resp:
             s.sendall(b'SIGNAL NEWNYM\r\n')
             resp2 = s.recv(1024).decode()
             if "250 OK" in resp2:
+                s.close()
                 return jsonify({"status": "success"})
+        s.close()
         return jsonify({"status": "error", "message": "Échec de l'authentification Tor Control."})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
