@@ -136,6 +136,12 @@ REQUIRED_TOOLS = {
         "category": "Scans Réseau & Exploration LAN",
         "description": "Scanner de ports ultra-rapide (Mode Hybride)",
     },
+    "arp-scan": {
+        "check_cmd": ["arp-scan", "-V"],
+        "apt_package": "arp-scan",
+        "category": "Scans Réseau & Exploration LAN",
+        "description": "Scanner ARP ultra-rapide et discret",
+    },
     "searchsploit": {
         "check_cmd": ["searchsploit", "-h"],
         "apt_package": "exploitdb",
