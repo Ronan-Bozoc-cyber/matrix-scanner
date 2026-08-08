@@ -849,13 +849,18 @@ async function runWebPentestPipeline(target, modeToggle) {
   if (progressText) progressText.textContent = "Détection des services, ports & vulnérabilités (Nmap)...";
   await runNmapScan(target, "web", modeToggle);
 
-  // --- ÉTAPE 7 : AUDIT COMPLET (Gobuster + SQLMap + CMS Scanner) ---
-  setScanningState(true, "Audit de sécurité approfondi (Gobuster, SQLMap, CMS)", "7", "7");
-  if (progressText) progressText.textContent = "Audit de sécurité approfondi (Gobuster, SQLMap, CMS)...";
+  // --- ÉTAPE 7 : AUDIT COMPLET (Gobuster + SQLMap + CMS Scanner / Nuclei) ---
+  setScanningState(true, "Audit de sécurité approfondi (Gobuster, SQLMap, CMS/Nuclei)", "7", "7");
+  if (progressText) progressText.textContent = "Audit de sécurité approfondi (Gobuster, SQLMap, CMS/Nuclei)...";
 
-  // Lancer le scan CMS en parallèle
-  const cmsAuditPromise = runAuditCMSScan(target, window._lastDetectedCms || null);
-  await Promise.all([cmsAuditPromise]);
+  // Lancer le scan CMS ou Nuclei (Smart Branching)
+  let specializedAuditPromise;
+  if (window._lastDetectedCms && window._lastDetectedCms !== "Non identifié / Personnalisé") {
+      specializedAuditPromise = runAuditCMSScan(target, window._lastDetectedCms);
+  } else {
+      specializedAuditPromise = runAuditNuclei(target);
+  }
+  await Promise.all([specializedAuditPromise]);
 
   // Gobuster séquentiel
   await runAuditGobuster(target);
@@ -1286,6 +1291,88 @@ async function runAuditCMSScan(target, cmsKey) {
   } catch (err) {
     if (progress) progress.classList.add("hidden");
     if (content) content.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Scanner CMS indisponible (${err.message}).</div>`;
+  }
+}
+
+async function runAuditNuclei(target) {
+  const card = document.getElementById("nuclei-audit-card");
+  const progress = document.getElementById("nuclei-audit-progress");
+  const content = document.getElementById("nuclei-audit-results-content");
+  const progressText = document.getElementById("nuclei-audit-progress-text");
+
+  if (card) card.classList.remove("hidden");
+  if (progress) progress.classList.remove("hidden");
+  if (progressText) progressText.textContent = `⚡ Nuclei — Audit approfondi de failles (Smart Branching Custom) en cours...`;
+  if (content) content.innerHTML = "";
+
+  try {
+    const res = await fetch("/api/nuclei-scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target_url: target })
+    });
+    const data = await res.json();
+
+    if (res.status === 412) {
+      if (progress) progress.classList.add("hidden");
+      if (content) content.innerHTML = `
+        <div style="padding: 12px; background: rgba(241, 196, 15, 0.1); border-left: 3px solid #f1c40f; color: #f7dc6f; font-size: 0.85rem;">
+          ⚠️ Nuclei n'est pas installé. Installez-le depuis la page <strong>Vérification Système</strong>.
+        </div>`;
+      return;
+    }
+
+    if (data.job_id) {
+      // Use the generic pollScanStatus endpoint because nuclei uses NUCLEI_JOBS internally but pollScanStatus polls SCAN_JOBS.
+      // Wait, let's look at app.py: /api/nuclei-status/<job_id> exists. We should write a specific poller or use a simple loop.
+      const nucleiResult = await new Promise((resolve) => {
+        const interval = setInterval(async () => {
+          try {
+            const r = await fetch(`/api/nuclei-status/${data.job_id}`);
+            const d = await r.json();
+            if (d.status === "done" || d.status === "error") {
+              clearInterval(interval);
+              resolve(d);
+            }
+          } catch (e) {
+            clearInterval(interval);
+            resolve({ status: "error", error: e.message });
+          }
+        }, 2000);
+      });
+
+      if (progress) progress.classList.add("hidden");
+      
+      if (nucleiResult.status === "error") {
+        if (content) content.innerHTML = `<div style="color: #e74c3c; font-size: 0.85rem;">❌ Erreur Nuclei : ${nucleiResult.error}</div>`;
+      } else {
+        const findings = nucleiResult.result || [];
+        if (findings.length === 0) {
+            content.innerHTML = `<div style="color: #aaa; font-size: 0.85rem;"><i class="fa-solid fa-check"></i> Aucun modèle Nuclei n'a matché. La cible semble saine face aux failles connues.</div>`;
+        } else {
+            let html = `<div style="padding: 10px 14px; background: rgba(52, 152, 219, 0.08); border-left: 3px solid #3498db; border-radius: 4px;">`;
+            html += `<div style="font-size: 0.85rem; color: #7ec8ff; font-weight: bold; margin-bottom: 8px;"><i class="fa-solid fa-bolt"></i> Nuclei — ${findings.length} faille(s) / info(s) détectée(s)</div>`;
+            html += `<div style="font-family: monospace; font-size: 0.78rem; color: #fff; max-height: 250px; overflow-y: auto; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 4px; margin-bottom: 10px;">`;
+            findings.forEach(finding => {
+                let color = "#ddd";
+                if (finding.info && finding.info.severity) {
+                    const sev = finding.info.severity.toLowerCase();
+                    if (sev === "critical" || sev === "high") color = "#ff4444";
+                    else if (sev === "medium") color = "#f39c12";
+                    else if (sev === "low") color = "#f1c40f";
+                    else if (sev === "info") color = "#3498db";
+                }
+                const name = (finding.info && finding.info.name) ? finding.info.name : finding.template || "Alerte";
+                html += `<div style="color: ${color}; margin-bottom: 4px;"><strong>[${(finding.info && finding.info.severity) ? finding.info.severity.toUpperCase() : "INFO"}]</strong> ${name} <span style="color:#aaa;">(${finding.matched_at || target})</span></div>`;
+            });
+            html += `</div></div>`;
+            content.innerHTML = html;
+        }
+      }
+    }
+  } catch (err) {
+    if (progress) progress.classList.add("hidden");
+    if (content) content.innerHTML = `<div style="color: #888; font-size: 0.85rem;">Nuclei indisponible (${err.message}).</div>`;
   }
 }
 

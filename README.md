@@ -121,8 +121,10 @@ graph TD
     E --> F[6. Cartographie Nmap]
     F --> G[7. Recherche CVE]
     G --> H{8. Audits Spécifiques}
-    H --> I(CMS : WPScan / JoomScan...)
-    H --> K(Gobuster : Fuzzing)
+    H --> I{Empreinte CMS ?}
+    I -- Oui --> M(WPScan / JoomScan / etc.)
+    I -- Non --> N(Nuclei : Failles & 0-days)
+    H --> K(Gobuster : Fuzzing d'arborescence)
     H --> L[ParamSpider : Extraction URLs]
     L --> J(SQLMap : Injections SQL)
    
@@ -134,10 +136,10 @@ graph TD
 | **2 — Sous-domaines** | `Subfinder` + `Sublist3r` + DNS Probe | Énumération hybride : CT Logs, OSINT moteurs de recherche, sondage DNS multithreadé avec **filtre anti-Wildcard DNS** (élimination des faux positifs `*.domaine.com`). |
 | **3 — WAF** | `Wafw00f` | Détection du pare-feu applicatif (Cloudflare, ModSecurity, AWS WAF, Imperva). Placé **avant** les scans actifs pour anticiper les blocages. |
 | **4 — Capture** | `Gowitness` | Rendu visuel headless de la page d'accueil de la cible (JPEG intégré au rapport). |
-| **5 — Empreinte CMS** | `WhatWeb` | Détection de la pile logicielle (WordPress, Joomla, Drupal, Moodle, Nginx, Apache, PHP, en-têtes HTTP). Retourne le **type de CMS** pour le Smart Branching de l'étape 8. |
-| **6 — Nmap** | `Nmap` + `Nuclei` | Cartographie ports/services, exécution de templates vulnérabilités. Fallback automatique `-sT` si `-sS` refusé (sans root). |
+| **5 — Empreinte CMS** | `WhatWeb` | Détection de la pile logicielle (WordPress, Joomla, Drupal, PHP, Serveurs). Retourne le **type de CMS** pour l'aiguillage de l'étape 8. |
+| **6 — Nmap** | `Nmap` | Cartographie ports/services, exécution de scripts Nmap. Fallback automatique `-sT` si `-sS` refusé (sans privilèges root). |
 | **7 — Recherche CVE** | `Searchsploit` (Exploit-DB) | Recherche hors-ligne ou via API de vulnérabilités et d'exploits connus pour chaque service et version détectés à l'étape 6. |
-| **8 — Audit complet** | `Gobuster` + `ParamSpider` + `SQLMap` + CMS Scanner | **Smart Branching** : WPScan si WordPress, JoomScan si Joomla, Droopescan si Drupal, Moodlescan si Moodle. En parallèle : Gobuster (fuzzing de répertoires). ParamSpider récupère d'abord toutes les URLs avec paramètres vulnérables dans les archives web, puis les envoie en masse à SQLMap pour maximiser la surface d'attaque d'injections SQL. |
+| **8 — Audit complet** | `Gobuster` + `ParamSpider` + `SQLMap` + (`CMS Scanner` ou `Nuclei`) | **Smart Branching (Aiguillage Intelligent)** : Si l'empreinte CMS est détectée, exécute le spécialiste (WPScan, JoomScan...). Si **aucun CMS** n'est trouvé (site custom), exécute **Nuclei** pour tester des failles génériques. En parallèle, Gobuster fuzze l'arborescence et ParamSpider extrait les paramètres d'archives web pour des attaques massives en Injections SQL via SQLMap. |
 | **Livrables** | `ReportLab` + `python-docx` | Rapport PDF & Word avec score de risque global, export 1 clic. |
 
 ---

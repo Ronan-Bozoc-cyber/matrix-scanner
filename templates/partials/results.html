@@ -203,6 +203,21 @@
     <div id="cms-audit-results-content" style="margin-top: 10px;"></div>
   </div>
 
+  <!-- CARTE DE DÉCLENCHEMENT CONDITIONNEL NUCLEI (Failles & 0-days) -->
+  <div id="nuclei-audit-card" class="card hidden" style="margin-bottom: 20px; border-color: #3498db;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+      <h3 class="card-title" style="color: #3498db; margin: 0;"><i class="fa-solid fa-bolt"></i> Audit de Failles Récentes (Nuclei)</h3>
+      <button id="btn-add-nuclei-audit-to-report" class="btn btn-small" style="background: rgba(52, 152, 219, 0.15); border-color: #2980b9; color: #3498db; font-weight: bold; font-size: 0.75rem;">
+        <i class="fa-solid fa-plus"></i> Ajouter l'audit Nuclei au rapport
+      </button>
+    </div>
+    <div id="nuclei-audit-progress" class="scan-progress hidden">
+      <div class="loader"></div>
+      <span id="nuclei-audit-progress-text">Recherche de failles avec modèles (Nuclei) en cours...</span>
+    </div>
+    <div id="nuclei-audit-results-content" style="margin-top: 10px;"></div>
+  </div>
+
   <!-- CARTE FUZZING ARBORESCENCE & REPERTOIRES (Gobuster) -->
   <div id="gobuster-card" class="card hidden" style="margin-bottom: 20px; border-color: #9b59b6;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
